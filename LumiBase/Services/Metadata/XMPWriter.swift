@@ -1,0 +1,86 @@
+import Foundation
+
+/// Writer for standard Adobe XMP sidecar files
+public final class XMPWriter: Sendable {
+    
+    /// Writes or updates an XMP sidecar file for a given photo
+    public static func write(metadata: XMPMetadata, to url: URL, originalFilename: String? = nil) throws {
+        let xmpContent = generateXMPXML(metadata: metadata, originalFilename: originalFilename)
+        guard let data = xmpContent.data(using: .utf8) else {
+            throw NSError(domain: "LumiBase.XMPWriter", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to encode XMP string as UTF-8"])
+        }
+        
+        try data.write(to: url, options: .atomic)
+    }
+    
+    /// Generates valid Adobe Lightroom-compatible XMP Packet XML
+    public static func generateXMPXML(metadata: XMPMetadata, originalFilename: String? = nil) -> String {
+        let rawFileNameAttr = originalFilename != nil ? " crs:RawFileName=\"\(escapeXML(originalFilename!))\"" : ""
+        let ratingAttr = " xmp:Rating=\"\(metadata.rating)\""
+        let labelAttr = metadata.colorLabel != .none ? " xmp:Label=\"\(metadata.colorLabel.rawValue)\"" : ""
+        let flagAttr: String
+        switch metadata.flag {
+        case .pick: flagAttr = " crs:Pick=\"1\""
+        case .reject: flagAttr = " crs:Pick=\"-1\""
+        case .unflagged: flagAttr = ""
+        }
+        
+        var keywordsXML = ""
+        if !metadata.keywords.isEmpty {
+            let items = metadata.keywords.map { "      <rdf:li>\(escapeXML($0))</rdf:li>" }.joined(separator: "\n")
+            keywordsXML = """
+                <dc:subject>
+                 <rdf:Bag>
+            \(items)
+                 </rdf:Bag>
+                </dc:subject>
+            """
+        }
+        
+        var titleXML = ""
+        if let title = metadata.title, !title.isEmpty {
+            titleXML = """
+                <dc:title>
+                 <rdf:Alt>
+                  <rdf:li xml:lang="x-default">\(escapeXML(title))</rdf:li>
+                 </rdf:Alt>
+                </dc:title>
+            """
+        }
+        
+        var captionXML = ""
+        if let caption = metadata.caption, !caption.isEmpty {
+            captionXML = """
+                <dc:description>
+                 <rdf:Alt>
+                  <rdf:li xml:lang="x-default">\(escapeXML(caption))</rdf:li>
+                 </rdf:Alt>
+                </dc:description>
+            """
+        }
+        
+        let xml = """
+        <x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 7.0-c000 1.000000, 0000/00/00-00:00:00        ">
+         <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+          <rdf:Description rdf:about=""
+            xmlns:xmp="http://ns.adobe.com/xap/1.0/"
+            xmlns:photoshop="http://ns.adobe.com/photoshop/1.0/"
+            xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
+            xmlns:dc="http://purl.org/dc/elements/1.1/"\(rawFileNameAttr)\(ratingAttr)\(labelAttr)\(flagAttr)>
+        \(keywordsXML.isEmpty ? "" : keywordsXML + "\n")\(titleXML.isEmpty ? "" : titleXML + "\n")\(captionXML.isEmpty ? "" : captionXML + "\n")  </rdf:Description>
+         </rdf:RDF>
+        </x:xmpmeta>
+        """
+        
+        return "<?xpacket begin=\"\u{FEFF}\" id=\"W5M0MpCehiHzreSzNTczkc9d\"?>\n\(xml)\n<?xpacket end=\"w\"?>"
+    }
+    
+    private static func escapeXML(_ string: String) -> String {
+        return string
+            .replacingOccurrences(of: "&", with: "&amp;")
+            .replacingOccurrences(of: "<", with: "&lt;")
+            .replacingOccurrences(of: ">", with: "&gt;")
+            .replacingOccurrences(of: "\"", with: "&quot;")
+            .replacingOccurrences(of: "'", with: "&apos;")
+    }
+}

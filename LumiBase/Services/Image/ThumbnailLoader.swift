@@ -1,0 +1,80 @@
+import Foundation
+import AppKit
+import CoreImage
+import ImageIO
+
+/// High-performance thumbnail extractor utilizing ImageIO embedded JPEG previews
+public actor ThumbnailLoader {
+    public static let shared = ThumbnailLoader()
+    
+    private let cache = ThumbnailCacheManager.shared
+    private var inFlightTasks: [String: Task<NSImage?, Never>] = [:]
+    
+    /// Loads a thumbnail asynchronously with memory/disk caching and request deduplication
+    public func loadThumbnail(for asset: PhotoAsset, maxPixelSize: Int = 400) async -> NSImage? {
+        let developTag = asset.xmp.hasDevelopEdits ? "\(asset.xmp.exposure2012 ?? 0)_\(asset.xmp.temperature ?? 0)_\(asset.xmp.highlights2012 ?? 0)" : ""
+        let key = cache.cacheKey(for: asset.fileURL, maxPixelSize: maxPixelSize, dateModified: asset.dateModified, developTag: developTag)
+        
+        // Check cache first
+        if let cached = cache.image(forKey: key) {
+            return cached
+        }
+        
+        // Deduplicate in-flight requests
+        if let existingTask = inFlightTasks[key] {
+            return await existingTask.value
+        }
+        
+        let targetAsset = asset
+        let task = Task<NSImage?, Never>.detached(priority: .userInitiated) {
+            return Self.createThumbnail(for: targetAsset, maxPixelSize: maxPixelSize)
+        }
+        
+        inFlightTasks[key] = task
+        let result = await task.value
+        inFlightTasks.removeValue(forKey: key)
+        
+        if let thumbnail = result {
+            cache.store(image: thumbnail, forKey: key)
+        }
+        
+        return result
+    }
+    
+    /// Synchronously creates a thumbnail from disk using CIRAWFilter draft mode (for exact preview match) or ImageIO
+    private nonisolated static func createThumbnail(for asset: PhotoAsset, maxPixelSize: Int) -> NSImage? {
+        // 1. For RAW assets with develop edits, use CIRAWFilter to get identical color science as Loupe View
+        if asset.isRaw && asset.xmp.hasDevelopEdits {
+            if let rawFilter = CIRAWFilter(imageURL: asset.fileURL) {
+                if let baseCI = rawFilter.outputImage {
+                    let processed = AdobeColorPipeline.shared.process(
+                        image: baseCI,
+                        cameraModel: asset.cameraMetadata.model,
+                        xmp: asset.xmp
+                    )
+                    let ciContext = CIContext(options: [.useSoftwareRenderer: false])
+                    if let renderedCG = ciContext.createCGImage(processed, from: processed.extent) {
+                        let size = NSSize(width: renderedCG.width, height: renderedCG.height)
+                        return NSImage(cgImage: renderedCG, size: size)
+                    }
+                }
+            }
+        }
+        
+        // 2. Standard fast path using ImageIO embedded preview
+        let options: [CFString: Any] = [
+            kCGImageSourceShouldCache: false,
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize
+        ]
+        
+        guard let source = CGImageSourceCreateWithURL(asset.fileURL as CFURL, nil),
+              let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return nil
+        }
+        
+        let size = NSSize(width: cgImage.width, height: cgImage.height)
+        return NSImage(cgImage: cgImage, size: size)
+    }
+}

@@ -1,0 +1,485 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000012C00000100000001 /* LumiBaseApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000001 /* LumiBaseApp.swift */; };
+		A10000012C00000100000002 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000002 /* AppState.swift */; };
+		A10000012C00000100000003 /* PhotoAsset.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000003 /* PhotoAsset.swift */; };
+		A10000012C00000100000004 /* CameraMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000004 /* CameraMetadata.swift */; };
+		A10000012C00000100000005 /* XMPMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000005 /* XMPMetadata.swift */; };
+		A10000012C00000100000006 /* FilterCriteria.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000006 /* FilterCriteria.swift */; };
+		A10000012C00000100000007 /* ThumbnailLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000007 /* ThumbnailLoader.swift */; };
+		A10000012C00000100000008 /* ThumbnailCacheManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000008 /* ThumbnailCacheManager.swift */; };
+		A10000012C00000100000009 /* RAWImageLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000009 /* RAWImageLoader.swift */; };
+		A10000012C0000010000000A /* HistogramCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C0000010000000A /* HistogramCalculator.swift */; };
+		A10000012C0000010000000B /* MetadataReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C0000010000000B /* MetadataReader.swift */; };
+		A10000012C0000010000000C /* XMPParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C0000010000000C /* XMPParser.swift */; };
+		A10000012C0000010000000D /* XMPWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C0000010000000D /* XMPWriter.swift */; };
+		A10000012C0000010000000E /* FolderScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C0000010000000E /* FolderScanner.swift */; };
+		A10000012C0000010000000F /* DirectoryWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C0000010000000F /* DirectoryWatcher.swift */; };
+		A10000012C00000100000010 /* LightroomTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000010 /* LightroomTheme.swift */; };
+		A10000012C00000100000011 /* Badges.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000011 /* Badges.swift */; };
+		A10000012C00000100000012 /* MainLayoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000012 /* MainLayoutView.swift */; };
+		A10000012C00000100000013 /* LeftSidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000013 /* LeftSidebarView.swift */; };
+		A10000012C00000100000014 /* WorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000014 /* WorkspaceView.swift */; };
+		A10000012C00000100000015 /* GridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000015 /* GridView.swift */; };
+		A10000012C00000100000016 /* PhotoGridItemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000016 /* PhotoGridItemView.swift */; };
+		A10000012C00000100000017 /* LoupeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000017 /* LoupeView.swift */; };
+		A10000012C00000100000018 /* FilmstripView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000018 /* FilmstripView.swift */; };
+		A10000012C00000100000019 /* RightInspectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000019 /* RightInspectorView.swift */; };
+		A10000012C0000010000001A /* HistogramView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C0000010000001A /* HistogramView.swift */; };
+		A10000012C0000010000001B /* EXIFInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C0000010000001B /* EXIFInfoView.swift */; };
+		A10000012C0000010000001C /* XMPMetadataEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C0000010000001C /* XMPMetadataEditorView.swift */; };
+		A10000012C0000010000001D /* TopFilterBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C0000010000001D /* TopFilterBarView.swift */; };
+		A10000012C0000010000001E /* BottomControlsBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C0000010000001E /* BottomControlsBarView.swift */; };
+		A10000012C0000010000001F /* DCPProfileManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C0000010000001F /* DCPProfileManager.swift */; };
+		A10000012C00000100000020 /* AdobeColorPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000020 /* AdobeColorPipeline.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A10000002C00000000000001 /* LumiBase.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LumiBase.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000022C00000100000001 /* LumiBaseApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LumiBaseApp.swift; sourceTree = "<group>"; };
+		A10000022C00000100000002 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		A10000022C00000100000003 /* PhotoAsset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoAsset.swift; sourceTree = "<group>"; };
+		A10000022C00000100000004 /* CameraMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraMetadata.swift; sourceTree = "<group>"; };
+		A10000022C00000100000005 /* XMPMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XMPMetadata.swift; sourceTree = "<group>"; };
+		A10000022C00000100000006 /* FilterCriteria.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterCriteria.swift; sourceTree = "<group>"; };
+		A10000022C00000100000007 /* ThumbnailLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailLoader.swift; sourceTree = "<group>"; };
+		A10000022C00000100000008 /* ThumbnailCacheManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailCacheManager.swift; sourceTree = "<group>"; };
+		A10000022C00000100000009 /* RAWImageLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RAWImageLoader.swift; sourceTree = "<group>"; };
+		A10000022C0000010000000A /* HistogramCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistogramCalculator.swift; sourceTree = "<group>"; };
+		A10000022C0000010000000B /* MetadataReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataReader.swift; sourceTree = "<group>"; };
+		A10000022C0000010000000C /* XMPParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XMPParser.swift; sourceTree = "<group>"; };
+		A10000022C0000010000000D /* XMPWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XMPWriter.swift; sourceTree = "<group>"; };
+		A10000022C0000010000000E /* FolderScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderScanner.swift; sourceTree = "<group>"; };
+		A10000022C0000010000000F /* DirectoryWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryWatcher.swift; sourceTree = "<group>"; };
+		A10000022C00000100000010 /* LightroomTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LightroomTheme.swift; sourceTree = "<group>"; };
+		A10000022C00000100000011 /* Badges.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Badges.swift; sourceTree = "<group>"; };
+		A10000022C00000100000012 /* MainLayoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainLayoutView.swift; sourceTree = "<group>"; };
+		A10000022C00000100000013 /* LeftSidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeftSidebarView.swift; sourceTree = "<group>"; };
+		A10000022C00000100000014 /* WorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceView.swift; sourceTree = "<group>"; };
+		A10000022C00000100000015 /* GridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GridView.swift; sourceTree = "<group>"; };
+		A10000022C00000100000016 /* PhotoGridItemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoGridItemView.swift; sourceTree = "<group>"; };
+		A10000022C00000100000017 /* LoupeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoupeView.swift; sourceTree = "<group>"; };
+		A10000022C00000100000018 /* FilmstripView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmstripView.swift; sourceTree = "<group>"; };
+		A10000022C00000100000019 /* RightInspectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightInspectorView.swift; sourceTree = "<group>"; };
+		A10000022C0000010000001A /* HistogramView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistogramView.swift; sourceTree = "<group>"; };
+		A10000022C0000010000001B /* EXIFInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EXIFInfoView.swift; sourceTree = "<group>"; };
+		A10000022C0000010000001C /* XMPMetadataEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XMPMetadataEditorView.swift; sourceTree = "<group>"; };
+		A10000022C0000010000001D /* TopFilterBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopFilterBarView.swift; sourceTree = "<group>"; };
+		A10000022C0000010000001E /* BottomControlsBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomControlsBarView.swift; sourceTree = "<group>"; };
+		A10000022C0000010000001F /* DCPProfileManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DCPProfileManager.swift; sourceTree = "<group>"; };
+		A10000022C00000100000020 /* AdobeColorPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdobeColorPipeline.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A10000032C00000100000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A10000042C00000100000001 = {
+			isa = PBXGroup;
+			children = (
+				A10000052C00000100000001 /* LumiBase */,
+				A10000062C00000100000001 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A10000052C00000100000001 /* LumiBase */ = {
+			isa = PBXGroup;
+			children = (
+				A10000072C00000100000001 /* App */,
+				A10000082C00000100000001 /* Models */,
+				A10000092C00000100000001 /* Services */,
+				A100000A2C00000100000001 /* Theme */,
+				A100000B2C00000100000001 /* Views */,
+			);
+			path = LumiBase;
+			sourceTree = "<group>";
+		};
+		A10000072C00000100000001 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				A10000022C00000100000001 /* LumiBaseApp.swift */,
+				A10000022C00000100000002 /* AppState.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A10000082C00000100000001 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A10000022C00000100000003 /* PhotoAsset.swift */,
+				A10000022C00000100000004 /* CameraMetadata.swift */,
+				A10000022C00000100000005 /* XMPMetadata.swift */,
+				A10000022C00000100000006 /* FilterCriteria.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		A10000092C00000100000001 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				B10000012C00000100000001 /* Image */,
+				B10000012C00000100000002 /* Metadata */,
+				B10000012C00000100000003 /* FileSystem */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		B10000012C00000100000001 /* Image */ = {
+			isa = PBXGroup;
+			children = (
+				A10000022C00000100000007 /* ThumbnailLoader.swift */,
+				A10000022C00000100000008 /* ThumbnailCacheManager.swift */,
+				A10000022C00000100000009 /* RAWImageLoader.swift */,
+				A10000022C0000010000000A /* HistogramCalculator.swift */,
+				A10000022C0000010000001F /* DCPProfileManager.swift */,
+				A10000022C00000100000020 /* AdobeColorPipeline.swift */,
+			);
+			path = Image;
+			sourceTree = "<group>";
+		};
+		B10000012C00000100000002 /* Metadata */ = {
+			isa = PBXGroup;
+			children = (
+				A10000022C0000010000000B /* MetadataReader.swift */,
+				A10000022C0000010000000C /* XMPParser.swift */,
+				A10000022C0000010000000D /* XMPWriter.swift */,
+			);
+			path = Metadata;
+			sourceTree = "<group>";
+		};
+		B10000012C00000100000003 /* FileSystem */ = {
+			isa = PBXGroup;
+			children = (
+				A10000022C0000010000000E /* FolderScanner.swift */,
+				A10000022C0000010000000F /* DirectoryWatcher.swift */,
+			);
+			path = FileSystem;
+			sourceTree = "<group>";
+		};
+		A100000A2C00000100000001 /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				A10000022C00000100000010 /* LightroomTheme.swift */,
+				B10000012C00000100000004 /* Components */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		B10000012C00000100000004 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				A10000022C00000100000011 /* Badges.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		A100000B2C00000100000001 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A10000022C00000100000012 /* MainLayoutView.swift */,
+				B10000012C00000100000005 /* Sidebar */,
+				B10000012C00000100000006 /* Center */,
+				B10000012C00000100000007 /* Inspector */,
+				B10000012C00000100000008 /* Toolbar */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		B10000012C00000100000005 /* Sidebar */ = {
+			isa = PBXGroup;
+			children = (
+				A10000022C00000100000013 /* LeftSidebarView.swift */,
+			);
+			path = Sidebar;
+			sourceTree = "<group>";
+		};
+		B10000012C00000100000006 /* Center */ = {
+			isa = PBXGroup;
+			children = (
+				A10000022C00000100000014 /* WorkspaceView.swift */,
+				A10000022C00000100000015 /* GridView.swift */,
+				A10000022C00000100000016 /* PhotoGridItemView.swift */,
+				A10000022C00000100000017 /* LoupeView.swift */,
+				A10000022C00000100000018 /* FilmstripView.swift */,
+			);
+			path = Center;
+			sourceTree = "<group>";
+		};
+		B10000012C00000100000007 /* Inspector */ = {
+			isa = PBXGroup;
+			children = (
+				A10000022C00000100000019 /* RightInspectorView.swift */,
+				A10000022C0000010000001A /* HistogramView.swift */,
+				A10000022C0000010000001B /* EXIFInfoView.swift */,
+				A10000022C0000010000001C /* XMPMetadataEditorView.swift */,
+			);
+			path = Inspector;
+			sourceTree = "<group>";
+		};
+		B10000012C00000100000008 /* Toolbar */ = {
+			isa = PBXGroup;
+			children = (
+				A10000022C0000010000001D /* TopFilterBarView.swift */,
+				A10000022C0000010000001E /* BottomControlsBarView.swift */,
+			);
+			path = Toolbar;
+			sourceTree = "<group>";
+		};
+		A10000062C00000100000001 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A10000002C00000000000001 /* LumiBase.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A100000C2C00000100000001 /* LumiBase */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A100000D2C00000100000001 /* Build configuration list for PBXNativeTarget "LumiBase" */;
+			buildPhases = (
+				A100000E2C00000100000001 /* Sources */,
+				A10000032C00000100000001 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = LumiBase;
+			productName = LumiBase;
+			productReference = A10000002C00000000000001 /* LumiBase.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A100000F2C00000100000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					A100000C2C00000100000001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = A10000102C00000100000001 /* Build configuration list for PBXProject "LumiBase" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A10000042C00000100000001;
+			productRefGroup = A10000062C00000100000001 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A100000C2C00000100000001 /* LumiBase */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A100000E2C00000100000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000012C00000100000001 /* LumiBaseApp.swift in Sources */,
+				A10000012C00000100000002 /* AppState.swift in Sources */,
+				A10000012C00000100000003 /* PhotoAsset.swift in Sources */,
+				A10000012C00000100000004 /* CameraMetadata.swift in Sources */,
+				A10000012C00000100000005 /* XMPMetadata.swift in Sources */,
+				A10000012C00000100000006 /* FilterCriteria.swift in Sources */,
+				A10000012C00000100000007 /* ThumbnailLoader.swift in Sources */,
+				A10000012C00000100000008 /* ThumbnailCacheManager.swift in Sources */,
+				A10000012C00000100000009 /* RAWImageLoader.swift in Sources */,
+				A10000012C0000010000000A /* HistogramCalculator.swift in Sources */,
+				A10000012C0000010000000B /* MetadataReader.swift in Sources */,
+				A10000012C0000010000000C /* XMPParser.swift in Sources */,
+				A10000012C0000010000000D /* XMPWriter.swift in Sources */,
+				A10000012C0000010000000E /* FolderScanner.swift in Sources */,
+				A10000012C0000010000000F /* DirectoryWatcher.swift in Sources */,
+				A10000012C00000100000010 /* LightroomTheme.swift in Sources */,
+				A10000012C00000100000011 /* Badges.swift in Sources */,
+				A10000012C00000100000012 /* MainLayoutView.swift in Sources */,
+				A10000012C00000100000013 /* LeftSidebarView.swift in Sources */,
+				A10000012C00000100000014 /* WorkspaceView.swift in Sources */,
+				A10000012C00000100000015 /* GridView.swift in Sources */,
+				A10000012C00000100000016 /* PhotoGridItemView.swift in Sources */,
+				A10000012C00000100000017 /* LoupeView.swift in Sources */,
+				A10000012C00000100000018 /* FilmstripView.swift in Sources */,
+				A10000012C00000100000019 /* RightInspectorView.swift in Sources */,
+				A10000012C0000010000001A /* HistogramView.swift in Sources */,
+				A10000012C0000010000001B /* EXIFInfoView.swift in Sources */,
+				A10000012C0000010000001C /* XMPMetadataEditorView.swift in Sources */,
+				A10000012C0000010000001D /* TopFilterBarView.swift in Sources */,
+				A10000012C0000010000001E /* BottomControlsBarView.swift in Sources */,
+				A10000012C0000010000001F /* DCPProfileManager.swift in Sources */,
+				A10000012C00000100000020 /* AdobeColorPipeline.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A10000112C00000100000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A10000122C00000100000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		A10000132C00000100000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = LumiBase/Resources/LumiBase.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lumibase.LumiBase;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A10000142C00000100000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = LumiBase/Resources/LumiBase.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lumibase.LumiBase;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A100000D2C00000100000001 /* Build configuration list for PBXNativeTarget "LumiBase" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000132C00000100000001 /* Debug */,
+				A10000142C00000100000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000102C00000100000001 /* Build configuration list for PBXProject "LumiBase" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000112C00000100000001 /* Debug */,
+				A10000122C00000100000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = A100000F2C00000100000001 /* Project object */;
+}
