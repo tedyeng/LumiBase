@@ -52,8 +52,13 @@ public actor ThumbnailLoader {
                         cameraModel: asset.cameraMetadata.model,
                         xmp: asset.xmp
                     )
+                    let extent = processed.extent
+                    let maxDim = max(extent.width, extent.height)
+                    let scale = maxDim > CGFloat(maxPixelSize) ? CGFloat(maxPixelSize) / maxDim : 1.0
+                    let scaledCI = scale < 1.0 ? processed.transformed(by: CGAffineTransform(scaleX: scale, y: scale)) : processed
+                    
                     let ciContext = CIContext(options: [.useSoftwareRenderer: false])
-                    if let renderedCG = ciContext.createCGImage(processed, from: processed.extent) {
+                    if let renderedCG = ciContext.createCGImage(scaledCI, from: scaledCI.extent) {
                         let size = NSSize(width: renderedCG.width, height: renderedCG.height)
                         return NSImage(cgImage: renderedCG, size: size)
                     }

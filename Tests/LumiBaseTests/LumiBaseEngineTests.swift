@@ -93,4 +93,28 @@ final class LumiBaseEngineTests: XCTestCase {
         XCTAssertNotNil(processed)
         XCTAssertEqual(processed.extent.width, 100)
     }
+    
+    @MainActor
+    func testSelectAllAndSelectedAssets() {
+        let appState = AppState()
+        let asset1 = PhotoAsset(fileURL: URL(fileURLWithPath: "/tmp/photo1.arw"))
+        let asset2 = PhotoAsset(fileURL: URL(fileURLWithPath: "/tmp/photo2.arw"))
+        let asset3 = PhotoAsset(fileURL: URL(fileURLWithPath: "/tmp/photo3.arw"))
+        
+        appState.allAssets = [asset1, asset2, asset3]
+        XCTAssertEqual(appState.displayedAssets.count, 3)
+        XCTAssertEqual(appState.selectedAssets.count, 0)
+        
+        // Select All (Command+A simulation)
+        appState.selectAll()
+        XCTAssertEqual(appState.selectedAssetIDs.count, 3)
+        XCTAssertEqual(appState.selectedAssets.count, 3)
+        XCTAssertEqual(appState.primarySelectedAssetID, asset1.id)
+        
+        // Deselect All (Command+D simulation)
+        appState.deselectAll()
+        XCTAssertEqual(appState.selectedAssetIDs.count, 0)
+        XCTAssertEqual(appState.selectedAssets.count, 0)
+        XCTAssertNil(appState.primarySelectedAssetID)
+    }
 }

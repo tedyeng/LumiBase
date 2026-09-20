@@ -8,21 +8,28 @@ public struct MainLayoutView: View {
     public init() {}
     
     public var body: some View {
-        HStack(spacing: 0) {
-            // 1. Left Navigator & Collections Panel
-            if appState.isLeftSidebarVisible {
-                LeftSidebarView(appState: appState)
-                Divider().background(LightroomTheme.dividerColor)
+        ZStack {
+            HStack(spacing: 0) {
+                // 1. Left Navigator & Collections Panel
+                if appState.isLeftSidebarVisible {
+                    LeftSidebarView(appState: appState)
+                    Divider().background(LightroomTheme.dividerColor)
+                }
+                
+                // 2. Center Workspace (Grid / Loupe + Filmstrip)
+                WorkspaceView(appState: appState)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                
+                // 3. Right Inspector & Metadata Panel
+                if appState.isRightInspectorVisible {
+                    Divider().background(LightroomTheme.dividerColor)
+                    RightInspectorView(appState: appState)
+                }
             }
             
-            // 2. Center Workspace (Grid / Loupe + Filmstrip)
-            WorkspaceView(appState: appState)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            
-            // 3. Right Inspector & Metadata Panel
-            if appState.isRightInspectorVisible {
-                Divider().background(LightroomTheme.dividerColor)
-                RightInspectorView(appState: appState)
+            // Export Progress Floating HUD
+            if appState.isExporting {
+                exportProgressHUD
             }
         }
         .environmentObject(appState)
@@ -36,6 +43,18 @@ public struct MainLayoutView: View {
                     Label("Open Folder", systemImage: "folder.badge.plus")
                 }
                 .help("Open Photo Folder (Cmd+O)")
+                
+                // Export Button
+                Button {
+                    appState.exportSelectedPhotos()
+                } label: {
+                    let count = appState.selectedAssets.count
+                    let total = appState.displayedAssets.count
+                    let labelText = (count > 1) ? ((count == total) ? "Export All (\(count))" : "Export (\(count))") : "Export"
+                    Label(labelText, systemImage: "square.and.arrow.up")
+                }
+                .help("Export Selected Photos to High-Quality JPEG (Shift+Cmd+E)")
+                .disabled(appState.displayedAssets.isEmpty || appState.isExporting)
                 
                 // Toggle Left Sidebar
                 Button {
@@ -64,6 +83,18 @@ public struct MainLayoutView: View {
             if let url = notif.object as? URL {
                 appState.openFolder(url: url)
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseSelectAll"))) { _ in
+            appState.selectAll()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseDeselectAll"))) { _ in
+            appState.deselectAll()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseExportPhotos"))) { _ in
+            appState.exportSelectedPhotos()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseExportAllPhotos"))) { _ in
+            appState.exportAllPhotos()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseNavPrev"))) { _ in
             appState.selectPreviousPhoto()
@@ -94,5 +125,58 @@ public struct MainLayoutView: View {
         if panel.runModal() == .OK, let url = panel.url {
             appState.openFolder(url: url)
         }
+    }
+    
+    private var exportProgressHUD: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Image(systemName: "square.and.arrow.up.circle.fill")
+                    .foregroundColor(LightroomTheme.accentYellow)
+                    .font(.system(size: 20))
+                
+                Text("Exporting to JPEG...")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(LightroomTheme.textPrimary)
+                
+                Spacer()
+                
+                Button("Cancel") {
+                    appState.cancelExport()
+                }
+                .buttonStyle(.plain)
+                .font(.system(size: 11))
+                .foregroundColor(LightroomTheme.textMuted)
+            }
+            
+            ProgressView(value: appState.exportProgressFraction)
+                .progressViewStyle(.linear)
+                .accentColor(LightroomTheme.accentYellow)
+            
+            HStack {
+                Text(appState.exportCurrentFilename)
+                    .font(.system(size: 11))
+                    .foregroundColor(LightroomTheme.textSecondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                
+                Spacer()
+                
+                Text("\(appState.exportCompletedCount) / \(appState.exportTotalCount)")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(LightroomTheme.accentYellow)
+            }
+        }
+        .padding(16)
+        .frame(width: 360)
+        .background(Color(white: 0.12).opacity(0.96))
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(LightroomTheme.dividerColor, lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.55), radius: 20, x: 0, y: 10)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        .padding(24)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 }

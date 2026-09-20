@@ -188,12 +188,69 @@ public struct LoupeView: View {
                                 }
                                 appState.setFlag(next)
                             }
+                            
+                            // Export Button
+                            Button {
+                                if !appState.selectedAssets.isEmpty {
+                                    appState.exportPhotos(assets: appState.selectedAssets)
+                                } else {
+                                    appState.exportPhotos(assets: [asset])
+                                }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "square.and.arrow.up")
+                                        .font(.system(size: 11))
+                                    Text(appState.selectedAssets.count > 1 ? "Export (\(appState.selectedAssets.count))" : "Export")
+                                        .font(.system(size: 11, weight: .medium))
+                                }
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.black.opacity(0.6))
+                                .cornerRadius(4)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Export to High-Quality JPEG (⇧⌘E)")
                         }
                         .padding(8)
                         .background(Color.black.opacity(0.55))
                         .cornerRadius(6)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                         .padding(12)
+                    }
+                }
+                .contextMenu {
+                    if !appState.selectedAssets.isEmpty {
+                        Button("Export Selected (\(appState.selectedAssets.count)) to JPEG... (⇧⌘E)") {
+                            appState.exportPhotos(assets: appState.selectedAssets)
+                        }
+                    } else if let asset = appState.primarySelectedAsset {
+                        Button("Export to JPEG... (⇧⌘E)") {
+                            appState.exportPhotos(assets: [asset])
+                        }
+                    }
+                    Button("Export All (\(appState.displayedAssets.count)) Images...") {
+                        appState.exportPhotos(assets: appState.displayedAssets)
+                    }
+                    Divider()
+                    Button("Select All (⌘A)") {
+                        appState.selectAll()
+                    }
+                    if !appState.selectedAssetIDs.isEmpty {
+                        Button("Deselect All (⌘D)") {
+                            appState.deselectAll()
+                        }
+                    }
+                    Divider()
+                    if let asset = appState.primarySelectedAsset {
+                        Button("Reveal in Finder") {
+                            NSWorkspace.shared.activateFileViewerSelecting([asset.fileURL])
+                        }
+                        if asset.hasSidecarXMP {
+                            Button("Reveal XMP Sidecar in Finder") {
+                                NSWorkspace.shared.activateFileViewerSelecting([asset.sidecarXMPURL])
+                            }
+                        }
                     }
                 }
             }
@@ -206,6 +263,20 @@ public struct LoupeView: View {
         }
         .focusable()
         .focusEffectDisabled()
+        .onKeyPress(KeyEquivalent("a")) {
+            if NSEvent.modifierFlags.contains(.command) {
+                appState.selectAll()
+                return .handled
+            }
+            return .ignored
+        }
+        .onKeyPress(KeyEquivalent("d")) {
+            if NSEvent.modifierFlags.contains(.command) {
+                appState.deselectAll()
+                return .handled
+            }
+            return .ignored
+        }
         .onKeyPress(.leftArrow) {
             appState.selectPreviousPhoto()
             return .handled

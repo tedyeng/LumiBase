@@ -30,6 +30,15 @@ public final class AppState: ObservableObject {
     @Published public var isRightInspectorVisible: Bool = true
     @Published public var isFilmstripVisible: Bool = true
     
+    // Export State
+    @Published public var isExporting: Bool = false
+    @Published public var exportProgressFraction: Double = 0.0
+    @Published public var exportCurrentFilename: String = ""
+    @Published public var exportCompletedCount: Int = 0
+    @Published public var exportTotalCount: Int = 0
+    @Published public var exportErrorMessage: String?
+    private var exportTask: Task<Void, Never>?
+    
     // Watcher & Keyboard Monitor
     private let directoryWatcher = DirectoryWatcher()
     private var keyMonitor: Any?
@@ -57,6 +66,35 @@ public final class AppState: ObservableObject {
     public func handleGlobalKeyEvent(_ event: NSEvent) -> Bool {
         // Only ignore keyboard shortcuts if user is currently typing in an active text input field
         if let responder = NSApp.keyWindow?.firstResponder as? NSTextView, responder.isFieldEditor {
+            return false
+        }
+        
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        
+        // 0. Modifier Key Combinations (e.g. ⇧⌘E for Export)
+        if flags.contains([.command, .shift]) {
+            let lower = (event.charactersIgnoringModifiers ?? "").lowercased()
+            if lower == "e" {
+                self.exportSelectedPhotos()
+                return true
+            }
+        }
+        
+        // Command combinations (⌘A for Select All, ⌘D for Deselect All)
+        if flags.contains(.command) && !flags.contains(.shift) && !flags.contains(.option) && !flags.contains(.control) {
+            let lower = (event.charactersIgnoringModifiers ?? "").lowercased()
+            if lower == "a" {
+                self.selectAll()
+                return true
+            }
+            if lower == "d" {
+                self.deselectAll()
+                return true
+            }
+        }
+        
+        // Ignore single-character navigation/rating if Command or Control is held
+        if flags.contains(.command) || flags.contains(.control) {
             return false
         }
         
@@ -150,7 +188,7 @@ public final class AppState: ObservableObject {
     }
     
     public var selectedAssets: [PhotoAsset] {
-        allAssets.filter { selectedAssetIDs.contains($0.id) }
+        displayedAssets.filter { selectedAssetIDs.contains($0.id) }
     }
     
     // MARK: - Folder Actions
@@ -232,7 +270,11 @@ public final class AppState: ObservableObject {
     }
     
     public func selectAll() {
-        selectedAssetIDs = Set(displayedAssets.map { $0.id })
+        let assets = displayedAssets
+        selectedAssetIDs = Set(assets.map { $0.id })
+        if primarySelectedAssetID == nil || !selectedAssetIDs.contains(primarySelectedAssetID!) {
+            primarySelectedAssetID = assets.first?.id
+        }
     }
     
     public func deselectAll() {
@@ -358,4 +400,82 @@ public final class AppState: ObservableObject {
             return assets.sorted { $0.fileSize > $1.fileSize }
         }
     }
+    
+    // MARK: - Photo Export Actions
+    
+    public func exportSelectedPhotos() {
+        let targets = selectedAssets.isEmpty ? (primarySelectedAsset != nil ? [primarySelectedAsset!] : []) : selectedAssets
+        guard !targets.isEmpty else { return }
+        exportPhotos(assets: targets)
+    }
+    
+    public func exportAllPhotos() {
+        let targets = displayedAssets
+        guard !targets.isEmpty else { return }
+        exportPhotos(assets: targets)
+    }
+    
+    public func exportPhotos(assets: [PhotoAsset]) {
+        guard !assets.isEmpty, !isExporting else { return }
+        
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Export"
+        panel.title = "Export \(assets.count) Photo\(assets.count > 1 ? "s" : "") to JPEG"
+        
+        if let current = currentFolderURL {
+            panel.directoryURL = current
+        }
+        
+        if panel.runModal() == .OK, let targetDir = panel.url {
+            startExport(assets: assets, outputDirectory: targetDir)
+        }
+    }
+    
+    public func cancelExport() {
+        exportTask?.cancel()
+        exportTask = nil
+        isExporting = false
+    }
+    
+    private func startExport(assets: [PhotoAsset], outputDirectory: URL) {
+        isExporting = true
+        exportProgressFraction = 0.0
+        exportCompletedCount = 0
+        exportTotalCount = assets.count
+        exportErrorMessage = nil
+        exportCurrentFilename = assets.first?.filename ?? ""
+        
+        exportTask = Task { @MainActor [weak self] in
+            do {
+                _ = try await PhotoExportService.shared.exportBatch(
+                    assets: assets,
+                    to: outputDirectory,
+                    quality: 0.95
+                ) { progress in
+                    Task { @MainActor in
+                        self?.exportCompletedCount = progress.completed
+                        self?.exportTotalCount = progress.total
+                        self?.exportProgressFraction = progress.fractionCompleted
+                        self?.exportCurrentFilename = progress.currentFilename
+                    }
+                }
+                
+                self?.isExporting = false
+                self?.exportTask = nil
+                // Reveal exported folder in Finder
+                NSWorkspace.shared.activateFileViewerSelecting([outputDirectory])
+            } catch {
+                self?.isExporting = false
+                self?.exportTask = nil
+                if !(error is CancellationError) {
+                    self?.exportErrorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
 }
+

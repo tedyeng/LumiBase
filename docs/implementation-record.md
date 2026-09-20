@@ -99,6 +99,92 @@ LumiBase 是一套專為 macOS (特別針對 Apple Silicon M 系列晶片) 打�
 
 ---
 
+### 2.9 高畫質 RAW + XMP 轉 JPEG 匯出引擎 (`PhotoExportService`)
+- **需求**：根據 XMP 修圖參數將 RAW 照片匯出成高品質 JPEG，效果媲美 Adobe Lightroom Classic 匯出成果。
+- **實作架構**：
+  1. **全解析度 Demosaicing**：以 Apple CoreImage RAW 引擎以相機感光元件原始解析度（如 Sony A7C II 33MP 7008×4672）完整解算。
+  2. **Adobe PV2012 色彩管線轉譯**：經過 `AdobeColorPipeline` 套用精確的曝光補償、色溫偏移、高光/陰影還原、微對比清晰度與色彩增益。
+  3. **sRGB 色彩空間精確標記**：強制在 `sRGB IEC61966-2.1` 色彩空間下算圖並嵌入 ICC Profile，徹底解決在 Safari、Chrome、macOS Preview 或手機檢視時顏色偏淡偏灰的問題。
+  4. **相機 EXIF / TIFF / GPS 中繼資料完整保留**：從原 RAW 檔提取相機型號（Sony ILCE-7CM2）、鏡頭、快門、光圈、ISO、拍攝日期與 GPS 等資訊，完整寫入匯出的 JPEG。
+  5. **95% 高品質硬體加速壓縮**：透過 Apple Silicon Metal GPU 硬體編碼器加速壓縮。
+  6. **匯出操作介面與快捷鍵**：
+     - Lightroom 標準快捷鍵 `⇧⌘E`（Shift + Command + E）。
+     - 右鍵選單「Export to JPEG... (⇧⌘E)」。
+     - 頂部工具列「Export」快捷按鈕。
+     - 浮動 HUD 進度指示器（顯示百分比、張數進度、當前檔案名稱與取消按鈕）。
+     - 匯出完成自動在 Finder 開啟目標資料夾。
+
+---
+
+### 2.10 全選 (`⌘A`) 與批次匯出所有照片 (`Export All Images`)
+- **需求**：在 Grid View 中按下 `Command + A`（`⌘A`）選取所有照片，並支援一鍵匯出所有照片為高品質 JPEG。
+- **實作細節**：
+  1. **全域鍵盤監聽 (`AppState.swift`)**：在 `handleGlobalKeyEvent` 攔截 `⌘A` 呼叫 `selectAll()`，攔截 `⌘D` 呼叫 `deselectAll()`。
+  2. **View 焦點層級監聽 (`GridView.swift`)**：透過 `.onKeyPress` 綁定 `KeyEquivalent("a")` 與 `KeyEquivalent("d")`，確保無論焦點落在網格或視窗任一位置皆可即時觸發。
+  3. **macOS 標準主選單 (`LumiBaseApp.swift`)**：在 Edit 選單註冊 `Select All (⌘A)` 與 `Deselect All (⌘D)`，在 File 選單註冊 `Export Selected Photos... (⇧⌘E)` 與 `Export All Photos...`。
+  4. **動態介面狀態回饋**：
+     - **頂部工具列按鈕**：依據選取狀態動態顯示 `Export All (N)`、`Export (N)` 或 `Export`，點擊即啟動批次輸出。
+     - **右鍵上下文選單**：右鍵點擊任一已選照片或背景空白處，動態顯示 `Export All (N) Images... (⇧⌘E)`、`Select All (⌘A)` 與 `Deselect All (⌘D)`。
+     - **過濾與排序保持**：`selectedAssets` 會優先遵循使用者目前在 Grid 畫面所設定的排序與篩選條件進行批次算圖。
+
+---
+
+### 2.11 直式照片匯出方向二次旋轉修正 (`Orientation Double-Rotation Bug Fix`)
+- **問題現象**：部分相機直向拍攝的照片（例如 `A7C01319.ARW`，EXIF Orientation = 8）在匯出成 JPEG 後，在預覽程式中變成橫向躺倒。
+- **根本原因**：
+  1. `CIRAWFilter` 在解碼輸出 `outputImage` 時，底層已經自動根據感光元件方向旋轉將像素點矩陣擺正為直向（4672 × 7008）。
+  2. 原本的匯出程式在寫入 JPEG EXIF/TIFF 時，又把來源 RAW 檔的 `Orientation = 8` 標籤原封不動複製給了輸出檔。
+  3. 當 macOS Preview、Finder、Chrome 等看圖軟體打開時，看到畫素已經是 4672 × 7008，卻又被標籤指示「再逆時針旋轉 90 度（Orientation = 8）」，導致照片被「二次旋轉」變成橫的。
+- **解決方案**：
+  - 在 `PhotoExportService.swift` 中，確保所有匯出的像素矩陣在算圖階段已完全轉正（RAW 透過 `CIRAWFilter`，通用點陣圖透過 `CIImage.oriented()`）。
+  - 將輸出 JPEG 的根目錄 `kCGImagePropertyOrientation` 與 TIFF 字典中的 `kCGImagePropertyTIFFOrientation` 明確標記為 `1` (Normal / Upright, 0 度旋轉)。
+  - 同時將 EXIF 的 `PixelXDimension` 與 `PixelYDimension` 正確對齊輸出寬高（4672 × 7008）。
+  - **驗證**：新增 `testExportPortraitSonyRAWPhotoOrientation` 單元測試，針對 `A7C01319.ARW` 斷言輸出尺寸為 4672 × 7008 (Height > Width) 且 Orientation 標記為 1。
+
+---
+
+### 2.12 Loupe View 與 Filmstrip 底部縮圖列全選同步 (`⌘A` / `⌘D` 與多選視覺指示)
+- **需求**：在 Loupe View（大圖預覽檢視）下按下 `Command + A` 全選時，下方 Filmstrip 底片列的所有縮圖照片也必須同步顯示為被選取狀態，並能清晰分辨「當前大圖預覽照片（Primary/Active）」與「被多選的照片（Selected）」。
+- **問題分析**：原本 `FilmstripView` 僅以 `appState.primarySelectedAssetID == asset.id` 判斷是否顯示黃色邊框，未串接 `appState.selectedAssetIDs` 集合，導致 `⌘A` 全選時只有當前預覽的那一張有框線，其餘 27 張看起來完全沒被選取。
+- **實作架構**：
+  1. **雙層選取狀態呈現**：
+     - **當前預覽焦點（`isPrimary`）**：以 Lightroom 標誌性的亮金黃色粗外框（`accentYellow`, 2.5px）標示。
+     - **多選範圍（`isSelected`）**：以高亮白色外框（`Color.white.opacity(0.9)`, 2.0px）搭配半透明白色覆蓋光影（`Color.white.opacity(0.18)`）標示。
+     - **未選取項目**：透明度適度降低（0.65）與細暗框（0.5px），呈現專業層次感。
+  2. **底片列互動支援**：
+     - 點擊縮圖：切換當前大圖顯示。
+     - `⌘ + 點擊` 或 `⇧ + 點擊`：直接在 Filmstrip 進行加選/減選。
+     - 右鍵選單：提供 `Export Selected (N) to JPEG... (⇧⌘E)`、`Export All Images...`、`Select All (⌘A)`、`Deselect All (⌘D)` 與 `Reveal in Finder`。
+  3. **Loupe View 焦點鍵盤監聽**：
+     - 在 `LoupeView` 綁定 `.onKeyPress` 攔截 `⌘A` 與 `⌘D`，右上角匯出按鈕與右鍵選單動態顯示選取張數（如 `Export (28)`）。
+
+---
+
+### 2.13 專屬 macOS 原生應用程式圖示與 Apple HIG 製作規範 (`AppIcon.icns` & `Assets.xcassets`)
+- **需求**：設計 LumiBase 專屬應用程式圖示，採用縮寫 **「LB」**，並徹底解決在 macOS Dock 底部會出現非預期白色底盤（White Platter）的問題。
+- **Apple 官方 macOS App Icon 設計規範 (HIG - Human Interface Guidelines)**：
+  1. **母圖畫布尺寸**：標準母圖為 **1024 × 1024 px**（PNG 格式，色彩空間為 Display P3 或 sRGB，支援 Alpha 透明通道）。
+  2. **主體網格 (Grid Body) 與安全邊距 (Gutter)**：
+     - 圖示主體必須嚴格限制在中央 **824 × 824 px** 範圍內 (`x: 100, y: 100, w: 824, h: 824`)。
+     - 四邊各留 **100 px 的透明安全留白**，專供光影自然散射與投射立體陰影（Drop Shadow），呈現 Dock 上的真實懸浮感。
+  3. **連續曲率超橢圓 (Squircle Geometry)**：
+     - macOS 規定不使用傳統生硬的圓角矩形，而是採用 **Superellipse（曲率連續超橢圓，約 60% 圓角平滑度）**。
+     - 在 824×824 尺寸下，對應的圓角半徑為 **約 185 px**（曲率約 22.4%）。
+  4. **光影與立體陰影層次**：
+     - **環境光陰影 (Ambient Shadow)**：半徑大而柔和（Blur ~20px - 24px，Y-offset ~-4px，不透明度 ~30%-40%）。
+     - **主要投射陰影 (Directional Key Shadow)**：模擬頂部 90° 光源向下投射（Y-offset ~-10px 至 -14px，Blur ~20px - 28px，不透明度 ~40%-50%）。
+     - **頂部高光細邊 (Edge Highlight)**：主體上緣具有 1px - 2px 的細微明亮邊框，凸顯實體層次。
+  5. **Dock 底部出現「白色圓角底盤」的原因與防範**：
+     - 自 macOS 11 Big Sur 至 macOS 15 Sequoia，系統導入了舊版圖示相容補償機制。
+     - 若 App 圖示的幾何形狀未填滿 824×824 網格、安全邊距異常或缺乏標準 Squircle 邊界，macOS 會判定該圖示未遵循 Big Sur 規範，並自動在背後塞入一個**白色圓角矩形底盤（White Platter）**以維持 Dock 一致性。
+     - **防範對策**：背景嚴格填滿 824×824 Squircle 深色主體，並精準留出 100px 陰影留白，確保系統能原生渲染深色圖示而不再強制加襯白底。
+- **Adobe Creative Cloud (Lightroom `Lr` / `LrC`) 設計語彙導入**：
+  - 借鏡 Adobe 專業設計：以午夜深藍（`#00172A`）為基底，外緣內縮細亮藍邊框（`#31A8FF`，Lightroom 識別色），中央置放俐落現代字體「**LB**」。
+  - 產出涵蓋 16×16 至 1024×1024 Retina（1x / 2x）全解析度之 `AppIcon.icns` 與 `Assets.xcassets/AppIcon.appiconset`。
+  - 配置 Xcode 專案 `PBXResourcesBuildPhase` 與 `CFBundleIconFile = AppIcon`，在 macOS Dock、Finder 與應用程式切換器中即時生效。
+
+---
+
 ## 3. 模組架構總覽
 
 ```
@@ -156,11 +242,19 @@ LumiBase/
   - `CameraMetadataFormatting`：通過
   - `DCPProfileManagerNormalizationAndDiscovery`：通過
   - `HistogramComputation`：通過
+  - `SelectAllAndSelectedAssets`：通過
   - `SupportedFileTypes`：通過
   - `ThumbnailCacheKeyGeneration`：通過
+  - `ExportBatchProgressFraction`：通過
+  - `ExportPortraitSonyRAWPhotoOrientation`：通過
+  - `ExportRasterImageToJPEG`：通過
+  - `ExportRealSonyA7C2RAWPhoto`：通過
+  - `OldExportedJPEGThumbnail`：通過
+  - `ThumbnailPortraitRAWPhotoOrientation`：通過
   - `FilterCriteriaMatching`：通過
   - `ParseAdobeXMPStandard`：通過
   - `ParseCameraRawDevelopSettings`：通過
   - `XMPRoundTrip`：通過
-  - **共 10/10 測試全數通過，0 錯誤。**
+  - **共 17/17 測試全數通過，0 錯誤。**
 - **專案建置 (`xcodebuild`)**：`** BUILD SUCCEEDED **`
+

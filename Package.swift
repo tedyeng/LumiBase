@@ -15,7 +15,8 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "LumiBase",
-            path: "LumiBase"
+            path: "LumiBase",
+            exclude: ["Resources"]
         ),
         .testTarget(
             name: "LumiBaseTests",

@@ -2,6 +2,15 @@ import SwiftUI
 
 @main
 struct LumiBaseApp: App {
+    init() {
+        if let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
+           let iconImage = NSImage(contentsOf: iconURL) {
+            NSApplication.shared.applicationIconImage = iconImage
+        } else if let assetIcon = NSImage(named: "AppIcon") {
+            NSApplication.shared.applicationIconImage = assetIcon
+        }
+    }
+    
     var body: some Scene {
         WindowGroup {
             MainLayoutView()
@@ -23,6 +32,28 @@ struct LumiBaseApp: App {
                     }
                 }
                 .keyboardShortcut("o", modifiers: .command)
+                
+                Divider()
+                
+                Button("Export Selected Photos...") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseExportPhotos"), object: nil)
+                }
+                .keyboardShortcut("e", modifiers: [.command, .shift])
+                
+                Button("Export All Photos...") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseExportAllPhotos"), object: nil)
+                }
+            }
+            CommandGroup(replacing: .pasteboard) {
+                Button("Select All") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseSelectAll"), object: nil)
+                }
+                .keyboardShortcut("a", modifiers: .command)
+                
+                Button("Deselect All") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseDeselectAll"), object: nil)
+                }
+                .keyboardShortcut("d", modifiers: .command)
             }
             CommandMenu("Photo") {
                 Button("Previous Photo") {

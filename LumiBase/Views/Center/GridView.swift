@@ -82,6 +82,31 @@ public struct GridView: View {
                     }
                     return .ignored
                 }
+                .onKeyPress(KeyEquivalent("a"), phases: .down) { press in
+                    if press.modifiers.contains(.command) {
+                        appState.selectAll()
+                        return .handled
+                    }
+                    return .ignored
+                }
+                .onKeyPress(KeyEquivalent("d"), phases: .down) { press in
+                    if press.modifiers.contains(.command) {
+                        appState.deselectAll()
+                        return .handled
+                    }
+                    return .ignored
+                }
+                .contextMenu {
+                    Button("Select All (⌘A)") {
+                        appState.selectAll()
+                    }
+                    if !appState.displayedAssets.isEmpty {
+                        Button("Export All (\(appState.displayedAssets.count)) Images... (⇧⌘E)") {
+                            appState.selectAll()
+                            appState.exportPhotos(assets: appState.displayedAssets)
+                        }
+                    }
+                }
                 .onChange(of: appState.primarySelectedAssetID) { _, newID in
                     if let newID = newID {
                         withAnimation(.easeInOut(duration: 0.15)) {
@@ -171,6 +196,44 @@ public struct GridView: View {
             Button("Pick (P)") { appState.selectAsset(asset); appState.setFlag(.pick) }
             Button("Reject (X)") { appState.selectAsset(asset); appState.setFlag(.reject) }
             Button("Unflag (U)") { appState.selectAsset(asset); appState.setFlag(.unflagged) }
+        }
+        
+        Divider()
+        
+        let selectedCount = appState.selectedAssets.count
+        let totalCount = appState.displayedAssets.count
+        let isBatch = appState.selectedAssetIDs.contains(asset.id) && selectedCount > 1
+        let isAll = isBatch && selectedCount == totalCount
+        
+        let exportTitle = isAll ? "Export All (\(selectedCount)) Images... (⇧⌘E)" :
+                          (isBatch ? "Export \(selectedCount) Photos... (⇧⌘E)" : "Export to JPEG... (⇧⌘E)")
+        
+        Button(exportTitle) {
+            if isBatch {
+                appState.exportPhotos(assets: appState.selectedAssets)
+            } else {
+                appState.selectAsset(asset)
+                appState.exportPhotos(assets: [asset])
+            }
+        }
+        
+        if !isAll && totalCount > 1 {
+            Button("Export All (\(totalCount)) Images...") {
+                appState.selectAll()
+                appState.exportPhotos(assets: appState.displayedAssets)
+            }
+        }
+        
+        Divider()
+        
+        Button("Select All (⌘A)") {
+            appState.selectAll()
+        }
+        
+        if selectedCount > 1 {
+            Button("Deselect All (⌘D)") {
+                appState.deselectAll()
+            }
         }
         
         Divider()

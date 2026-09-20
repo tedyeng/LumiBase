@@ -20,7 +20,15 @@ LumiBase 是一套專為 macOS (特別是 Apple Silicon M 系列晶片) 打造�
 - 🔄 **雙向 XMP Sidecar 同步 (Non-Destructive)**：
   - 支援讀取與寫入標準 Adobe `.xmp` 副檔。
   - 評星等（Rating）或旗標（Pick/Reject）時自動產生 `.xmp`，不修改 RAW 原檔，並可無縫在 Adobe Lightroom Classic / Bridge / Capture One 中開啟。
+- 📤 **媲美 Lightroom 的 RAW+XMP 高畫質 JPEG 匯出**：
+  - 感光元件全解析度 Demosaicing 算圖。
+  - 完美套用 Adobe PV2012 色彩管線。
+  - 完整保留相機機身、鏡頭、快門、光圈、ISO、日期與 GPS 等 EXIF 中繼資料。
+  - 強制轉換並標記 `sRGB` 色彩空間與 ICC Profile，在各種裝置與螢幕上色彩鮮明一致。
+  - 支援批次匯出與即時進度浮動 HUD。
 - ⌨️ **Lightroom 經典快捷鍵操作**：
+  - **全選與取消全選**：`⌘A` (Command + A) 全選目前網格照片，`⌘D` (Command + D) 取消全選。
+  - **匯出**：`⇧⌘E` (Shift + Command + E) 快速匯出選取（或全部）照片為高品質 JPEG。
   - **Grid 2D 導覽**：`↑` / `↓` 整行跳轉，`←` / `→` 前後選取。
   - **檢視切換**：`Enter` / `Return` / `E` / `Space` 進入大圖預覽（Loupe View），`Esc` / `G` 返回網格（Grid View）。
   - **評分與旗標**：`0~5` 快速評星等，`P` 標記留用（Pick），`X` 標記剔除（Reject），`U` 取消標記（Unflag）。
@@ -47,6 +55,9 @@ LumiBase 是一套專為 macOS (特別是 Apple Silicon M 系列晶片) 打造�
 
 | 動作 | 快捷鍵 |
 | :--- | :--- |
+| **全選所有照片 (Select All)** | `⌘A` (Command + A) |
+| **取消全選 (Deselect All)** | `⌘D` (Command + D) |
+| **匯出至高品質 JPEG (Export)** | `⇧⌘E` (Shift + Command + E) |
 | **進入大圖預覽 (Loupe View)** | `Enter` / `Return`、`E`、雙擊滑鼠 |
 | **返回圖庫網格 (Grid View)** | `Esc`、`G` |
 | **切換 網格 / 預覽** | `Space` (空白鍵) |
@@ -92,7 +103,9 @@ xcodebuild -scheme LumiBase -destination 'platform=macOS' build
 
 ---
 
-## 📖 詳細實作紀錄
+## 📖 專案文件與版本紀錄 (Documentation & Changelog)
 
-詳細的架構演進、問題診斷與色彩管線設計細節請參閱：
-👉 [`docs/implementation-record.md`](docs/implementation-record.md)
+- 📝 **版本更新日誌 (Changelog)**：[`CHANGELOG.md`](CHANGELOG.md)
+- 📐 **架構演進與實作紀錄**：[`docs/implementation-record.md`](docs/implementation-record.md)
+- 🎨 **macOS App Icon 規範與設計**：參見 [`docs/implementation-record.md#213-專屬-macos-原生應用程式圖示-appiconicns--assetsxcassets`](docs/implementation-record.md#213-專屬-macos-原生應用程式圖示-appiconicns--assetsxcassets)
+

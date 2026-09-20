@@ -18,7 +18,7 @@ public final class ThumbnailCacheManager: @unchecked Sendable {
         
         // Setup disk cache in Application Support / Caches / LumiBase (versioned)
         let cachesDirectory = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first!
-        diskCacheURL = cachesDirectory.appendingPathComponent("com.lumibase.thumbnails.v2", isDirectory: true)
+        diskCacheURL = cachesDirectory.appendingPathComponent("com.lumibase.thumbnails.v3", isDirectory: true)
         
         try? fileManager.createDirectory(at: diskCacheURL, withIntermediateDirectories: true)
     }
