@@ -54,6 +54,13 @@ struct LumiBaseApp: App {
                     NotificationCenter.default.post(name: NSNotification.Name("LumiBaseDeselectAll"), object: nil)
                 }
                 .keyboardShortcut("d", modifiers: .command)
+                
+                Divider()
+                
+                Button("Move to Trash...") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseDeletePhotos"), object: nil)
+                }
+                .keyboardShortcut(.delete, modifiers: .command)
             }
             CommandMenu("Photo") {
                 Button("Previous Photo") {

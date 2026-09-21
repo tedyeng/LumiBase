@@ -112,6 +112,45 @@ public struct MainLayoutView: View {
                 appState.setFlag(flag)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseDeletePhotos"))) { _ in
+            appState.requestDeleteSelectedPhotos()
+        }
+        .alert(
+            deleteAlertTitle,
+            isPresented: $appState.showDeleteConfirmation
+        ) {
+            Button("Cancel", role: .cancel) {
+                appState.cancelDelete()
+            }
+            Button("Move to Trash", role: .destructive) {
+                appState.confirmDeletePendingPhotos()
+            }
+        } message: {
+            Text(deleteAlertMessage)
+        }
+    }
+    
+    private var deleteAlertTitle: String {
+        let count = appState.pendingDeleteAssets.count
+        if count == 1, let name = appState.pendingDeleteAssets.first?.filename {
+            return "Move \"\(name)\" to Trash?"
+        } else {
+            return "Move \(count) Photos to Trash?"
+        }
+    }
+    
+    private var deleteAlertMessage: String {
+        let count = appState.pendingDeleteAssets.count
+        let hasXmp = appState.pendingDeleteAssets.contains { $0.hasSidecarXMP }
+        
+        var msg = (count == 1) ?
+            "Are you sure you want to move this photo to the Trash?" :
+            "Are you sure you want to move these \(count) photos to the Trash?"
+        
+        if hasXmp {
+            msg += "\nAny corresponding XMP sidecar files will also be moved to the Trash."
+        }
+        return msg
     }
     
     private func chooseFolder() {

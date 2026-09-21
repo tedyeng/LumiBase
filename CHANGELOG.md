@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-09-21
+
+### Added
+- **Enhanced Multi-Photo Selection**:
+  - **Control / Command Click (`^ + Click` / `⌘ + Click`)**: Continuous multi-selection toggle supporting both macOS (`⌘`) and Windows/Cross-platform (`⌃`) mental models to seamlessly select or unselect individual photos without resetting existing selections.
+  - **Shift Click (`⇧ + Click`)**: Contiguous range selection, selecting all photos between the anchor photo and the clicked target photo based on current sort/filter order.
+  - Consistent behavior and selection highlights in both **Grid View** and **Loupe View** (Filmstrip bottom carousel).
+- **Selection Anchor Tracking (`selectionAnchorAssetID`)**:
+  - Automatically maintains the reference anchor photo during shift range expansion/contraction while setting the clicked photo as primary.
+- **Photo & XMP Sidecar Deletion (`⌘ + Backspace` / Move to Trash)**:
+  - Select one or multiple photos and press `⌘ + Backspace` (`Command + Delete`) to trigger deletion.
+  - Native macOS confirmation modal dialog detailing photo count and warning that corresponding `.xmp` sidecar files will also be moved to the Trash.
+  - Safe macOS Trash integration (`FileManager.trashItem`) preventing accidental data loss, with fallback to permanent deletion if needed.
+  - Automatic cleanup of both `.ARW.xmp` and `.xmp` sidecars.
+  - Seamless selection advance to the adjacent photo upon deletion.
+  - Fully accessible in **Grid View**, **Loupe View**, bottom **FilmstripView**, right-click contextual menus, and top application Edit menu.
+- **Automated DMG Distribution Script (`package_dmg.sh`)**:
+  - One-click build and DMG packaging script for distributing standalone macOS installers.
+  - Automatically compiles optimized Release build, configures staging folder with `/Applications` drag-and-drop symlink, and generates compressed read-only DMG with Apple `hdiutil`.
+- **Unit Tests**:
+  - Added `testRequestDeletePopulatesPendingAssets` and `testConfirmDeleteRemovesFilesAndXMP` (21/21 unit tests passing, 0 failures).
+
+---
+
 ## [1.1.0] - 2026-09-20
 
 ### Added

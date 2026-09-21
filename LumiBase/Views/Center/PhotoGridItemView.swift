@@ -7,7 +7,7 @@ public struct PhotoGridItemView: View {
     public let isSelected: Bool
     public let isPrimary: Bool
     public let size: CGFloat
-    public let onSelect: (Bool) -> Void
+    public let onSelect: (_ isToggle: Bool, _ isRange: Bool) -> Void
     public let onDoubleClick: () -> Void
     public let onRatingChange: (Int) -> Void
     public let onFlagToggle: () -> Void
@@ -109,8 +109,10 @@ public struct PhotoGridItemView: View {
         )
         .contentShape(Rectangle())
         .onTapGesture {
-            let isCommandDown = NSEvent.modifierFlags.contains(.command)
-            onSelect(isCommandDown)
+            let flags = NSEvent.modifierFlags
+            let isToggle = flags.contains(.control) || flags.contains(.command)
+            let isRange = flags.contains(.shift)
+            onSelect(isToggle, isRange)
         }
         .simultaneousGesture(
             TapGesture(count: 2).onEnded {

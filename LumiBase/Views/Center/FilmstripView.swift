@@ -17,8 +17,8 @@ public struct FilmstripView: View {
                             asset: asset,
                             isSelected: isSelected,
                             isPrimary: isPrimary,
-                            onSelect: { multiSelect in
-                                appState.selectAsset(asset, multiSelect: multiSelect)
+                            onSelect: { isToggle, isRange in
+                                appState.selectAsset(asset, isToggle: isToggle, isRange: isRange)
                             }
                         )
                         .id(asset.id)
@@ -44,6 +44,14 @@ public struct FilmstripView: View {
                             Button("Reveal in Finder") {
                                 NSWorkspace.shared.activateFileViewerSelecting([asset.fileURL])
                             }
+                            Divider()
+                            Button("Move to Trash (⌘⌫)", role: .destructive) {
+                                if appState.selectedAssetIDs.contains(asset.id) {
+                                    appState.requestDeleteSelectedPhotos()
+                                } else {
+                                    appState.requestDeleteSelectedPhotos(targets: [asset])
+                                }
+                            }
                         }
                     }
                 }
@@ -67,7 +75,7 @@ private struct FilmstripItemView: View {
     let asset: PhotoAsset
     let isSelected: Bool
     let isPrimary: Bool
-    let onSelect: (Bool) -> Void
+    let onSelect: (_ isToggle: Bool, _ isRange: Bool) -> Void
     
     @State private var thumbnail: NSImage?
     
@@ -127,8 +135,10 @@ private struct FilmstripItemView: View {
         )
         .contentShape(Rectangle())
         .onTapGesture {
-            let isMulti = NSEvent.modifierFlags.contains(.command) || NSEvent.modifierFlags.contains(.shift)
-            onSelect(isMulti)
+            let flags = NSEvent.modifierFlags
+            let isToggle = flags.contains(.control) || flags.contains(.command)
+            let isRange = flags.contains(.shift)
+            onSelect(isToggle, isRange)
         }
         .task(id: asset.id) {
             let loaded = await ThumbnailLoader.shared.loadThumbnail(for: asset, maxPixelSize: 180)

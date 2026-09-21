@@ -40,3 +40,7 @@ DerivedData/
 *.NEF
 *.DNG
 *.RAF
+
+# Packaged Installers
+*.dmg
+

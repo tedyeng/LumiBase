@@ -183,6 +183,59 @@ LumiBase 是一套專為 macOS (特別針對 Apple Silicon M 系列晶片) 打�
   - 產出涵蓋 16×16 至 1024×1024 Retina（1x / 2x）全解析度之 `AppIcon.icns` 與 `Assets.xcassets/AppIcon.appiconset`。
   - 配置 Xcode 專案 `PBXResourcesBuildPhase` 與 `CFBundleIconFile = AppIcon`，在 macOS Dock、Finder 與應用程式切換器中即時生效。
 
+### 2.14 增強選取功能：`Control/Command` 連續多選與 `Shift` 連續範圍選取
+- **需求**：
+  1. 點選一張照片後，按住 `Control`（或 `Command`）點選其他照片，可持續加選/減選多張照片。
+  2. 點選第一張照片後，按住 `Shift` 點選第二張照片，可將第一張與第二張之間的所有照片一次連續全選。
+  3. 支援 `Grid View`（主圖庫網格）與 `Loupe View`（底部底片縮圖列 FilmstripView）。
+- **實作細節**：
+  1. **錨點記憶機制 (`AppState.selectionAnchorAssetID`)**：
+     - 在使用者單擊照片時記錄為起始錨點（Anchor）。
+     - 當使用者按住 `Shift` 點選目標照片時，錨點保持固定，計算 `displayedAssets` 中介於錨點與目標點之間的所有索引範圍並整批選取；點選點設為 `primarySelectedAssetID`。
+     - 若反向或縮減 Shift 點選，範圍動態縮放。
+  2. **跨平台相容點選修飾鍵 (`Control` 與 `Command`)**：
+     - 在 `PhotoGridItemView` 與 `FilmstripItemView` 中透過 `NSEvent.modifierFlags` 偵測 `.control` 或 `.command` 標記為 `isToggle`。
+     - 偵測 `.shift` 標記為 `isRange`。
+     - 單擊直接切換單選並更新錨點。
+  3. **視圖同步反饋**：
+     - `Grid View`：選取項目以高亮白色外框標示，當前主預覽照片以金黃色標示。
+     - `Loupe View` 底部 `FilmstripView`：同步反映多選集合（白色光影與外框）與目前主檢視項目（黃框），支援直接在 Filmstrip 進行 Shift/Control 點選。
+  4. **單元測試驗證**：
+     - 新增 `testControlMultiSelectToggle` 與 `testShiftRangeSelection`，覆蓋單選、加選、減選、正向 Shift 區間選取、反向 Shift 區間選取及混合操作。
+
+---
+
+### 2.15 照片與 XMP 側邊副檔安全刪除機制 (`Command + Backspace` / Move to Trash)
+- **需求**：
+  1. 選取照片後按下 `Command + Backspace`（`⌘⌫`）可觸發刪除。
+  2. 真正刪除前彈出原生確認對話框（Confirmation Modal Alert），提供「Move to Trash」與「Cancel」。
+  3. `Grid View` 與 `Loupe View` 皆具備此功能。
+  4. 照片若存在對應的 `.xmp` 副檔（如 `DSC001.ARW.xmp` 或 `DSC001.xmp`），必須一併刪除。
+- **實作細節**：
+  1. **安全刪除核心 (`AppState.swift`)**：
+     - `requestDeleteSelectedPhotos()`：收集目前已選取照片清單（或 Loupe View 當前照片），設定待刪除陣列並觸發 `showDeleteConfirmation = true`。
+     - `confirmDeletePendingPhotos()`：
+       - 使用 Apple 原生 `FileManager.default.trashItem(at:resultingItemURL:)` 將照片原檔移入 macOS 垃圾桶（避免不可逆誤刪，支援 Finder 放回原處）。
+       - 同步檢查並將對應的 XMP 副檔（包含檔案全名 `.xmp` 與純主檔名 `.xmp`）移入垃圾桶。
+       - 自 `allAssets` 與 `selectedAssetIDs` 移除該項目，並平滑將選取焦點推進至相鄰的下一張照片。
+  2. **快速鍵與全域監聽**：
+     - 在全域鍵盤監聽（`handleGlobalKeyEvent`）與各視圖（`GridView`、`LoupeView`）的 `.onKeyPress(.delete)` 中攔截 `⌘ + Delete`。
+     - 在主選單 Edit（編輯）與右鍵選單（Context Menu）中提供「Move to Trash (⌘⌫)」。
+  3. **原生對話框整合 (`MainLayoutView.swift`)**：
+     - 透過 `.alert` 綁定 `appState.showDeleteConfirmation`，明確提示照片名稱或張數，並提醒 XMP 副檔亦將一併移入垃圾桶。
+  4. **單元測試驗證**：
+     - 新增 `testRequestDeletePopulatesPendingAssets` 與 `testConfirmDeleteRemovesFilesAndXMP`，在暫存沙盒目錄建立真實相片與 XMP 副檔，驗證兩者皆確實被移除且焦點正常遞移。
+
+---
+
+### 2.16 獨立跨機器發布與自動化 DMG 打包工具 (`package_dmg.sh`)
+- **獨立運作保證 (Standalone Architecture)**：
+  - LumiBase 100% 採用 macOS 原生 CoreImage Apple RAW 引擎與獨立 PV2012 色彩管線，**目標 Mac 無需安裝任何 Adobe 軟體或 Lightroom** 即可獨立完整運作。
+  - DCP Profile 管理器具備無縫降級機制，未安裝 Adobe 時自動使用原廠校正矩陣，確保極致穩定性。
+- **自動化 DMG 壓製流程 (`package_dmg.sh`)**：
+  - 一鍵完成：清理舊快取 ➜ 自動以 Xcode 編譯最高效能 Release 版本 ➜ 建立 `/Applications` 拖曳安裝捷徑 ➜ 使用 Apple `hdiutil` 壓製為標準唯讀壓縮 `.dmg`。
+  - 將生成的 `*.dmg` 納入 `.gitignore`，保持 Git 儲存庫乾淨輕量。
+
 ---
 
 ## 3. 模組架構總覽
@@ -243,6 +296,10 @@ LumiBase/
   - `DCPProfileManagerNormalizationAndDiscovery`：通過
   - `HistogramComputation`：通過
   - `SelectAllAndSelectedAssets`：通過
+  - `ControlMultiSelectToggle`：通過
+  - `ShiftRangeSelection`：通過
+  - `RequestDeletePopulatesPendingAssets`：通過
+  - `ConfirmDeleteRemovesFilesAndXMP`：通過
   - `SupportedFileTypes`：通過
   - `ThumbnailCacheKeyGeneration`：通過
   - `ExportBatchProgressFraction`：通過
@@ -255,6 +312,6 @@ LumiBase/
   - `ParseAdobeXMPStandard`：通過
   - `ParseCameraRawDevelopSettings`：通過
   - `XMPRoundTrip`：通過
-  - **共 17/17 測試全數通過，0 錯誤。**
+  - **共 21/21 測試全數通過，0 錯誤。**
 - **專案建置 (`xcodebuild`)**：`** BUILD SUCCEEDED **`
 

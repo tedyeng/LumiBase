@@ -25,8 +25,8 @@ public struct GridView: View {
                                     isSelected: isSelected,
                                     isPrimary: isPrimary,
                                     size: appState.thumbnailSize,
-                                    onSelect: { multiSelect in
-                                        appState.selectAsset(asset, multiSelect: multiSelect)
+                                    onSelect: { isToggle, isRange in
+                                        appState.selectAsset(asset, isToggle: isToggle, isRange: isRange)
                                     },
                                     onDoubleClick: {
                                         appState.selectAsset(asset)
@@ -92,6 +92,13 @@ public struct GridView: View {
                 .onKeyPress(KeyEquivalent("d"), phases: .down) { press in
                     if press.modifiers.contains(.command) {
                         appState.deselectAll()
+                        return .handled
+                    }
+                    return .ignored
+                }
+                .onKeyPress(.delete, phases: .down) { press in
+                    if press.modifiers.contains(.command) {
+                        appState.requestDeleteSelectedPhotos()
                         return .handled
                     }
                     return .ignored
@@ -245,6 +252,16 @@ public struct GridView: View {
         if asset.hasSidecarXMP {
             Button("Reveal XMP Sidecar in Finder") {
                 NSWorkspace.shared.activateFileViewerSelecting([asset.sidecarXMPURL])
+            }
+        }
+        
+        Divider()
+        
+        Button("Move to Trash (⌘⌫)", role: .destructive) {
+            if appState.selectedAssetIDs.contains(asset.id) {
+                appState.requestDeleteSelectedPhotos()
+            } else {
+                appState.requestDeleteSelectedPhotos(targets: [asset])
             }
         }
     }

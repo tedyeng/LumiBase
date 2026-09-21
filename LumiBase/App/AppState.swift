@@ -17,6 +17,7 @@ public final class AppState: ObservableObject {
     // Selection state
     @Published public var selectedAssetIDs: Set<String> = []
     @Published public var primarySelectedAssetID: String?
+    @Published public var selectionAnchorAssetID: String?
     
     // View state
     @Published public var viewMode: ViewMode = .grid
@@ -38,6 +39,10 @@ public final class AppState: ObservableObject {
     @Published public var exportTotalCount: Int = 0
     @Published public var exportErrorMessage: String?
     private var exportTask: Task<Void, Never>?
+    
+    // Deletion State
+    @Published public var showDeleteConfirmation: Bool = false
+    @Published public var pendingDeleteAssets: [PhotoAsset] = []
     
     // Watcher & Keyboard Monitor
     private let directoryWatcher = DirectoryWatcher()
@@ -80,8 +85,12 @@ public final class AppState: ObservableObject {
             }
         }
         
-        // Command combinations (⌘A for Select All, ⌘D for Deselect All)
+        // Command combinations (⌘A for Select All, ⌘D for Deselect All, ⌘⌫ for Delete)
         if flags.contains(.command) && !flags.contains(.shift) && !flags.contains(.option) && !flags.contains(.control) {
+            if event.keyCode == 51 { // 51 is Backspace / Delete
+                self.requestDeleteSelectedPhotos()
+                return true
+            }
             let lower = (event.charactersIgnoringModifiers ?? "").lowercased()
             if lower == "a" {
                 self.selectAll()
@@ -198,6 +207,7 @@ public final class AppState: ObservableObject {
         currentFolderURL = url
         selectedAssetIDs.removeAll()
         primarySelectedAssetID = nil
+        selectionAnchorAssetID = nil
         
         directoryWatcher.startWatching(url: url)
         
@@ -207,6 +217,7 @@ public final class AppState: ObservableObject {
             self.allAssets = quickAssets
             if let first = self.displayedAssets.first {
                 self.primarySelectedAssetID = first.id
+                self.selectionAnchorAssetID = first.id
                 self.selectedAssetIDs = [first.id]
             }
         }
@@ -222,6 +233,7 @@ public final class AppState: ObservableObject {
             if self.primarySelectedAssetID == nil || !assets.contains(where: { $0.id == self.primarySelectedAssetID }) {
                 if let first = sorted.first {
                     self.primarySelectedAssetID = first.id
+                    self.selectionAnchorAssetID = first.id
                     self.selectedAssetIDs = [first.id]
                 }
             }
@@ -241,6 +253,7 @@ public final class AppState: ObservableObject {
             if let primaryID = primarySelectedAssetID, !assets.contains(where: { $0.id == primaryID }) {
                 let sorted = self.displayedAssets
                 self.primarySelectedAssetID = sorted.first?.id
+                self.selectionAnchorAssetID = sorted.first?.id
                 if let first = sorted.first {
                     self.selectedAssetIDs = [first.id]
                 } else {
@@ -252,8 +265,36 @@ public final class AppState: ObservableObject {
     
     // MARK: - Selection Actions
     
-    public func selectAsset(_ asset: PhotoAsset, multiSelect: Bool = false) {
-        if multiSelect {
+    /// Selects an asset with support for:
+    /// - Normal click: select single asset, reset previous selection, and set as primary & anchor
+    /// - Toggle (Control/Command + click): toggle individual asset in selection without resetting others
+    /// - Range (Shift + click): select contiguous range of assets between anchor and clicked asset
+    public func selectAsset(_ asset: PhotoAsset, isToggle: Bool = false, isRange: Bool = false) {
+        let currentList = displayedAssets
+        
+        if isRange {
+            // Determine starting point (anchor)
+            let anchorID = selectionAnchorAssetID ?? primarySelectedAssetID ?? asset.id
+            guard let anchorIndex = currentList.firstIndex(where: { $0.id == anchorID }),
+                  let targetIndex = currentList.firstIndex(where: { $0.id == asset.id }) else {
+                // Fallback to single select
+                selectedAssetIDs = [asset.id]
+                primarySelectedAssetID = asset.id
+                selectionAnchorAssetID = asset.id
+                return
+            }
+            
+            let startIndex = min(anchorIndex, targetIndex)
+            let endIndex = max(anchorIndex, targetIndex)
+            let rangeIDs = currentList[startIndex...endIndex].map { $0.id }
+            
+            selectedAssetIDs = Set(rangeIDs)
+            primarySelectedAssetID = asset.id
+            // Note: In standard macOS / Lightroom, anchor remains at the original starting point during shift-click
+            if selectionAnchorAssetID == nil {
+                selectionAnchorAssetID = anchorID
+            }
+        } else if isToggle {
             if selectedAssetIDs.contains(asset.id) {
                 selectedAssetIDs.remove(asset.id)
                 if primarySelectedAssetID == asset.id {
@@ -263,10 +304,17 @@ public final class AppState: ObservableObject {
                 selectedAssetIDs.insert(asset.id)
                 primarySelectedAssetID = asset.id
             }
+            selectionAnchorAssetID = asset.id
         } else {
             selectedAssetIDs = [asset.id]
             primarySelectedAssetID = asset.id
+            selectionAnchorAssetID = asset.id
         }
+    }
+    
+    /// Backward-compatibility overload for simple multiSelect boolean
+    public func selectAsset(_ asset: PhotoAsset, multiSelect: Bool) {
+        selectAsset(asset, isToggle: multiSelect, isRange: false)
     }
     
     public func selectAll() {
@@ -275,11 +323,15 @@ public final class AppState: ObservableObject {
         if primarySelectedAssetID == nil || !selectedAssetIDs.contains(primarySelectedAssetID!) {
             primarySelectedAssetID = assets.first?.id
         }
+        if selectionAnchorAssetID == nil {
+            selectionAnchorAssetID = primarySelectedAssetID
+        }
     }
     
     public func deselectAll() {
         selectedAssetIDs.removeAll()
         primarySelectedAssetID = nil
+        selectionAnchorAssetID = nil
     }
     
     public func selectNextPhoto() {
@@ -476,6 +528,106 @@ public final class AppState: ObservableObject {
                 }
             }
         }
+    }
+    
+    // MARK: - Photo Deletion Actions
+    
+    /// Requests deletion of selected photo(s) by populating `pendingDeleteAssets` and triggering confirmation modal
+    public func requestDeleteSelectedPhotos(targets: [PhotoAsset]? = nil) {
+        let items: [PhotoAsset]
+        if let explicit = targets, !explicit.isEmpty {
+            items = explicit
+        } else if !selectedAssets.isEmpty {
+            items = selectedAssets
+        } else if let primary = primarySelectedAsset {
+            items = [primary]
+        } else {
+            return
+        }
+        
+        guard !items.isEmpty else { return }
+        self.pendingDeleteAssets = items
+        self.showDeleteConfirmation = true
+    }
+    
+    /// Confirms and executes moving pending photo(s) and any associated XMP sidecar(s) to macOS Trash
+    public func confirmDeletePendingPhotos() {
+        guard !pendingDeleteAssets.isEmpty else { return }
+        
+        let deletedAssets = pendingDeleteAssets
+        let currentList = displayedAssets
+        let deletedIDs = Set(deletedAssets.map { $0.id })
+        
+        // Calculate the next candidate asset to select after deletion
+        var nextAssetToSelect: PhotoAsset?
+        if let primaryID = primarySelectedAssetID,
+           let currentIndex = currentList.firstIndex(where: { $0.id == primaryID }) {
+            // Try subsequent items first
+            if let nextItem = currentList[(currentIndex + 1)...].first(where: { !deletedIDs.contains($0.id) }) {
+                nextAssetToSelect = nextItem
+            } else if let prevItem = currentList[..<currentIndex].reversed().first(where: { !deletedIDs.contains($0.id) }) {
+                nextAssetToSelect = prevItem
+            }
+        }
+        
+        let fileManager = FileManager.default
+        
+        for asset in deletedAssets {
+            let photoURL = asset.fileURL
+            
+            // 1. Move primary photo file to macOS Trash
+            if fileManager.fileExists(atPath: photoURL.path) {
+                do {
+                    try fileManager.trashItem(at: photoURL, resultingItemURL: nil)
+                } catch {
+                    try? fileManager.removeItem(at: photoURL)
+                }
+            }
+            
+            // 2. Also move any corresponding XMP sidecar(s) to Trash
+            let parentDir = photoURL.deletingLastPathComponent()
+            let directXmp = parentDir.appendingPathComponent("\(photoURL.lastPathComponent).xmp")
+            let baseNameXmp = parentDir.appendingPathComponent("\(photoURL.deletingPathExtension().lastPathComponent).xmp")
+            
+            for xmpURL in [directXmp, baseNameXmp] {
+                if fileManager.fileExists(atPath: xmpURL.path) {
+                    do {
+                        try fileManager.trashItem(at: xmpURL, resultingItemURL: nil)
+                    } catch {
+                        try? fileManager.removeItem(at: xmpURL)
+                    }
+                }
+            }
+        }
+        
+        // 3. Update memory assets list
+        self.allAssets.removeAll { deletedIDs.contains($0.id) }
+        self.selectedAssetIDs.subtract(deletedIDs)
+        
+        // 4. Update selection
+        if let next = nextAssetToSelect {
+            self.primarySelectedAssetID = next.id
+            self.selectionAnchorAssetID = next.id
+            if self.selectedAssetIDs.isEmpty {
+                self.selectedAssetIDs = [next.id]
+            }
+        } else if let firstRemaining = self.displayedAssets.first {
+            self.primarySelectedAssetID = firstRemaining.id
+            self.selectionAnchorAssetID = firstRemaining.id
+            self.selectedAssetIDs = [firstRemaining.id]
+        } else {
+            self.primarySelectedAssetID = nil
+            self.selectionAnchorAssetID = nil
+            self.selectedAssetIDs.removeAll()
+        }
+        
+        self.pendingDeleteAssets = []
+        self.showDeleteConfirmation = false
+    }
+    
+    public func cancelDelete() {
+        self.pendingDeleteAssets = []
+        self.showDeleteConfirmation = false
     }
 }
 

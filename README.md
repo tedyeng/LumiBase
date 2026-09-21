@@ -28,6 +28,8 @@ LumiBase 是一套專為 macOS (特別是 Apple Silicon M 系列晶片) 打造�
   - 支援批次匯出與即時進度浮動 HUD。
 - ⌨️ **Lightroom 經典快捷鍵操作**：
   - **全選與取消全選**：`⌘A` (Command + A) 全選目前網格照片，`⌘D` (Command + D) 取消全選。
+  - **連續多選與範圍選取**：按住 `Control` / `⌘` 點選照片進行多選加減選；按住 `Shift` 點選兩張照片進行連續範圍全選。
+  - **安全刪除 (Move to Trash)**：`⌘⌫` (Command + Backspace) 快速刪除選取照片，並同步清理 `.xmp` 側邊副檔，刪除前具備原生確認對話框。
   - **匯出**：`⇧⌘E` (Shift + Command + E) 快速匯出選取（或全部）照片為高品質 JPEG。
   - **Grid 2D 導覽**：`↑` / `↓` 整行跳轉，`←` / `→` 前後選取。
   - **檢視切換**：`Enter` / `Return` / `E` / `Space` 進入大圖預覽（Loupe View），`Esc` / `G` 返回網格（Grid View）。
@@ -57,6 +59,9 @@ LumiBase 是一套專為 macOS (特別是 Apple Silicon M 系列晶片) 打造�
 | :--- | :--- |
 | **全選所有照片 (Select All)** | `⌘A` (Command + A) |
 | **取消全選 (Deselect All)** | `⌘D` (Command + D) |
+| **連續多選照片 (Multi-Select)** | 按住 `Control` 或 `⌘` 點選照片 |
+| **連續範圍選取 (Range Select)** | 點選起始照片，按住 `Shift` 點選結束照片 |
+| **移至垃圾桶 (Move to Trash)** | `⌘⌫` (Command + Backspace) |
 | **匯出至高品質 JPEG (Export)** | `⇧⌘E` (Shift + Command + E) |
 | **進入大圖預覽 (Loupe View)** | `Enter` / `Return`、`E`、雙擊滑鼠 |
 | **返回圖庫網格 (Grid View)** | `Esc`、`G` |
@@ -99,6 +104,9 @@ swift test
 
 # 建置 macOS 應用程式
 xcodebuild -scheme LumiBase -destination 'platform=macOS' build
+
+# 📦 一鍵打包產出 macOS DMG 安裝檔
+./package_dmg.sh
 ```
 
 ---

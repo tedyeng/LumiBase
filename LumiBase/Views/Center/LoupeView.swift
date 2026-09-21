@@ -251,6 +251,10 @@ public struct LoupeView: View {
                                 NSWorkspace.shared.activateFileViewerSelecting([asset.sidecarXMPURL])
                             }
                         }
+                        Divider()
+                        Button("Move to Trash (⌘⌫)", role: .destructive) {
+                            appState.requestDeleteSelectedPhotos()
+                        }
                     }
                 }
             }
@@ -273,6 +277,13 @@ public struct LoupeView: View {
         .onKeyPress(KeyEquivalent("d")) {
             if NSEvent.modifierFlags.contains(.command) {
                 appState.deselectAll()
+                return .handled
+            }
+            return .ignored
+        }
+        .onKeyPress(.delete) {
+            if NSEvent.modifierFlags.contains(.command) {
+                appState.requestDeleteSelectedPhotos()
                 return .handled
             }
             return .ignored
