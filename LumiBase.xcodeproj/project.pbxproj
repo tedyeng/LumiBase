@@ -42,6 +42,9 @@
 		A10000012C00000100000021 /* PhotoExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000021 /* PhotoExportService.swift */; };
 		A10000012C00000100000022 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000022 /* AppIcon.icns */; };
 		A10000012C00000100000023 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000023 /* Assets.xcassets */; };
+		A10000012C00000100000024 /* DevelopBasicPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000024 /* DevelopBasicPanelView.swift */; };
+		A10000012C00000100000025 /* LightroomSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000025 /* LightroomSlider.swift */; };
+		A10000012C00000100000026 /* LiveDevelopPreviewEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000026 /* LiveDevelopPreviewEngine.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -81,6 +84,9 @@
 		A10000022C00000100000021 /* PhotoExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoExportService.swift; sourceTree = "<group>"; };
 		A10000022C00000100000022 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		A10000022C00000100000023 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A10000022C00000100000024 /* DevelopBasicPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevelopBasicPanelView.swift; sourceTree = "<group>"; };
+		A10000022C00000100000025 /* LightroomSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LightroomSlider.swift; sourceTree = "<group>"; };
+		A10000022C00000100000026 /* LiveDevelopPreviewEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveDevelopPreviewEngine.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -167,6 +173,7 @@
 				A10000022C0000010000001F /* DCPProfileManager.swift */,
 				A10000022C00000100000020 /* AdobeColorPipeline.swift */,
 				A10000022C00000100000021 /* PhotoExportService.swift */,
+				A10000022C00000100000026 /* LiveDevelopPreviewEngine.swift */,
 			);
 			path = Image;
 			sourceTree = "<group>";
@@ -203,6 +210,7 @@
 			isa = PBXGroup;
 			children = (
 				A10000022C00000100000011 /* Badges.swift */,
+				A10000022C00000100000025 /* LightroomSlider.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -243,6 +251,7 @@
 			isa = PBXGroup;
 			children = (
 				A10000022C00000100000019 /* RightInspectorView.swift */,
+				A10000022C00000100000024 /* DevelopBasicPanelView.swift */,
 				A10000022C0000010000001A /* HistogramView.swift */,
 				A10000022C0000010000001B /* EXIFInfoView.swift */,
 				A10000022C0000010000001C /* XMPMetadataEditorView.swift */,
@@ -367,6 +376,9 @@
 				A10000012C0000010000001F /* DCPProfileManager.swift in Sources */,
 				A10000012C00000100000020 /* AdobeColorPipeline.swift in Sources */,
 				A10000012C00000100000021 /* PhotoExportService.swift in Sources */,
+				A10000012C00000100000024 /* DevelopBasicPanelView.swift in Sources */,
+				A10000012C00000100000025 /* LightroomSlider.swift in Sources */,
+				A10000012C00000100000026 /* LiveDevelopPreviewEngine.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

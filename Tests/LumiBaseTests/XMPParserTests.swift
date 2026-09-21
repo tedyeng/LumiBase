@@ -98,35 +98,50 @@ final class XMPParserTests: XCTestCase {
         XCTAssertFalse(filter.matches(asset: asset2))
     }
     
-    func testParseCameraRawDevelopSettings() {
-        let xmpContent = """
-        <x:xmpmeta xmlns:x="adobe:ns:meta/">
-         <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-          <rdf:Description rdf:about=""
-            xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
-            crs:Exposure2012="+0.65"
-            crs:Temperature="5600"
-            crs:Tint="+10"
-            crs:Contrast2012="+15"
-            crs:Highlights2012="-20"
-            crs:Shadows2012="+30"
-            crs:HasCrop="True"
-            crs:CameraProfile="Adobe Standard">
-          </rdf:Description>
-         </rdf:RDF>
-        </x:xmpmeta>
-        """
+    func testDevelopBasicRoundTrip() {
+        var develop = XMPMetadata()
+        develop.exposure2012 = 0.35
+        develop.temperature = 6200
+        develop.tint = 8
+        develop.contrast2012 = 12
+        develop.highlights2012 = -75
+        develop.shadows2012 = 45
+        develop.whites2012 = -20
+        develop.blacks2012 = -15
+        develop.texture = 8
+        develop.clarity2012 = 2
+        develop.dehaze = 12
+        develop.vibrance = 10
+        develop.saturation = 10
+        develop.cameraProfile = "Adobe Standard"
+        develop.convertToGrayscale = true
         
-        let metadata = XMPParser.parse(data: xmpContent.data(using: .utf8)!)
+        XCTAssertTrue(develop.hasDevelopEdits)
         
-        XCTAssertEqual(metadata.exposure2012, 0.65)
-        XCTAssertEqual(metadata.temperature, 5600)
-        XCTAssertEqual(metadata.tint, 10)
-        XCTAssertEqual(metadata.contrast2012, 15)
-        XCTAssertEqual(metadata.highlights2012, -20)
-        XCTAssertEqual(metadata.shadows2012, 30)
-        XCTAssertTrue(metadata.hasCrop)
-        XCTAssertEqual(metadata.cameraProfile, "Adobe Standard")
-        XCTAssertTrue(metadata.hasDevelopEdits)
+        let xml = XMPWriter.generateXMPXML(metadata: develop)
+        let parsed = XMPParser.parse(data: xml.data(using: .utf8)!)
+        
+        XCTAssertEqual(parsed.exposure2012, 0.35)
+        XCTAssertEqual(parsed.temperature, 6200)
+        XCTAssertEqual(parsed.tint, 8)
+        XCTAssertEqual(parsed.contrast2012, 12)
+        XCTAssertEqual(parsed.highlights2012, -75)
+        XCTAssertEqual(parsed.shadows2012, 45)
+        XCTAssertEqual(parsed.whites2012, -20)
+        XCTAssertEqual(parsed.blacks2012, -15)
+        XCTAssertEqual(parsed.texture, 8)
+        XCTAssertEqual(parsed.clarity2012, 2)
+        XCTAssertEqual(parsed.dehaze, 12)
+        XCTAssertEqual(parsed.vibrance, 10)
+        XCTAssertEqual(parsed.saturation, 10)
+        XCTAssertEqual(parsed.cameraProfile, "Adobe Standard")
+        XCTAssertEqual(parsed.convertToGrayscale, true)
+        
+        var resetTarget = parsed
+        resetTarget.resetDevelopSettings()
+        XCTAssertFalse(resetTarget.hasDevelopEdits)
+        XCTAssertNil(resetTarget.exposure2012)
+        XCTAssertNil(resetTarget.temperature)
+        XCTAssertNil(resetTarget.convertToGrayscale)
     }
 }

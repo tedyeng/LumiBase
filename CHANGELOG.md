@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.0] - 2026-09-21
+
+### Added
+- **Lightroom Classic Develop "Basic" Panel (`DevelopBasicPanelView`)**:
+  - Full 1:1 parity with Adobe Lightroom Classic Develop Basic module.
+  - **Treatment (Color / Black & White)**: One-click monochrome toggle with `crs:ConvertToGrayscale="True"` XMP synchronization and contextual hiding of color-only sliders in B&W mode.
+  - **Camera Profiles**: Support for standard Adobe profiles (Adobe Color as default, Adobe Standard, Adobe Portrait, Adobe Landscape, Adobe Vivid, Adobe Monochrome, Adobe Neutral, Camera Standard).
+  - **White Balance (WB)**: Full Kelvin temperature slider (2000K to 50000K), Tint slider (-150 to +150), and comprehensive presets (As Shot, Auto, Daylight, Cloudy, Shade, Tungsten, Fluorescent, Flash, Custom).
+  - **Tone Controls**: Linear EV Exposure (-5.00 to +5.00 EV), Contrast (-100 to +100), Highlights (-100 to +100), Shadows (-100 to +100), Whites (-100 to +100), Blacks (-100 to +100).
+  - **Presence Controls**: Texture (-100 to +100), Clarity (-100 to +100), Dehaze (-100 to +100), Vibrance (-100 to +100), Saturation (-100 to +100).
+  - **Quick Action Bar**: Auto tone balance, Color/B&W treatment toggle, and Reset.
+- **120fps Real-Time GPU Preview Engine (`LiveDevelopPreviewEngine`)**:
+  - Dedicated background `.userInteractive` coalescing work queue with automatic frame dropping to eliminate latency during high-frequency slider drags.
+  - Multi-tier display proxy architecture: 1440px interactive proxy for $<0.4$ms Metal renders during dragging, 2560px display proxy, and full-resolution background completion.
+  - State isolation (`liveDevelopXMP`) preventing full catalog / GridView re-computation during live slider adjustments.
+- **Lightroom-Style Slider Component (`LightroomSlider`)**:
+  - Local drag coordinate tracking (`localDragValue`) for 0ms cursor tracking.
+  - Center ticks, dual-direction gradient tracks for Temperature, Tint, and Saturation.
+  - **Direct Numeric Text Input**: Single-click on any numeric label switches to an active text field with `@FocusState` keyboard focus; press Enter / Return to clamp and commit, Esc to cancel.
+  - Double-click slider title or track to reset to default.
+- **Enhanced Adobe PV2012 Color Pipeline (`AdobeColorPipeline`)**:
+  - **Two-Stage Highlight Recovery & Tone Curve Matrix**: Apple bilateral filter highlight recovery (recovering blown skies and clouds) combined with 5-point parametric tone curve high-zone boost and shadow lifting/deepening.
+  - **Skin Softening & Dreamy Glow**: Negative Texture enables high-frequency skin smoothing; negative Clarity produces soft-focus diffusion glow.
+  - **Linear Saturation & True Grayscale**: Clean linear saturation scaling (-100 = 100% grayscale, +100 = 200% saturation) and `CIPhotoEffectMono` photographic monochrome.
+  - **Color Science Direction Correction**: Temp higher = warmer amber, lower = cooler blue; Tint positive = magenta, negative = green.
+
+---
+
 ## [1.2.0] - 2026-09-21
 
 ### Added

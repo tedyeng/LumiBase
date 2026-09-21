@@ -307,12 +307,23 @@ public struct LoupeView: View {
         .task(id: appState.primarySelectedAssetID) {
             await loadSelectedImage()
         }
+        .onChange(of: appState.liveDevelopXMP) { _, newXMP in
+            updateProcessedImage(with: newXMP)
+        }
+        .onChange(of: appState.primarySelectedAsset?.xmp) { _, newXMP in
+            updateProcessedImage(with: newXMP)
+        }
     }
+    
+    @State private var currentBaseHolder: BaseImageHolder?
+    @State private var liveRenderTask: Task<Void, Never>?
+    @State private var idleFullRenderTask: Task<Void, Never>?
     
     private func loadSelectedImage() async {
         guard let asset = appState.primarySelectedAsset else {
             previewImage = nil
             fullImage = nil
+            currentBaseHolder = nil
             return
         }
         
@@ -320,8 +331,11 @@ public struct LoupeView: View {
         
         // 1. Immediately reset fullImage of old photo so it does not block the new photo
         fullImage = nil
+        currentBaseHolder = nil
         dragOffset = .zero
         lastDragOffset = .zero
+        liveRenderTask?.cancel()
+        idleFullRenderTask?.cancel()
         
         // 2. Immediately load fast preview thumbnail for zero-latency response
         let cachedThumb = await ThumbnailLoader.shared.loadThumbnail(for: asset, maxPixelSize: 1600)
@@ -330,19 +344,68 @@ public struct LoupeView: View {
         self.previewImage = cachedThumb
         self.isLoading = (cachedThumb == nil)
         
-        // 3. Decode full RAW in background with Adobe Color Pipeline and XMP develop settings
-        let img = await RAWImageLoader.shared.loadFullImage(
-            from: asset.fileURL,
-            cameraModel: asset.cameraMetadata.model,
-            xmp: asset.xmp
-        )
+        // 3. Decode base neutral RAW holder (display proxy + full res) in background
+        let holder = await RAWImageLoader.shared.loadBaseHolder(from: asset.fileURL)
         
-        guard appState.primarySelectedAssetID == targetID else { return }
-        await MainActor.run {
-            if let img = img {
-                self.fullImage = img
-            }
+        guard appState.primarySelectedAssetID == targetID, let baseHolder = holder else {
             self.isLoading = false
+            return
+        }
+        
+        self.currentBaseHolder = baseHolder
+        
+        // 4. Immediately render interactive display proxy (< 1.5ms on Metal)
+        let activeXMP = (appState.liveDevelopAssetID == targetID && appState.liveDevelopXMP != nil) ? appState.liveDevelopXMP! : asset.xmp
+        if let img = RAWImageLoader.shared.renderProcessed(
+            baseHolder: baseHolder,
+            cameraModel: asset.cameraMetadata.model,
+            xmp: activeXMP,
+            interactive: true
+        ) {
+            self.fullImage = img
+        }
+        self.isLoading = false
+        
+        // 5. Background idle full-res render
+        scheduleIdleFullRender(for: targetID, xmp: activeXMP)
+    }
+    
+    private func updateProcessedImage(with xmp: XMPMetadata?) {
+        guard let holder = currentBaseHolder, let asset = appState.primarySelectedAsset else { return }
+        let targetID = asset.id
+        let targetModel = asset.cameraMetadata.model
+        
+        // Coalesced sub-millisecond background GPU render
+        LiveDevelopPreviewEngine.shared.requestRender(
+            baseHolder: holder,
+            cameraModel: targetModel,
+            xmp: xmp,
+            interactive: true
+        ) { newImage in
+            guard self.appState.primarySelectedAssetID == targetID else { return }
+            self.fullImage = newImage
+        }
+        
+        // Schedule background full-res update when user stops moving slider
+        scheduleIdleFullRender(for: targetID, xmp: xmp)
+    }
+    
+    private func scheduleIdleFullRender(for assetID: String, xmp: XMPMetadata?) {
+        idleFullRenderTask?.cancel()
+        idleFullRenderTask = Task(priority: .utility) { @MainActor in
+            try? await Task.sleep(nanoseconds: 200_000_000) // 200ms idle
+            guard !Task.isCancelled, let holder = currentBaseHolder, appState.primarySelectedAssetID == assetID else { return }
+            
+            let model = appState.primarySelectedAsset?.cameraMetadata.model
+            LiveDevelopPreviewEngine.shared.requestRender(
+                baseHolder: holder,
+                cameraModel: model,
+                xmp: xmp,
+                interactive: false
+            ) { fullImg in
+                guard self.appState.primarySelectedAssetID == assetID else { return }
+                self.fullImage = fullImg
+            }
         }
     }
     

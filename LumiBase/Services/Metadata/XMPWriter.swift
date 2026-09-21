@@ -59,6 +59,60 @@ public final class XMPWriter: Sendable {
             """
         }
         
+        var developAttrs = ""
+        if metadata.hasDevelopEdits {
+            developAttrs += " crs:ProcessVersion=\"15.4\""
+            if let exp = metadata.exposure2012 {
+                developAttrs += String(format: " crs:Exposure2012=\"%+.2f\"", exp)
+            }
+            if let temp = metadata.temperature {
+                developAttrs += " crs:Temperature=\"\(temp)\""
+                developAttrs += " crs:WhiteBalance=\"Custom\""
+            }
+            if let tint = metadata.tint {
+                developAttrs += String(format: " crs:Tint=\"%+d\"", tint)
+            }
+            if let contrast = metadata.contrast2012 {
+                developAttrs += String(format: " crs:Contrast2012=\"%+d\"", contrast)
+            }
+            if let hl = metadata.highlights2012 {
+                developAttrs += String(format: " crs:Highlights2012=\"%+d\"", hl)
+            }
+            if let sh = metadata.shadows2012 {
+                developAttrs += String(format: " crs:Shadows2012=\"%+d\"", sh)
+            }
+            if let w = metadata.whites2012 {
+                developAttrs += String(format: " crs:Whites2012=\"%+d\"", w)
+            }
+            if let b = metadata.blacks2012 {
+                developAttrs += String(format: " crs:Blacks2012=\"%+d\"", b)
+            }
+            if let tex = metadata.texture {
+                developAttrs += String(format: " crs:Texture=\"%+d\"", tex)
+            }
+            if let clarity = metadata.clarity2012 {
+                developAttrs += String(format: " crs:Clarity2012=\"%+d\"", clarity)
+            }
+            if let dehaze = metadata.dehaze {
+                developAttrs += String(format: " crs:Dehaze=\"%+d\"", dehaze)
+            }
+            if let vib = metadata.vibrance {
+                developAttrs += String(format: " crs:Vibrance=\"%+d\"", vib)
+            }
+            if let sat = metadata.saturation {
+                developAttrs += String(format: " crs:Saturation=\"%+d\"", sat)
+            }
+            if metadata.hasCrop {
+                developAttrs += " crs:HasCrop=\"true\""
+            }
+            if metadata.convertToGrayscale == true {
+                developAttrs += " crs:ConvertToGrayscale=\"True\""
+            }
+            if let profile = metadata.cameraProfile, !profile.isEmpty {
+                developAttrs += " crs:CameraProfile=\"\(escapeXML(profile))\""
+            }
+        }
+        
         let xml = """
         <x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 7.0-c000 1.000000, 0000/00/00-00:00:00        ">
          <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
@@ -66,7 +120,7 @@ public final class XMPWriter: Sendable {
             xmlns:xmp="http://ns.adobe.com/xap/1.0/"
             xmlns:photoshop="http://ns.adobe.com/photoshop/1.0/"
             xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
-            xmlns:dc="http://purl.org/dc/elements/1.1/"\(rawFileNameAttr)\(ratingAttr)\(labelAttr)\(flagAttr)>
+            xmlns:dc="http://purl.org/dc/elements/1.1/"\(rawFileNameAttr)\(ratingAttr)\(labelAttr)\(flagAttr)\(developAttrs)>
         \(keywordsXML.isEmpty ? "" : keywordsXML + "\n")\(titleXML.isEmpty ? "" : titleXML + "\n")\(captionXML.isEmpty ? "" : captionXML + "\n")  </rdf:Description>
          </rdf:RDF>
         </x:xmpmeta>

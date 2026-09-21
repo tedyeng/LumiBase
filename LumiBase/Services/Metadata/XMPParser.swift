@@ -49,6 +49,7 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
     private var parsedTexture: Int?
     private var parsedHasCrop: Bool = false
     private var parsedCameraProfile: String?
+    private var parsedConvertToGrayscale: Bool?
     
     private var inSubjectBag: Bool = false
     private var inTitleAlt: Bool = false
@@ -87,7 +88,8 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
                 clarity2012: parsedClarity,
                 texture: parsedTexture,
                 hasCrop: parsedHasCrop,
-                cameraProfile: parsedCameraProfile
+                cameraProfile: parsedCameraProfile,
+                convertToGrayscale: parsedConvertToGrayscale
             )
         }
         
@@ -152,6 +154,8 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
                 parsedHasCrop = (val.lowercased() == "true" || val == "1")
             } else if key.hasSuffix("cameraprofile") {
                 parsedCameraProfile = val
+            } else if key.hasSuffix("converttograyscale") {
+                parsedConvertToGrayscale = (val.lowercased() == "true" || val == "1")
             }
         }
         
@@ -257,6 +261,16 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
         var temperature: Int?
         var tint: Int?
         var contrast: Int?
+        var highlights: Int?
+        var shadows: Int?
+        var whites: Int?
+        var blacks: Int?
+        var dehaze: Int?
+        var vibrance: Int?
+        var saturation: Int?
+        var clarity: Int?
+        var texture: Int?
+        var cameraProfile: String?
         var hasCrop = false
         
         if let ratingMatch = matchFirst(pattern: #"(?:Rating="|<[^:>]+:Rating>)([0-5])"#, in: content) {
@@ -287,6 +301,46 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
             contrast = Int(contrastMatch)
         }
         
+        if let hlMatch = matchFirst(pattern: #"Highlights2012="([+-]?\d+)"#, in: content) {
+            highlights = Int(hlMatch)
+        }
+        
+        if let shMatch = matchFirst(pattern: #"Shadows2012="([+-]?\d+)"#, in: content) {
+            shadows = Int(shMatch)
+        }
+        
+        if let wMatch = matchFirst(pattern: #"Whites2012="([+-]?\d+)"#, in: content) {
+            whites = Int(wMatch)
+        }
+        
+        if let bMatch = matchFirst(pattern: #"Blacks2012="([+-]?\d+)"#, in: content) {
+            blacks = Int(bMatch)
+        }
+        
+        if let texMatch = matchFirst(pattern: #"Texture="([+-]?\d+)"#, in: content) {
+            texture = Int(texMatch)
+        }
+        
+        if let clarMatch = matchFirst(pattern: #"Clarity2012="([+-]?\d+)"#, in: content) {
+            clarity = Int(clarMatch)
+        }
+        
+        if let dehazeMatch = matchFirst(pattern: #"Dehaze="([+-]?\d+)"#, in: content) {
+            dehaze = Int(dehazeMatch)
+        }
+        
+        if let vibMatch = matchFirst(pattern: #"Vibrance="([+-]?\d+)"#, in: content) {
+            vibrance = Int(vibMatch)
+        }
+        
+        if let satMatch = matchFirst(pattern: #"Saturation="([+-]?\d+)"#, in: content) {
+            saturation = Int(satMatch)
+        }
+        
+        if let profMatch = matchFirst(pattern: #"CameraProfile="([^"]+)""#, in: content) {
+            cameraProfile = profMatch
+        }
+        
         if let cropMatch = matchFirst(pattern: #"HasCrop="(true|1)""#, in: content) {
             hasCrop = !cropMatch.isEmpty
         }
@@ -307,6 +361,11 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
             caption = descMatch.trimmingCharacters(in: .whitespacesAndNewlines)
         }
         
+        var convertToGrayscale: Bool? = nil
+        if let grayMatch = matchFirst(pattern: #"ConvertToGrayscale="(true|1)""#, in: content) {
+            convertToGrayscale = !grayMatch.isEmpty
+        }
+        
         return XMPMetadata(
             isLoadedFromSidecar: true,
             rating: rating,
@@ -319,7 +378,18 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
             temperature: temperature,
             tint: tint,
             contrast2012: contrast,
-            hasCrop: hasCrop
+            highlights2012: highlights,
+            shadows2012: shadows,
+            whites2012: whites,
+            blacks2012: blacks,
+            dehaze: dehaze,
+            vibrance: vibrance,
+            saturation: saturation,
+            clarity2012: clarity,
+            texture: texture,
+            hasCrop: hasCrop,
+            cameraProfile: cameraProfile,
+            convertToGrayscale: convertToGrayscale
         )
     }
     

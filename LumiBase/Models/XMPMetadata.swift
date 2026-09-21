@@ -60,6 +60,7 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
     public var texture: Int?
     public var hasCrop: Bool
     public var cameraProfile: String?
+    public var convertToGrayscale: Bool?
     
     public init(
         isLoadedFromSidecar: Bool = false,
@@ -87,7 +88,8 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
         clarity2012: Int? = nil,
         texture: Int? = nil,
         hasCrop: Bool = false,
-        cameraProfile: String? = nil
+        cameraProfile: String? = nil,
+        convertToGrayscale: Bool? = nil
     ) {
         self.isLoadedFromSidecar = isLoadedFromSidecar
         self.sidecarFilename = sidecarFilename
@@ -115,12 +117,44 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
         self.texture = texture
         self.hasCrop = hasCrop
         self.cameraProfile = cameraProfile
+        self.convertToGrayscale = convertToGrayscale
     }
     
     public var hasDevelopEdits: Bool {
-        exposure2012 != nil || temperature != nil || tint != nil || contrast2012 != nil ||
-        highlights2012 != nil || shadows2012 != nil || whites2012 != nil || blacks2012 != nil ||
-        dehaze != nil || vibrance != nil || saturation != nil || clarity2012 != nil || hasCrop
+        (exposure2012 != nil && exposure2012 != 0.0) ||
+        (temperature != nil && temperature != 0) ||
+        (tint != nil && tint != 0) ||
+        (contrast2012 != nil && contrast2012 != 0) ||
+        (highlights2012 != nil && highlights2012 != 0) ||
+        (shadows2012 != nil && shadows2012 != 0) ||
+        (whites2012 != nil && whites2012 != 0) ||
+        (blacks2012 != nil && blacks2012 != 0) ||
+        (dehaze != nil && dehaze != 0) ||
+        (vibrance != nil && vibrance != 0) ||
+        (saturation != nil && saturation != 0) ||
+        (clarity2012 != nil && clarity2012 != 0) ||
+        (texture != nil && texture != 0) ||
+        (convertToGrayscale == true) ||
+        hasCrop
+    }
+    
+    /// Resets all develop (Basic) settings to camera default / zero
+    public mutating func resetDevelopSettings() {
+        exposure2012 = nil
+        temperature = nil
+        tint = nil
+        contrast2012 = nil
+        highlights2012 = nil
+        shadows2012 = nil
+        whites2012 = nil
+        blacks2012 = nil
+        dehaze = nil
+        vibrance = nil
+        saturation = nil
+        clarity2012 = nil
+        texture = nil
+        convertToGrayscale = nil
+        hasCrop = false
     }
     
     public static let empty = XMPMetadata()

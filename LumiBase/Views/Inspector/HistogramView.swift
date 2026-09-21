@@ -85,6 +85,12 @@ public struct HistogramView: View {
         .task(id: asset?.id) {
             await computeHistogram()
         }
+        .task(id: asset?.xmp) {
+            // Debounce histogram during rapid slider drags to keep GPU & CPU dedicated to 120fps preview
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            guard !Task.isCancelled else { return }
+            await computeHistogram()
+        }
     }
     
     private func computeHistogram() async {

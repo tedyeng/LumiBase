@@ -5,6 +5,7 @@ public struct RightInspectorView: View {
     @ObservedObject var appState: AppState
     
     @State private var isHistogramExpanded: Bool = true
+    @State private var isDevelopExpanded: Bool = true
     @State private var isMetadataExpanded: Bool = true
     @State private var isEXIFExpanded: Bool = true
     
@@ -14,7 +15,7 @@ public struct RightInspectorView: View {
             HStack {
                 Image(systemName: "slider.horizontal.3")
                     .foregroundColor(LightroomTheme.accentYellow)
-                Text("METADATA & EXIF")
+                Text("DEVELOP & METADATA")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundColor(LightroomTheme.textSecondary)
                 Spacer()
@@ -36,14 +37,21 @@ public struct RightInspectorView: View {
                     Divider().background(LightroomTheme.dividerColor)
                     
                     if let asset = appState.primarySelectedAsset {
-                        // 2. XMP Metadata & Rating Editor Section
+                        // 2. Develop (Basic) Panel Section
+                        collapsibleSection(title: "BASIC (DEVELOP)", isExpanded: $isDevelopExpanded, badge: asset.xmp.hasDevelopEdits ? "Active" : nil) {
+                            DevelopBasicPanelView(asset: asset, appState: appState)
+                        }
+                        
+                        Divider().background(LightroomTheme.dividerColor)
+                        
+                        // 3. XMP Metadata & Rating Editor Section
                         collapsibleSection(title: "METADATA (XMP)", isExpanded: $isMetadataExpanded) {
                             XMPMetadataEditorView(asset: asset, appState: appState)
                         }
                         
                         Divider().background(LightroomTheme.dividerColor)
                         
-                        // 3. EXIF Info Section
+                        // 4. EXIF Info Section
                         collapsibleSection(title: "EXIF INFO", isExpanded: $isEXIFExpanded) {
                             EXIFInfoView(asset: asset)
                         }
@@ -68,6 +76,7 @@ public struct RightInspectorView: View {
     private func collapsibleSection<Content: View>(
         title: String,
         isExpanded: Binding<Bool>,
+        badge: String? = nil,
         @ViewBuilder content: @escaping () -> Content
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -84,6 +93,16 @@ public struct RightInspectorView: View {
                     Text(title)
                         .font(.system(size: 10, weight: .bold))
                         .foregroundColor(LightroomTheme.textSecondary)
+                    
+                    if let badge = badge {
+                        Text(badge)
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(LightroomTheme.accentYellow)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(LightroomTheme.accentYellow.opacity(0.15))
+                            .cornerRadius(3)
+                    }
                     
                     Spacer()
                 }

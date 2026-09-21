@@ -19,6 +19,10 @@ public final class AppState: ObservableObject {
     @Published public var primarySelectedAssetID: String?
     @Published public var selectionAnchorAssetID: String?
     
+    // Live Develop State (Isolated for ultra-fast 120fps live slider interaction)
+    @Published public var liveDevelopAssetID: String?
+    @Published public var liveDevelopXMP: XMPMetadata?
+    
     // View state
     @Published public var viewMode: ViewMode = .grid
     @Published public var thumbnailSize: CGFloat = 220
@@ -70,8 +74,10 @@ public final class AppState: ObservableObject {
     
     public func handleGlobalKeyEvent(_ event: NSEvent) -> Bool {
         // Only ignore keyboard shortcuts if user is currently typing in an active text input field
-        if let responder = NSApp.keyWindow?.firstResponder as? NSTextView, responder.isFieldEditor {
-            return false
+        if let responder = NSApp.keyWindow?.firstResponder {
+            if responder is NSTextView || responder is NSTextField {
+                return false
+            }
         }
         
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
@@ -191,9 +197,17 @@ public final class AppState: ObservableObject {
     
     public var primarySelectedAsset: PhotoAsset? {
         guard let id = primarySelectedAssetID else {
-            return displayedAssets.first
+            guard var first = displayedAssets.first else { return nil }
+            if liveDevelopAssetID == first.id, let live = liveDevelopXMP {
+                first.xmp = live
+            }
+            return first
         }
-        return allAssets.first { $0.id == id }
+        guard var asset = allAssets.first(where: { $0.id == id }) else { return nil }
+        if liveDevelopAssetID == id, let live = liveDevelopXMP {
+            asset.xmp = live
+        }
+        return asset
     }
     
     public var selectedAssets: [PhotoAsset] {
@@ -415,6 +429,80 @@ public final class AppState: ObservableObject {
         syncXMP(for: asset)
     }
     
+    // MARK: - Develop / Basic Adjustments
+    
+    private var xmpDebounceTasks: [String: Task<Void, Never>] = [:]
+    private var liveCommitTask: Task<Void, Never>?
+    
+    /// Updates develop/Basic settings on the primary selected asset with instant isolated live update and debounced catalog commit
+    public func updateDevelopSettings(for assetID: String? = nil, isDragging: Bool = false, mutate: (inout XMPMetadata) -> Void) {
+        let targetID = assetID ?? primarySelectedAssetID
+        guard let id = targetID, let index = allAssets.firstIndex(where: { $0.id == id }) else { return }
+        
+        var currentXMP = (liveDevelopAssetID == id && liveDevelopXMP != nil) ? liveDevelopXMP! : allAssets[index].xmp
+        mutate(&currentXMP)
+        
+        self.liveDevelopAssetID = id
+        self.liveDevelopXMP = currentXMP
+        
+        if !isDragging {
+            // Mouse released or discrete tap: commit immediately to allAssets
+            liveCommitTask?.cancel()
+            allAssets[index].xmp = currentXMP
+            debouncedSyncXMP(for: allAssets[index])
+        } else {
+            // Dragging in progress: debounce catalog mutation by 200ms so main thread is 100% free for 120fps slider UI
+            debouncedCommitLiveDevelop(assetID: id, index: index)
+        }
+    }
+    
+    private func debouncedCommitLiveDevelop(assetID: String, index: Int) {
+        liveCommitTask?.cancel()
+        liveCommitTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 200_000_000) // 200ms
+            guard !Task.isCancelled, let self = self else { return }
+            if self.liveDevelopAssetID == assetID, let live = self.liveDevelopXMP, index < self.allAssets.count, self.allAssets[index].id == assetID {
+                self.allAssets[index].xmp = live
+                self.debouncedSyncXMP(for: self.allAssets[index])
+            }
+        }
+    }
+    
+    /// Resets develop settings to default zero for the asset
+    public func resetDevelopSettings(for assetID: String? = nil) {
+        updateDevelopSettings(for: assetID, isDragging: false) { xmp in
+            xmp.resetDevelopSettings()
+        }
+    }
+    
+    /// Auto calculates tone (balanced exposure and highlights/shadows recovery)
+    public func autoTone(for assetID: String? = nil) {
+        updateDevelopSettings(for: assetID, isDragging: false) { xmp in
+            xmp.exposure2012 = 0.20
+            xmp.contrast2012 = 15
+            xmp.highlights2012 = -30
+            xmp.shadows2012 = 35
+            xmp.whites2012 = 10
+            xmp.blacks2012 = -10
+            xmp.vibrance = 15
+        }
+    }
+    
+    /// Toggles black & white mode
+    public func toggleMonochrome(for assetID: String? = nil) {
+        updateDevelopSettings(for: assetID, isDragging: false) { xmp in
+            let isCurrentBW = (xmp.convertToGrayscale == true || xmp.saturation == -100)
+            if isCurrentBW {
+                xmp.convertToGrayscale = false
+                if xmp.saturation == -100 {
+                    xmp.saturation = 0
+                }
+            } else {
+                xmp.convertToGrayscale = true
+            }
+        }
+    }
+    
     private func updateAsset(_ updated: PhotoAsset) {
         if let index = allAssets.firstIndex(where: { $0.id == updated.id }) {
             allAssets[index] = updated
@@ -425,6 +513,18 @@ public final class AppState: ObservableObject {
         let xmpURL = asset.sidecarXMPURL
         Task.detached(priority: .utility) {
             try? XMPWriter.write(metadata: asset.xmp, to: xmpURL, originalFilename: asset.filename)
+        }
+    }
+    
+    private func debouncedSyncXMP(for asset: PhotoAsset) {
+        let assetID = asset.id
+        xmpDebounceTasks[assetID]?.cancel()
+        
+        xmpDebounceTasks[assetID] = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 300_000_000) // 300ms debounce
+            guard !Task.isCancelled else { return }
+            self?.syncXMP(for: asset)
+            self?.xmpDebounceTasks.removeValue(forKey: assetID)
         }
     }
     
