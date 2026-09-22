@@ -36,9 +36,18 @@ public struct PhotoGridItemView: View {
                 .frame(width: size, height: size * 0.75)
                 .clipped()
                 
-                // Top-Left: RAW, XMP & Flag Badges
+                // Top-Left: RAW, RAW+JPG, XMP & Flag Badges
                 HStack(spacing: 4) {
-                    if asset.isRaw {
+                    if asset.isRawPlusJPG {
+                        Text("RAW+JPG")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                            .background(Color.blue.opacity(0.85))
+                            .cornerRadius(2)
+                            .help("Paired RAW + JPEG photo")
+                    } else if asset.isRaw {
                         Text(asset.fileExtension.uppercased())
                             .font(.system(size: 8, weight: .bold))
                             .foregroundColor(.white)

@@ -7,7 +7,11 @@ public struct EXIFInfoView: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             exifRow(label: "File Name", value: asset.filename)
-            exifRow(label: "Format", value: "\(asset.fileExtension.uppercased()) \(asset.isRaw ? "(RAW Sensor)" : "")")
+            exifRow(label: "Format", value: formatText)
+            if asset.isRawPlusJPG {
+                let companionNames = asset.companionURLs.map { $0.lastPathComponent }.joined(separator: ", ")
+                exifRow(label: "Companion JPG", value: companionNames)
+            }
             exifRow(label: "File Size", value: ByteCountFormatter.string(fromByteCount: asset.fileSize, countStyle: .file))
             
             if let w = asset.cameraMetadata.pixelWidth, let h = asset.cameraMetadata.pixelHeight {
@@ -58,6 +62,16 @@ public struct EXIFInfoView: View {
             }
         }
         .padding(.horizontal, 10)
+    }
+    
+    private var formatText: String {
+        if asset.isRawPlusJPG {
+            return "\(asset.fileExtension.uppercased()) + JPG (Paired)"
+        } else if asset.isRaw {
+            return "\(asset.fileExtension.uppercased()) (RAW Sensor)"
+        } else {
+            return asset.fileExtension.uppercased()
+        }
     }
     
     private var formattedFocalLength: String? {

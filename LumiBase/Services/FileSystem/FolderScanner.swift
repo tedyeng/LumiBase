@@ -18,17 +18,20 @@ public final class FolderScanner: Sendable {
         
         let filtered = fileURLs.filter { supportedExtensions.contains($0.pathExtension.lowercased()) }
         
-        return filtered.sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+        let scanned = filtered.sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
             .map { fileURL in
                 PhotoAsset(
                     fileURL: fileURL,
                     fileSize: (try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize).map { Int64($0) } ?? 0,
                     dateModified: (try? fileURL.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? Date(),
                     dateCreated: Date(),
+                    companionURLs: [],
                     xmp: .empty,
                     cameraMetadata: .empty
                 )
             }
+        
+        return groupRawAndCompanionAssets(scanned)
     }
     
     /// Scans a directory URL for supported RAW and image files with full metadata and XMP sidecars
@@ -74,13 +77,68 @@ public final class FolderScanner: Sendable {
                 }
             }
             
+            // Group RAW and companion JPG pairs
+            let grouped = groupRawAndCompanionAssets(results)
+            
             // Sort by capture date (oldest first) by default
-            return results.sorted { a, b in
+            return grouped.sorted { a, b in
                 let dateA = a.cameraMetadata.captureDate ?? a.dateCreated
                 let dateB = b.cameraMetadata.captureDate ?? b.dateCreated
                 return dateA < dateB
             }
         }
+    }
+    
+    /// Groups RAW files with corresponding companion JPG/JPEG files sharing the same stem in the same folder
+    public static func groupRawAndCompanionAssets(_ assets: [PhotoAsset]) -> [PhotoAsset] {
+        var groups: [String: [PhotoAsset]] = [:]
+        var order: [String] = []
+        
+        for asset in assets {
+            let parentPath = asset.fileURL.deletingLastPathComponent().standardizedFileURL.path.lowercased()
+            let stem = asset.fileURL.deletingPathExtension().lastPathComponent.lowercased()
+            let key = "\(parentPath)/\(stem)"
+            
+            if groups[key] == nil {
+                order.append(key)
+                groups[key] = [asset]
+            } else {
+                groups[key]?.append(asset)
+            }
+        }
+        
+        var consolidated: [PhotoAsset] = []
+        
+        for key in order {
+            guard let group = groups[key], !group.isEmpty else { continue }
+            
+            let rawAssets = group.filter { $0.isRaw }
+            let companionRasters = group.filter { !$0.isRaw && ["jpg", "jpeg"].contains($0.fileExtension.lowercased()) }
+            
+            if let primaryRaw = rawAssets.first, !companionRasters.isEmpty {
+                var combined = primaryRaw
+                let rasterURLs = companionRasters.map { $0.fileURL }
+                var allCompanions = combined.companionURLs
+                for url in rasterURLs {
+                    if !allCompanions.contains(url) {
+                        allCompanions.append(url)
+                    }
+                }
+                combined.companionURLs = allCompanions
+                consolidated.append(combined)
+                
+                for extraRaw in rawAssets.dropFirst() {
+                    consolidated.append(extraRaw)
+                }
+                for other in group where !other.isRaw && !["jpg", "jpeg"].contains(other.fileExtension.lowercased()) {
+                    consolidated.append(other)
+                }
+            } else {
+                consolidated.append(contentsOf: group)
+            }
+        }
+        
+        return consolidated
     }
     
     /// Parses a single asset on disk, reading XMP sidecar if present and reading EXIF

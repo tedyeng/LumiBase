@@ -70,6 +70,49 @@ public struct PhotoAsset: Identifiable, Hashable, Sendable {
         return FileManager.default.fileExists(atPath: directXmp.path) || FileManager.default.fileExists(atPath: baseNameXmp.path)
     }
     
+    public var companionURLs: [URL]
+    
+    public var hasCompanionJPG: Bool {
+        companionURLs.contains { ["jpg", "jpeg"].contains($0.pathExtension.lowercased()) }
+    }
+    
+    public var isRawPlusJPG: Bool {
+        isRaw && hasCompanionJPG
+    }
+    
+    public var formatBadgeText: String {
+        if isRawPlusJPG {
+            return "RAW+JPG"
+        }
+        return fileExtension.uppercased()
+    }
+    
+    /// Collects all associated files on disk for this asset (primary file, companion files, and XMP sidecars)
+    public var allAssociatedURLs: [URL] {
+        var urls: [URL] = [fileURL]
+        urls.append(contentsOf: companionURLs)
+        
+        let parentDir = fileURL.deletingLastPathComponent()
+        let directXmp = parentDir.appendingPathComponent("\(fileURL.lastPathComponent).xmp")
+        let baseNameXmp = parentDir.appendingPathComponent("\(fileURL.deletingPathExtension().lastPathComponent).xmp")
+        
+        if FileManager.default.fileExists(atPath: directXmp.path) && !urls.contains(directXmp) {
+            urls.append(directXmp)
+        }
+        if FileManager.default.fileExists(atPath: baseNameXmp.path) && !urls.contains(baseNameXmp) {
+            urls.append(baseNameXmp)
+        }
+        
+        for companion in companionURLs {
+            let companionDirectXmp = parentDir.appendingPathComponent("\(companion.lastPathComponent).xmp")
+            if FileManager.default.fileExists(atPath: companionDirectXmp.path) && !urls.contains(companionDirectXmp) {
+                urls.append(companionDirectXmp)
+            }
+        }
+        
+        return urls
+    }
+    
     public var xmp: XMPMetadata
     public var cameraMetadata: CameraMetadata
     
@@ -78,6 +121,7 @@ public struct PhotoAsset: Identifiable, Hashable, Sendable {
         fileSize: Int64 = 0,
         dateModified: Date = Date(),
         dateCreated: Date = Date(),
+        companionURLs: [URL] = [],
         xmp: XMPMetadata = .empty,
         cameraMetadata: CameraMetadata = .empty
     ) {
@@ -87,15 +131,17 @@ public struct PhotoAsset: Identifiable, Hashable, Sendable {
         self.fileSize = fileSize
         self.dateModified = dateModified
         self.dateCreated = dateCreated
+        self.companionURLs = companionURLs
         self.xmp = xmp
         self.cameraMetadata = cameraMetadata
     }
     
     public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
+        hasher.combine(companionURLs)
     }
     
     public static func == (lhs: PhotoAsset, rhs: PhotoAsset) -> Bool {
-        lhs.id == rhs.id && lhs.xmp == rhs.xmp && lhs.cameraMetadata == rhs.cameraMetadata
+        lhs.id == rhs.id && lhs.companionURLs == rhs.companionURLs && lhs.xmp == rhs.xmp && lhs.cameraMetadata == rhs.cameraMetadata
     }
 }

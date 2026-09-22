@@ -44,3 +44,5 @@ DerivedData/
 # Packaged Installers
 *.dmg
 
+# codegraph database
+.codegraph/

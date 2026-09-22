@@ -34,6 +34,7 @@ public struct MainLayoutView: View {
         }
         .environmentObject(appState)
         .background(LightroomTheme.workspaceBackground)
+        .navigationTitle("LumiBase v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.3.0")")
         .toolbar {
             ToolbarItemGroup(placement: .automatic) {
                 // Open Folder Button
@@ -107,6 +108,12 @@ public struct MainLayoutView: View {
                 appState.setRating(rating)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseIncreaseRating"))) { _ in
+            appState.increaseRating()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseDecreaseRating"))) { _ in
+            appState.decreaseRating()
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseFlag"))) { notif in
             if let flag = notif.object as? FlagStatus {
                 appState.setFlag(flag)
@@ -142,13 +149,23 @@ public struct MainLayoutView: View {
     private var deleteAlertMessage: String {
         let count = appState.pendingDeleteAssets.count
         let hasXmp = appState.pendingDeleteAssets.contains { $0.hasSidecarXMP }
+        let hasCompanion = appState.pendingDeleteAssets.contains { !$0.companionURLs.isEmpty }
         
         var msg = (count == 1) ?
             "Are you sure you want to move this photo to the Trash?" :
             "Are you sure you want to move these \(count) photos to the Trash?"
         
+        var extraNotes: [String] = []
+        if hasCompanion {
+            extraNotes.append("paired companion JPG files")
+        }
         if hasXmp {
-            msg += "\nAny corresponding XMP sidecar files will also be moved to the Trash."
+            extraNotes.append("corresponding XMP sidecar files")
+        }
+        
+        if !extraNotes.isEmpty {
+            let joined = extraNotes.joined(separator: " and ")
+            msg += "\nAny \(joined) will also be moved to the Trash."
         }
         return msg
     }

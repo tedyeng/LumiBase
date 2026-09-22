@@ -10,6 +10,10 @@ public struct BaseImageHolder: @unchecked Sendable {
     public let fullExtent: CGRect
     public let displayExtent: CGRect
     public let interactiveExtent: CGRect
+    public let baseTemperature: Float?
+    public let baseTint: Float?
+    public let baseExposure: Float?
+    public let isRaw: Bool
 }
 
 /// High-resolution RAW and raster image loader for Loupe view
@@ -31,24 +35,88 @@ public final class RAWImageLoader: @unchecked Sendable {
     private var cachedBaseHolder: BaseImageHolder?
     private let cacheLock = NSLock()
     
-    /// Asynchronously decodes and retrieves the base neutral CIImage holder (with full, display, and interactive proxies)
-    public func loadBaseHolder(from url: URL) async -> BaseImageHolder? {
+    private func getCached(for url: URL) -> BaseImageHolder? {
         cacheLock.lock()
-        if cachedBaseURL == url, let cached = cachedBaseHolder {
-            cacheLock.unlock()
-            return cached
+        defer { cacheLock.unlock() }
+        return (cachedBaseURL == url) ? cachedBaseHolder : nil
+    }
+    
+    private func setCached(url: URL, holder: BaseImageHolder) {
+        cacheLock.lock()
+        defer { cacheLock.unlock() }
+        cachedBaseURL = url
+        cachedBaseHolder = holder
+    }
+    
+    public func clearCache() {
+        cacheLock.lock()
+        defer { cacheLock.unlock() }
+        cachedBaseURL = nil
+        cachedBaseHolder = nil
+    }
+    
+    /// Asynchronously decodes and retrieves the base neutral CIImage holder (with full, display, and interactive proxies)
+    public func loadBaseHolder(from url: URL, xmp: XMPMetadata? = nil) async -> BaseImageHolder? {
+        if let cached = getCached(for: url) {
+            if !cached.isRaw {
+                return cached
+            }
+            let targetEV = Float(xmp?.exposure2012 ?? 0.0)
+            let currentEV = cached.baseExposure ?? 0.0
+            let targetTemp = Float(xmp?.temperature ?? 0)
+            let currentTemp = cached.baseTemperature ?? 0.0
+            let targetTint = Float(xmp?.tint ?? 0)
+            let currentTint = cached.baseTint ?? 0.0
+            if abs(targetEV - currentEV) < 0.05 && (targetTemp == 0 || abs(targetTemp - currentTemp) < 10.0) && (xmp?.tint == nil || abs(targetTint - currentTint) < 0.5) {
+                return cached
+            }
         }
-        cacheLock.unlock()
         
         return await Task.detached(priority: .userInitiated) { [weak self] () -> BaseImageHolder? in
             let pathExtension = url.pathExtension.lowercased()
             let isRaw = SupportedFileType(rawValue: pathExtension)?.isRaw ?? false
             
             var baseCIImage: CIImage?
+            var baseTemp: Float? = nil
+            var baseTint: Float? = nil
+            var baseExp: Float? = nil
             
             // 1. Try CIRAWFilter for Apple RAW engine
             if isRaw {
                 if let rawFilter = CIRAWFilter(imageURL: url) {
+                    // Pass native RAW decode parameters
+                    let defaultTemp = rawFilter.neutralTemperature
+                    let defaultTint = rawFilter.neutralTint
+                    
+                    rawFilter.exposure = 0.0
+                    baseExp = 0.0
+                    
+                    if let temp = xmp?.temperature, temp > 0 {
+                        rawFilter.neutralTemperature = Float(temp)
+                        baseTemp = Float(temp)
+                    } else {
+                        baseTemp = defaultTemp
+                    }
+                    if let tint = xmp?.tint {
+                        // Adobe Camera Raw Planckian locus compensation:
+                        // When Kelvin changes relative to native shot temp, Apple RAW drifts in tint without Planckian offset
+                        let tempDelta = Double((baseTemp ?? defaultTemp) - defaultTemp)
+                        let tintOffset = Float(tempDelta * 0.012)
+                        rawFilter.neutralTint = Float(tint) + tintOffset
+                        baseTint = Float(tint)
+                    } else {
+                        baseTint = defaultTint
+                    }
+                    
+                    // Calibrated CIRAWFilter baseline settings to match Adobe Camera Raw 1:1
+                    rawFilter.baselineExposure = 0.30
+                    rawFilter.shadowBias = 0.0
+                    rawFilter.boostShadowAmount = 0.0
+                    rawFilter.boostAmount = 1.0
+                    if #available(macOS 26.0, *) {
+                        rawFilter.isHighlightRecoveryEnabled = true
+                    }
+                    
                     baseCIImage = rawFilter.outputImage
                 }
             }
@@ -111,13 +179,14 @@ public final class RAWImageLoader: @unchecked Sendable {
                 interactive: interactiveImage,
                 fullExtent: fullExtent,
                 displayExtent: displayExtent,
-                interactiveExtent: interactiveExtent
+                interactiveExtent: interactiveExtent,
+                baseTemperature: baseTemp,
+                baseTint: baseTint,
+                baseExposure: baseExp,
+                isRaw: isRaw
             )
             
-            self?.cacheLock.lock()
-            self?.cachedBaseURL = url
-            self?.cachedBaseHolder = holder
-            self?.cacheLock.unlock()
+            self?.setCached(url: url, holder: holder)
             
             return holder
         }.value
@@ -137,10 +206,12 @@ public final class RAWImageLoader: @unchecked Sendable {
         let processed = AdobeColorPipeline.shared.process(
             image: targetBase,
             cameraModel: cameraModel,
-            xmp: xmp
+            xmp: xmp,
+            baseHolder: baseHolder
         )
         
-        if let cgImage = ciContext.createCGImage(processed, from: targetExtent) {
+        let srgb = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+        if let cgImage = ciContext.createCGImage(processed, from: targetExtent, format: .RGBA8, colorSpace: srgb) {
             return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
         }
         return nil
@@ -159,7 +230,8 @@ public final class RAWImageLoader: @unchecked Sendable {
             cameraModel: cameraModel,
             xmp: xmp
         )
-        if let cgImage = ciContext.createCGImage(processed, from: processed.extent) {
+        let srgb = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+        if let cgImage = ciContext.createCGImage(processed, from: processed.extent, format: .RGBA8, colorSpace: srgb) {
             return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
         }
         return nil

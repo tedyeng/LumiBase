@@ -38,6 +38,7 @@
 		A10000012C0000010000001D /* TopFilterBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C0000010000001D /* TopFilterBarView.swift */; };
 		A10000012C0000010000001E /* BottomControlsBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C0000010000001E /* BottomControlsBarView.swift */; };
 		A10000012C0000010000001F /* DCPProfileManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C0000010000001F /* DCPProfileManager.swift */; };
+		A10000012C00000100000027 /* DCPProfileParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000027 /* DCPProfileParser.swift */; };
 		A10000012C00000100000020 /* AdobeColorPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000020 /* AdobeColorPipeline.swift */; };
 		A10000012C00000100000021 /* PhotoExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000021 /* PhotoExportService.swift */; };
 		A10000012C00000100000022 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000022 /* AppIcon.icns */; };
@@ -80,6 +81,7 @@
 		A10000022C0000010000001D /* TopFilterBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopFilterBarView.swift; sourceTree = "<group>"; };
 		A10000022C0000010000001E /* BottomControlsBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomControlsBarView.swift; sourceTree = "<group>"; };
 		A10000022C0000010000001F /* DCPProfileManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DCPProfileManager.swift; sourceTree = "<group>"; };
+		A10000022C00000100000027 /* DCPProfileParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DCPProfileParser.swift; sourceTree = "<group>"; };
 		A10000022C00000100000020 /* AdobeColorPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdobeColorPipeline.swift; sourceTree = "<group>"; };
 		A10000022C00000100000021 /* PhotoExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoExportService.swift; sourceTree = "<group>"; };
 		A10000022C00000100000022 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
@@ -171,6 +173,7 @@
 				A10000022C00000100000009 /* RAWImageLoader.swift */,
 				A10000022C0000010000000A /* HistogramCalculator.swift */,
 				A10000022C0000010000001F /* DCPProfileManager.swift */,
+				A10000022C00000100000027 /* DCPProfileParser.swift */,
 				A10000022C00000100000020 /* AdobeColorPipeline.swift */,
 				A10000022C00000100000021 /* PhotoExportService.swift */,
 				A10000022C00000100000026 /* LiveDevelopPreviewEngine.swift */,
@@ -374,6 +377,7 @@
 				A10000012C0000010000001D /* TopFilterBarView.swift in Sources */,
 				A10000012C0000010000001E /* BottomControlsBarView.swift in Sources */,
 				A10000012C0000010000001F /* DCPProfileManager.swift in Sources */,
+				A10000012C00000100000027 /* DCPProfileParser.swift in Sources */,
 				A10000012C00000100000020 /* AdobeColorPipeline.swift in Sources */,
 				A10000012C00000100000021 /* PhotoExportService.swift in Sources */,
 				A10000012C00000100000024 /* DevelopBasicPanelView.swift in Sources */,
@@ -458,7 +462,7 @@
 				CODE_SIGN_ENTITLEMENTS = LumiBase/Resources/LumiBase.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 1.3.0;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -468,7 +472,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.lumibase.LumiBase;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -484,7 +488,7 @@
 				CODE_SIGN_ENTITLEMENTS = LumiBase/Resources/LumiBase.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 1.3.0;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -494,7 +498,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.lumibase.LumiBase;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

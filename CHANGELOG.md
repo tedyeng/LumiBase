@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.1] - 2026-09-22
+
+### Added & Improved
+- **Adobe Camera Raw (ACR) Planckian Locus Dynamic Tint Compensation (`AdobeColorPipeline` & `RAWImageLoader`)**:
+  - Automatically calculates color temperature deviation relative to camera as-shot baseline ($\Delta\text{Temp}$) and injects dynamic Planckian locus magenta compensation into `CIRAWFilter` ($\Delta\text{Tint} \approx \Delta\text{Temp} \times 0.012$).
+  - Completely eliminates the green/olive/yellowish chromaticity drift in Apple RAW when boosting Kelvin color temperature, restoring clean golden sunset tones and neutral water reflections.
+- **Calibrated Baseline Exposure & Dynamic Range (`rawFilter.baselineExposure = 0.30`)**:
+  - Aligned default RAW demosaicing baseline exposure offset with Adobe Camera Raw's Sony ILCE-7CM2 profile (+0.30 EV).
+  - Normalizes 18% middle gray (Zone V) luminance and opens up shadow/midtone dynamic range across the entire image.
+- **Filmic Highlight Roll-off & S-Curve Tone Mapping (`CIToneCurve`)**:
+  - Re-calibrated 5-point parametric tone curve with a filmic highlight shoulder ($p2Y, p3Y$) and deep shadow anchor ($p0Y, p1Y$).
+  - Prevents burnout / harsh clipping when Highlights is pushed to $+100$, gracefully preserving cloud and sun ray textures.
+  - Smooth shadow toe prevents shadow smearing while keeping blacks crisp.
+- **Lightroom Classic Style Histogram Engine (`HistogramCalculator` & `HistogramView`)**:
+  - Replaced square-root scaling with Lightroom's Perceptual Power curve response ($x^{0.70}$) combined with 3-point Gaussian smoothing to eliminate high-frequency sampling noise.
+  - Implemented multi-layer additive RGB histogram visualization with gray luminance background and accurate channel overlaps.
+- **Multi-Selection Rating & Flag Sync**:
+  - Integrated `1`–`5`, `0`, `P`, `X`, `U` rating shortcuts across all selected photos simultaneously with live XMP write-back.
+- **Unit Test Suite Expansion**:
+  - Added real Sony A7C II color pipeline verification, CIRAWFilter temperature direction tests, and multi-selection keyboard shortcut tests (30/30 tests passing, 0 failures).
+
+---
+
 ## [1.3.0] - 2026-09-21
 
 ### Added

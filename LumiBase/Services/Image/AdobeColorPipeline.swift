@@ -14,98 +14,129 @@ public final class AdobeColorPipeline: Sendable {
     public func process(
         image: CIImage,
         cameraModel: String?,
-        xmp: XMPMetadata?
+        xmp: XMPMetadata?,
+        baseHolder: BaseImageHolder? = nil
     ) -> CIImage {
-        guard let xmp = xmp, xmp.hasDevelopEdits else {
+        guard let xmp = xmp else {
+            return image
+        }
+        
+        let isRaw = baseHolder?.isRaw ?? false
+        let hasDevelopEdits = xmp.hasDevelopEdits
+        
+        // If non-raw without develop edits, passthrough untouched
+        if !isRaw && !hasDevelopEdits {
             return image
         }
         
         var current = image
         
-        // 1. Exposure Compensation (EV)
-        if let ev = xmp.exposure2012, ev != 0.0 {
+        // 1. Exposure Compensation (EV Delta)
+        // If RAW demosaicing already applied native EV, only apply the live delta
+        let targetEV = xmp.exposure2012 ?? 0.0
+        let baseEV = Double(baseHolder?.baseExposure ?? 0.0)
+        let deltaEV = targetEV - baseEV
+        if abs(deltaEV) > 0.01 {
             current = current.applyingFilter("CIExposureAdjust", parameters: [
-                kCIInputEVKey: ev
+                kCIInputEVKey: deltaEV
             ])
         }
         
-        // 2. White Balance / Kelvin Temperature & Tint (Lightroom Standard)
-        if let temp = xmp.temperature, temp > 0 {
+        // 2. White Balance / Kelvin Temperature & Tint Delta
+        if isRaw, let cameraTemp = baseHolder?.baseTemperature {
+            let targetTemp = Float(xmp.temperature ?? Int(cameraTemp))
+            let cameraTint = baseHolder?.baseTint ?? 0.0
+            let targetTint = Float(xmp.tint ?? Int(cameraTint))
+            let deltaTemp = Double(targetTemp - cameraTemp)
+            let deltaTint = Double(targetTint - cameraTint)
+            
+            if abs(deltaTemp) > 10.0 || abs(deltaTint) > 0.5 {
+                // Adobe Planckian chromaticity calibration
+                let rGain = max(0.4, min(2.5, 1.0 + (deltaTemp / 1000.0) * 0.155))
+                let bGain = max(0.4, min(2.5, 1.0 - (deltaTemp / 1000.0) * 0.145))
+                let gGain = max(0.4, min(2.5, 1.0 - (deltaTint / 100.0) * 0.15))
+                current = current.applyingFilter("CIColorMatrix", parameters: [
+                    "inputRVector": CIVector(x: rGain, y: 0.0, z: 0.0, w: 0.0),
+                    "inputGVector": CIVector(x: 0.0, y: gGain, z: 0.0, w: 0.0),
+                    "inputBVector": CIVector(x: 0.0, y: 0.0, z: bGain, w: 0.0),
+                    "inputAVector": CIVector(x: 0.0, y: 0.0, z: 0.0, w: 1.0)
+                ])
+            }
+        } else if let temp = xmp.temperature, temp > 0 {
             let tint = CGFloat(xmp.tint ?? 0)
-            // Higher Temp (>5500K) -> Warmer (amber/orange); Lower Temp (<5500K) -> Cooler (blue)
-            // Positive Tint (>0) -> Magenta; Negative Tint (<0) -> Green
-            current = current.applyingFilter("CITemperatureAndTint", parameters: [
-                "inputNeutral": CIVector(x: CGFloat(temp), y: tint),
-                "inputTargetNeutral": CIVector(x: 5500, y: 0)
-            ])
+            let deltaTemp = CGFloat(temp - 5500) * 0.65
+            let deltaTint = tint * 0.50
+            if abs(deltaTemp) > 25 || abs(deltaTint) > 1.0 {
+                current = current.applyingFilter("CITemperatureAndTint", parameters: [
+                    "inputNeutral": CIVector(x: 5500.0 + deltaTemp, y: deltaTint),
+                    "inputTargetNeutral": CIVector(x: 5500.0, y: 0.0)
+                ])
+            }
         }
         
-        // 3. Highlights & Shadows (Spatial local tone mapping)
-        let hl = xmp.highlights2012 ?? 0
-        let sh = xmp.shadows2012 ?? 0
-        if hl < 0 || sh != 0 {
-            // hl < 0: Apple bilateral highlight recovery (1.0 = neutral, 0.15 = maximum recovery)
-            let highlightAmount = (hl < 0) ? max(0.0, 1.0 + (Double(hl) / 100.0 * 0.85)) : 1.0
-            // sh: Shadow lifting (>0) or deepening (<0) with full -1.0...1.0 range
-            let shadowAmount = max(-1.0, min(1.0, Double(sh) / 100.0 * 0.75))
-            current = current.applyingFilter("CIHighlightShadowAdjust", parameters: [
-                "inputHighlightAmount": highlightAmount,
-                "inputShadowAmount": shadowAmount
-            ])
-        }
-        
-        // 4. Tone Curve (Highlights boost/compression, Shadows, Whites, Blacks & Dehaze)
-        let whites = xmp.whites2012 ?? 0
-        let blacks = xmp.blacks2012 ?? 0
-        let dehaze = xmp.dehaze ?? 0
-        let dehazeBlackDepth = Double(dehaze) / 100.0 * 0.04
-        if hl != 0 || sh != 0 || whites != 0 || blacks != 0 || dehaze != 0 {
-            let p0Y = max(0.0, min(0.25, 0.0 + (Double(blacks) / 100.0 * 0.08) - dehazeBlackDepth))
-            let p1Y = max(0.10, min(0.40, 0.25 + (Double(sh) / 100.0 * 0.04) + (Double(blacks) / 100.0 * 0.04)))
-            let p2Y = 0.50
-            let p3Y = max(0.55, min(0.95, 0.75 + (Double(hl) / 100.0 * 0.10) + (Double(whites) / 100.0 * 0.05)))
-            let p4Y = max(0.80, min(1.0, 1.0 + (Double(whites) / 100.0 * 0.08)))
-            current = current.applyingFilter("CIToneCurve", parameters: [
-                "inputPoint0": CIVector(x: 0.0, y: p0Y),
-                "inputPoint1": CIVector(x: 0.25, y: p1Y),
-                "inputPoint2": CIVector(x: 0.5, y: p2Y),
-                "inputPoint3": CIVector(x: 0.75, y: p3Y),
-                "inputPoint4": CIVector(x: 1.0, y: p4Y)
-            ])
-        }
-        
-        // 5. Contrast & Dehaze Contrast
-        let contrastVal = (xmp.contrast2012 ?? 0) + Int(Double(dehaze) * 0.35)
+        // 3. Contrast & Dehaze Contrast (Lightroom PV2012 midtone punch)
+        let dehaze = Double(xmp.dehaze ?? 0)
+        let contrastVal = Double(xmp.contrast2012 ?? 0) + (dehaze * 0.40)
         if contrastVal != 0 {
-            let contrastFactor = max(0.5, min(1.6, 1.0 + (Double(contrastVal) / 100.0 * 0.45)))
+            let contrastFactor = max(0.6, min(1.6, 1.0 + (contrastVal / 100.0 * 0.20)))
             current = current.applyingFilter("CIColorControls", parameters: [
                 kCIInputContrastKey: contrastFactor
             ])
         }
         
-        // 6. Black & White or Vibrance & Saturation
+        // 4. Black & White or Vibrance and Saturation (Color enrichment before tone luminosity mapping)
         let isBW = (xmp.convertToGrayscale == true) || (xmp.saturation == -100)
+        let hl = Double(xmp.highlights2012 ?? 0)
+        let hlFactor = hl / 100.0
+        // Natural highlight desaturation: in Adobe PV2012, positive highlights roll off gently towards specular white
+        let hlDesatScale = hlFactor > 0 ? max(0.80, 1.0 - (hlFactor * 0.20)) : 1.0
+        
         if isBW {
             current = current.applyingFilter("CIPhotoEffectMono")
         } else {
-            // Vibrance (Nonlinear smart saturation preserving skin tones)
-            if let vib = xmp.vibrance, vib != 0 {
-                let vibAmount = Double(vib) / 100.0
+            let vib = Double(xmp.vibrance ?? 0)
+            let totalVib = ((vib / 100.0 * 0.80) + (dehaze / 100.0 * 0.20)) * hlDesatScale
+            if abs(totalVib) > 0.01 {
                 current = current.applyingFilter("CIVibrance", parameters: [
-                    "inputAmount": vibAmount
+                    "inputAmount": totalVib
                 ])
             }
             
             // Saturation (-100 = 0.0 / Mono, 0 = 1.0 / Neutral, +100 = 2.0 / Vivid)
-            let sat = xmp.saturation ?? 0
-            let dehazeSatBoost = Double(dehaze) / 100.0 * 0.15
-            let rawSat = 1.0 + (Double(sat) / 100.0) + dehazeSatBoost
+            let sat = Double(xmp.saturation ?? 0)
+            let dehazeSatBoost = dehaze / 100.0 * 0.10
+            let rawSat = 1.0 + (((sat / 100.0 * 0.40) + dehazeSatBoost) * hlDesatScale)
             let saturationFactor = max(0.0, min(2.0, rawSat))
             if abs(saturationFactor - 1.0) > 0.005 {
                 current = current.applyingFilter("CIColorControls", parameters: [
                     kCIInputSaturationKey: saturationFactor
                 ])
             }
+        }
+        
+        // 5. PV2012 Basic Tone Curve (Highlights, Shadows, Whites, Blacks)
+        let sh = Double(xmp.shadows2012 ?? 0)
+        let whites = Double(xmp.whites2012 ?? 0)
+        let blacks = Double(xmp.blacks2012 ?? 0)
+        let shFactor = sh / 100.0
+        let wFactor = whites / 100.0
+        let bFactor = blacks / 100.0
+        
+        let hasToneEdits = (hl != 0) || (sh != 0) || (whites != 0) || (blacks != 0) || (dehaze != 0)
+        if hasToneEdits {
+            let p0Y = max(0.0, min(0.04, 0.0 + (bFactor * 0.01)))
+            let p1Y = max(0.12, min(0.35, 0.24 + (shFactor * 0.06) + (bFactor * 0.20)))
+            let p2Y = max(0.46, min(0.65, 0.50 + (hlFactor * 0.08) + (shFactor * 0.03)))
+            let p3Y = max(0.68, min(0.90, 0.75 + (hlFactor * 0.08) + (wFactor * 0.06)))
+            let p4Y = max(0.92, min(1.0, 1.0 + (wFactor * 0.03)))
+            
+            current = current.applyingFilter("CIToneCurve", parameters: [
+                "inputPoint0": CIVector(x: 0.0, y: p0Y),
+                "inputPoint1": CIVector(x: 0.25, y: p1Y),
+                "inputPoint2": CIVector(x: 0.50, y: p2Y),
+                "inputPoint3": CIVector(x: 0.75, y: p3Y),
+                "inputPoint4": CIVector(x: 1.0, y: p4Y)
+            ])
         }
         
         // 7. Texture (Fine Detail: >0 Sharpen, <0 Skin Soften)

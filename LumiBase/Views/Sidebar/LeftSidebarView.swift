@@ -119,6 +119,7 @@ public struct LeftSidebarView: View {
                                     customName: nil,
                                     icon: "folder.fill",
                                     level: 0,
+                                    showFullPath: true,
                                     appState: appState,
                                     expandedFolderPaths: $expandedFolderPaths
                                 )
@@ -306,6 +307,7 @@ private struct FolderTreeRow: View {
     let customName: String?
     let icon: String
     let level: Int
+    var showFullPath: Bool = false
     @ObservedObject var appState: AppState
     @Binding var expandedFolderPaths: Set<String>
     
@@ -355,23 +357,34 @@ private struct FolderTreeRow: View {
                 .buttonStyle(.plain)
                 .help(isExpanded ? "Collapse Folder" : "Expand Folder")
                 
-                // 2. Folder Name (Click to select & open photos, double click to toggle)
+                // 2. Folder Name & Full Path (Click to select & open photos, double click to toggle)
                 Button {
                     appState.openFolder(url: url)
                     if !isExpanded {
                         toggleExpand()
                     }
                 } label: {
-                    Text(customName ?? url.lastPathComponent)
-                        .font(.system(size: 11, weight: isCurrent ? .semibold : .regular))
-                        .foregroundColor(isCurrent ? LightroomTheme.textPrimary : LightroomTheme.textSecondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 3)
-                        .contentShape(Rectangle())
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(customName ?? url.lastPathComponent)
+                            .font(.system(size: 11, weight: isCurrent ? .semibold : .regular))
+                            .foregroundColor(isCurrent ? LightroomTheme.textPrimary : LightroomTheme.textSecondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        
+                        if showFullPath {
+                            Text(url.path)
+                                .font(.system(size: 9))
+                                .foregroundColor(isCurrent ? LightroomTheme.textSecondary.opacity(0.85) : LightroomTheme.textMuted)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, showFullPath ? 3 : 3)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .help(url.path)
                 .simultaneousGesture(
                     TapGesture(count: 2).onEnded {
                         toggleExpand()
@@ -392,6 +405,7 @@ private struct FolderTreeRow: View {
                         customName: nil,
                         icon: "folder",
                         level: level + 1,
+                        showFullPath: false,
                         appState: appState,
                         expandedFolderPaths: $expandedFolderPaths
                     )

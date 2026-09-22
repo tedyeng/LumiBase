@@ -11,11 +11,17 @@ struct LumiBaseApp: App {
         }
     }
     
+    private var appTitleWithVersion: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.3.0"
+        return "LumiBase v\(version)"
+    }
+    
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(appTitleWithVersion) {
             MainLayoutView()
                 .frame(minWidth: 900, minHeight: 600)
                 .preferredColorScheme(.dark)
+                .navigationTitle(appTitleWithVersion)
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified(showsTitle: true))
@@ -81,6 +87,11 @@ struct LumiBaseApp: App {
                 Button("Set 2 Stars") { NotificationCenter.default.post(name: NSNotification.Name("LumiBaseRate"), object: 2) }.keyboardShortcut("2", modifiers: [])
                 Button("Set 1 Star") { NotificationCenter.default.post(name: NSNotification.Name("LumiBaseRate"), object: 1) }.keyboardShortcut("1", modifiers: [])
                 Button("Clear Rating") { NotificationCenter.default.post(name: NSNotification.Name("LumiBaseRate"), object: 0) }.keyboardShortcut("0", modifiers: [])
+                
+                Divider()
+                
+                Button("Increase Rating") { NotificationCenter.default.post(name: NSNotification.Name("LumiBaseIncreaseRating"), object: nil) }.keyboardShortcut("]", modifiers: [])
+                Button("Decrease Rating") { NotificationCenter.default.post(name: NSNotification.Name("LumiBaseDecreaseRating"), object: nil) }.keyboardShortcut("[", modifiers: [])
                 
                 Divider()
                 

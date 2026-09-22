@@ -69,10 +69,50 @@ public final class PhotoExportService: @unchecked Sendable {
     ) throws -> URL {
         // 1. Decode full resolution image
         var baseCI: CIImage?
-        
+        var exportBaseHolder: BaseImageHolder? = nil
         if asset.isRaw {
             if let rawFilter = CIRAWFilter(imageURL: asset.fileURL) {
-                baseCI = rawFilter.outputImage
+                let defaultTemp = rawFilter.neutralTemperature
+                let defaultTint = rawFilter.neutralTint
+                let ev = Float(asset.xmp.exposure2012 ?? 0.0)
+                let decodedTemp: Float
+                if let temp = asset.xmp.temperature, temp > 0 {
+                    rawFilter.neutralTemperature = Float(temp)
+                    decodedTemp = Float(temp)
+                } else {
+                    decodedTemp = defaultTemp
+                }
+                let decodedTint: Float
+                if let tint = asset.xmp.tint {
+                    let tempDelta = Double(decodedTemp - defaultTemp)
+                    let tintOffset = Float(tempDelta * 0.012)
+                    rawFilter.neutralTint = Float(tint) + tintOffset
+                    decodedTint = Float(tint)
+                } else {
+                    decodedTint = defaultTint
+                }
+                rawFilter.baselineExposure = 0.30
+                rawFilter.shadowBias = 0.0
+                rawFilter.boostShadowAmount = 0.0
+                rawFilter.boostAmount = 1.0
+                if #available(macOS 26.0, *) {
+                    rawFilter.isHighlightRecoveryEnabled = true
+                }
+                if let out = rawFilter.outputImage {
+                    baseCI = out
+                    exportBaseHolder = BaseImageHolder(
+                        full: out,
+                        display: out,
+                        interactive: out,
+                        fullExtent: out.extent,
+                        displayExtent: out.extent,
+                        interactiveExtent: out.extent,
+                        baseTemperature: decodedTemp,
+                        baseTint: decodedTint,
+                        baseExposure: ev,
+                        isRaw: true
+                    )
+                }
             }
         }
         
@@ -102,7 +142,8 @@ public final class PhotoExportService: @unchecked Sendable {
         let processedCI = AdobeColorPipeline.shared.process(
             image: sourceCI,
             cameraModel: asset.cameraMetadata.model,
-            xmp: asset.xmp
+            xmp: asset.xmp,
+            baseHolder: exportBaseHolder
         )
         
         // Determine valid non-infinite render extent

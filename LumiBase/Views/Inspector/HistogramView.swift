@@ -71,11 +71,13 @@ public struct HistogramView: View {
                         context.stroke(strokePath, with: .color(color), lineWidth: 1.0)
                     }
                     
-                    // Draw channels with additive blend effect
-                    drawChannel(values: histogramData.red, color: Color.red, opacity: 0.3)
-                    drawChannel(values: histogramData.green, color: Color.green, opacity: 0.3)
-                    drawChannel(values: histogramData.blue, color: Color.blue, opacity: 0.3)
-                    drawChannel(values: histogramData.luminance, color: Color.white, opacity: 0.25)
+                    // Draw base gray luminance shape first
+                    drawChannel(values: histogramData.luminance, color: Color(white: 0.75), opacity: 0.35)
+                    
+                    // Draw RGB channels with vibrant Lightroom tones
+                    drawChannel(values: histogramData.red, color: Color(red: 0.95, green: 0.25, blue: 0.20), opacity: 0.35)
+                    drawChannel(values: histogramData.green, color: Color(red: 0.20, green: 0.85, blue: 0.30), opacity: 0.35)
+                    drawChannel(values: histogramData.blue, color: Color(red: 0.15, green: 0.55, blue: 0.95), opacity: 0.40)
                 }
             }
             .frame(height: 110)
@@ -100,7 +102,25 @@ public struct HistogramView: View {
         }
         
         isCalculating = true
-        if let thumbnail = await ThumbnailLoader.shared.loadThumbnail(for: asset, maxPixelSize: 300) {
+        
+        // 1. Compute histogram from the actual developed image with all XMP adjustments
+        if let baseHolder = await RAWImageLoader.shared.loadBaseHolder(from: asset.fileURL, xmp: asset.xmp),
+           let processed = RAWImageLoader.shared.renderProcessed(
+               baseHolder: baseHolder,
+               cameraModel: asset.cameraMetadata.model,
+               xmp: asset.xmp,
+               interactive: true
+           ) {
+            let data = await HistogramCalculator.computeHistogram(for: processed)
+            await MainActor.run {
+                self.histogramData = data
+                self.isCalculating = false
+            }
+            return
+        }
+        
+        // 2. Fallback to thumbnail
+        if let thumbnail = await ThumbnailLoader.shared.loadThumbnail(for: asset, maxPixelSize: 512) {
             let data = await HistogramCalculator.computeHistogram(for: thumbnail)
             await MainActor.run {
                 self.histogramData = data

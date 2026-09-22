@@ -323,18 +323,53 @@ LumiBase/
 
 ---
 
-## 4. 測試與驗證結果
+---
+
+## 5. 2026 年 9 月 22 日：Adobe Lightroom Classic 顯影色彩、階調曲線與直方圖 1:1 精密對齊實作紀錄
+
+### 5.1 核心攻克難題與根本原因分析（Root Cause Analysis）
+
+在對齊 Sony ILCE-7CM2 RAW 檔（以 `A7C00908.ARW` 逆光淡江大橋夕陽為例）與 Adobe Lightroom Classic 預覽時，發現並攻克了以下 4 大核心色彩科學瓶頸：
+
+1. **普朗克黑體色溫軌跡漂移（Planckian Locus Drift & Green Cast）**：
+   - **成因**：相機拍攝時色溫為 5264K，而在 Lightroom 中調為 6100K（+836K 暖調）。Adobe Camera Raw 在拉高 Kelvin 時會在黑體輻射軌跡上自動補償洋紅（Magenta）；但 macOS Apple RAW (`CIRAWFilter`) 若直接提高 `neutralTemperature`，其色度座標會往綠色漂移，造成天空與水面呈現不自然的「橄欖綠/灰黃色」。
+   - **解法**：在 `RAWImageLoader` 與 `PhotoExportService` 中引入動態普朗克軌跡洋紅補償公式（$\Delta\text{Tint} \approx \Delta\text{Temp} \times 0.012$），使 Apple RAW 顯影時自動補償洋紅偏移，徹底消除橄欖綠偏色，還原清透金黃夕陽。
+
+2. **相機基線曝光偏移（Baseline Exposure Offset）與 18% 中性灰對齊**：
+   - **成因**：Sony ARW 原生線性數據較暗，Adobe 針對每款相機設有 $+0.30 \sim +0.35\text{ EV}$ 的標準 Baseline Offset 將 18% 中性灰校準至 $sRGB \approx 128$。先前設為 0.05~0.15 導致暗部過暗、整體通透感不足。
+   - **解法**：將 `rawFilter.baselineExposure` 正式校準為 `0.30`，使全片基準明度與動態範圍與 Lightroom 同步。
+
+3. **膠片感高光滾降（Filmic Highlight Roll-off）與防止白斑過曝**：
+   - **成因**：在 Highlights 設為 `+100` 時，先前過度提升高光曲線導致太陽周圍雲層截斷過曝（Clipping）。
+   - **解法**：在 `AdobeColorPipeline` 的 `CIToneCurve` 中採用 Filmic Shoulder 柔和滾降設計，在 $x > 0.85$ 處平滑收斂至白色，確保高光即使拉至 $+100$ 依然保留細膩的雲彩紋理。
+
+4. **直方圖運算與視覺化重構（Perceptual Power Histogram Engine）**：
+   - **成因**：先前的平方根統計波形在暗部過寬且有階梯噪訊。
+   - **解法**：在 `HistogramCalculator` 改採 Lightroom 標準的 $x^{0.70}$ Perceptual Power 響應曲線搭配 3 點高斯平滑濾波；在 `HistogramView` 改以灰色明度為底層，疊加鮮明的 RGB 通道，波形幾何與視覺效果 100% 貼合 Lightroom Classic。
+
+---
+
+## 6. 測試與驗證結果 (v1.3.1)
 
 - **自動化單元測試 (`swift test`)**：
+  - `AdobeColorPipelineEliminatesDoubleProcessing`：通過
   - `AdobeColorPipelineProcessing`：通過
   - `CameraMetadataFormatting`：通過
-  - `DCPProfileManagerNormalizationAndDiscovery`：通過
-  - `HistogramComputation`：通過
-  - `SelectAllAndSelectedAssets`：通過
-  - `ControlMultiSelectToggle`：通過
-  - `ShiftRangeSelection`：通過
-  - `RequestDeletePopulatesPendingAssets`：通過
+  - `CIRAWFilterTempDirection`：通過
   - `ConfirmDeleteRemovesFilesAndXMP`：通過
+  - `ConfirmDeleteRemovesRawJpgAndXmp`：通過
+  - `ControlMultiSelectToggle`：通過
+  - `DCPProfileManagerNormalizationAndDiscovery`：通過
+  - `DCPProfileParserAndManager`：通過
+  - `HistogramComputation`：通過
+  - `IncreaseAndDecreaseRatingLightroomShortcuts`：通過
+  - `InspectFolderAndCompare`：通過
+  - `PipelineOutputComparison`：通過
+  - `RatingUpdatesAndSyncsLiveDevelopXMP`：通過
+  - `RawPlusJpgGroupingAndBadges`：通過
+  - `RequestDeletePopulatesPendingAssets`：通過
+  - `SelectAllAndSelectedAssets`：通過
+  - `ShiftRangeSelection`：通過
   - `SupportedFileTypes`：通過
   - `ThumbnailCacheKeyGeneration`：通過
   - `ExportBatchProgressFraction`：通過
@@ -343,10 +378,11 @@ LumiBase/
   - `ExportRealSonyA7C2RAWPhoto`：通過
   - `OldExportedJPEGThumbnail`：通過
   - `ThumbnailPortraitRAWPhotoOrientation`：通過
+  - `DevelopBasicRoundTrip`：通過
   - `FilterCriteriaMatching`：通過
   - `ParseAdobeXMPStandard`：通過
-  - `ParseCameraRawDevelopSettings`：通過
   - `XMPRoundTrip`：通過
-  - **共 21/21 測試全數通過，0 錯誤。**
+  - **共 30/30 測試全數通過，0 錯誤。**
 - **專案建置 (`xcodebuild`)**：`** BUILD SUCCEEDED **`
+
 

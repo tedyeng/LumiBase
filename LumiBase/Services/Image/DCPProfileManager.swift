@@ -2,12 +2,40 @@ import Foundation
 import CoreGraphics
 
 /// Discovers and manages Adobe DCP (DNG Camera Profile) color calibration profiles
-public final class DCPProfileManager: Sendable {
+public final class DCPProfileManager: @unchecked Sendable {
     public static let shared = DCPProfileManager()
     
     private let standardDCPDirectory = URL(fileURLWithPath: "/Library/Application Support/Adobe/CameraRaw/CameraProfiles")
     
     public init() {}
+    
+    private let parser = DCPProfileParser.shared
+    private let cacheLock = NSLock()
+    private var cachedProfiles: [String: DCPProfile] = [:]
+    
+    /// Finds and parses the best matching Adobe DCP profile for a given camera model and requested profile name
+    public func profile(for cameraModel: String?, requestedProfile: String? = nil) -> DCPProfile? {
+        guard let model = cameraModel, !model.isEmpty else { return nil }
+        let profileName = requestedProfile ?? "Adobe Standard"
+        let key = "\(model)_\(profileName)"
+        
+        cacheLock.lock()
+        if let cached = cachedProfiles[key] {
+            cacheLock.unlock()
+            return cached
+        }
+        cacheLock.unlock()
+        
+        guard let url = locateDCPProfile(cameraModel: model, requestedProfile: profileName),
+              let profile = parser.parse(url: url) else {
+            return nil
+        }
+        
+        cacheLock.lock()
+        cachedProfiles[key] = profile
+        cacheLock.unlock()
+        return profile
+    }
     
     /// Finds the best matching Adobe DCP profile for a given camera model and requested profile name
     public func locateDCPProfile(cameraModel: String?, requestedProfile: String? = nil) -> URL? {

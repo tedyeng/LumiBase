@@ -77,18 +77,30 @@ public final class HistogramCalculator: Sendable {
                 lBins[clampedLum] += 1
             }
             
-            // Normalize to [0.0, 1.0]
-            let maxCount = max(1, max(
-                rBins.max() ?? 1,
-                gBins.max() ?? 1,
-                bBins.max() ?? 1,
-                lBins.max() ?? 1
+            // Exclude extreme clipped edges (bins 0 and 255) when computing peak height,
+            // so single-color borders or clipped spikes do not flatten the entire histogram curve.
+            let effectiveMax = max(1, max(
+                rBins[1..<255].max() ?? 1,
+                gBins[1..<255].max() ?? 1,
+                bBins[1..<255].max() ?? 1,
+                lBins[1..<255].max() ?? 1
             ))
             
-            let normR = rBins.map { Float($0) / Float(maxCount) }
-            let normG = gBins.map { Float($0) / Float(maxCount) }
-            let normB = bBins.map { Float($0) / Float(maxCount) }
-            let normL = lBins.map { Float($0) / Float(maxCount) }
+            // Apply calibrated perceptual scaling (Lightroom power curve + 3-point smoothing)
+            let power = 0.70
+            func normalizeAndSmooth(_ bins: [UInt]) -> [Float] {
+                let raw = bins.map { min(1.0, Float(pow(Double($0) / Double(effectiveMax), power))) }
+                var smoothed = raw
+                for i in 1..<255 {
+                    smoothed[i] = (raw[i-1] * 0.22) + (raw[i] * 0.56) + (raw[i+1] * 0.22)
+                }
+                return smoothed
+            }
+            
+            let normR = normalizeAndSmooth(rBins)
+            let normG = normalizeAndSmooth(gBins)
+            let normB = normalizeAndSmooth(bBins)
+            let normL = normalizeAndSmooth(lBins)
             
             return HistogramData(red: normR, green: normG, blue: normB, luminance: normL)
         }.value

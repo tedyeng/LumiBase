@@ -116,12 +116,20 @@ public final class AppState: ObservableObject {
         let chars = event.charactersIgnoringModifiers ?? ""
         let keyCode = event.keyCode
         
-        // 1. Star Ratings (0 - 5)
+        // 1. Star Ratings (0 - 5, [ decrease, ] increase)
         if ["0", "1", "2", "3", "4", "5"].contains(chars) {
             if let r = Int(chars) {
                 self.setRating(r)
                 return true
             }
+        }
+        if chars == "]" {
+            self.increaseRating()
+            return true
+        }
+        if chars == "[" {
+            self.decreaseRating()
+            return true
         }
         
         // 2. Flags, Navigation & Layout Shortcuts
@@ -131,6 +139,12 @@ public final class AppState: ObservableObject {
         case "u", "U": self.setFlag(.unflagged); return true
         case "g", "G": self.viewMode = .grid; return true
         case "e", "E": self.viewMode = .loupe; return true
+        case "z", "Z":
+            NotificationCenter.default.post(name: NSNotification.Name("LumiBaseToggleZoom"), object: nil)
+            return true
+        case "i", "I":
+            NotificationCenter.default.post(name: NSNotification.Name("LumiBaseToggleInfoOverlay"), object: nil)
+            return true
         case " ":
             self.viewMode = (self.viewMode == .grid) ? .loupe : .grid
             return true
@@ -286,6 +300,17 @@ public final class AppState: ObservableObject {
     public func selectAsset(_ asset: PhotoAsset, isToggle: Bool = false, isRange: Bool = false) {
         let currentList = displayedAssets
         
+        // If primary selection changes, commit any pending live develop XMP and reset live cache
+        if primarySelectedAssetID != asset.id {
+            if let liveID = liveDevelopAssetID, let live = liveDevelopXMP, let index = allAssets.firstIndex(where: { $0.id == liveID }) {
+                allAssets[index].xmp = live
+                debouncedSyncXMP(for: allAssets[index])
+            }
+            liveDevelopAssetID = nil
+            liveDevelopXMP = nil
+            liveCommitTask?.cancel()
+        }
+        
         if isRange {
             // Determine starting point (anchor)
             let anchorID = selectionAnchorAssetID ?? primarySelectedAssetID ?? asset.id
@@ -393,6 +418,36 @@ public final class AppState: ObservableObject {
             updated.xmp.rating = max(0, min(5, rating))
             updateAsset(updated)
             syncXMP(for: updated)
+        }
+    }
+    
+    public func increaseRating() {
+        let targetAssets = selectedAssets.isEmpty ? (primarySelectedAsset != nil ? [primarySelectedAsset!] : []) : selectedAssets
+        guard !targetAssets.isEmpty else { return }
+        
+        for asset in targetAssets {
+            var updated = asset
+            let newRating = min(5, updated.xmp.rating + 1)
+            if newRating != updated.xmp.rating {
+                updated.xmp.rating = newRating
+                updateAsset(updated)
+                syncXMP(for: updated)
+            }
+        }
+    }
+    
+    public func decreaseRating() {
+        let targetAssets = selectedAssets.isEmpty ? (primarySelectedAsset != nil ? [primarySelectedAsset!] : []) : selectedAssets
+        guard !targetAssets.isEmpty else { return }
+        
+        for asset in targetAssets {
+            var updated = asset
+            let newRating = max(0, updated.xmp.rating - 1)
+            if newRating != updated.xmp.rating {
+                updated.xmp.rating = newRating
+                updateAsset(updated)
+                syncXMP(for: updated)
+            }
         }
     }
     
@@ -506,6 +561,9 @@ public final class AppState: ObservableObject {
     private func updateAsset(_ updated: PhotoAsset) {
         if let index = allAssets.firstIndex(where: { $0.id == updated.id }) {
             allAssets[index] = updated
+            if liveDevelopAssetID == updated.id {
+                liveDevelopXMP = updated.xmp
+            }
         }
     }
     
@@ -673,28 +731,12 @@ public final class AppState: ObservableObject {
         let fileManager = FileManager.default
         
         for asset in deletedAssets {
-            let photoURL = asset.fileURL
-            
-            // 1. Move primary photo file to macOS Trash
-            if fileManager.fileExists(atPath: photoURL.path) {
-                do {
-                    try fileManager.trashItem(at: photoURL, resultingItemURL: nil)
-                } catch {
-                    try? fileManager.removeItem(at: photoURL)
-                }
-            }
-            
-            // 2. Also move any corresponding XMP sidecar(s) to Trash
-            let parentDir = photoURL.deletingLastPathComponent()
-            let directXmp = parentDir.appendingPathComponent("\(photoURL.lastPathComponent).xmp")
-            let baseNameXmp = parentDir.appendingPathComponent("\(photoURL.deletingPathExtension().lastPathComponent).xmp")
-            
-            for xmpURL in [directXmp, baseNameXmp] {
-                if fileManager.fileExists(atPath: xmpURL.path) {
+            for fileURL in asset.allAssociatedURLs {
+                if fileManager.fileExists(atPath: fileURL.path) {
                     do {
-                        try fileManager.trashItem(at: xmpURL, resultingItemURL: nil)
+                        try fileManager.trashItem(at: fileURL, resultingItemURL: nil)
                     } catch {
-                        try? fileManager.removeItem(at: xmpURL)
+                        try? fileManager.removeItem(at: fileURL)
                     }
                 }
             }
