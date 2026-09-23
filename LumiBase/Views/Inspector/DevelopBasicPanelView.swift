@@ -5,6 +5,8 @@ public struct DevelopBasicPanelView: View {
     public let asset: PhotoAsset
     @ObservedObject var appState: AppState
     
+    @FocusState private var focusedSlider: BasicSliderField?
+    
     public init(asset: PhotoAsset, appState: AppState) {
         self.asset = asset
         self.appState = appState
@@ -17,7 +19,35 @@ public struct DevelopBasicPanelView: View {
         return asset.xmp
     }
     
+    private func nextSlider(after current: BasicSliderField, isBW: Bool) -> BasicSliderField? {
+        var all = BasicSliderField.allCases
+        if isBW {
+            all.removeAll { $0 == .vibrance || $0 == .saturation }
+        }
+        guard let idx = all.firstIndex(of: current) else { return nil }
+        let nextIdx = idx + 1
+        if nextIdx < all.count {
+            return all[nextIdx]
+        }
+        return all.first
+    }
+    
+    private func previousSlider(before current: BasicSliderField, isBW: Bool) -> BasicSliderField? {
+        var all = BasicSliderField.allCases
+        if isBW {
+            all.removeAll { $0 == .vibrance || $0 == .saturation }
+        }
+        guard let idx = all.firstIndex(of: current) else { return nil }
+        let prevIdx = idx - 1
+        if prevIdx >= 0 {
+            return all[prevIdx]
+        }
+        return all.last
+    }
+    
     public var body: some View {
+        let isBW = (currentXMP.convertToGrayscale == true || currentXMP.saturation == -100)
+        
         VStack(alignment: .leading, spacing: 10) {
             
             // 1. Top Quick Action Bar: Auto, Treatment (Color / B&W), Reset
@@ -26,7 +56,6 @@ public struct DevelopBasicPanelView: View {
                     appState.autoTone(for: asset.id)
                 }
                 
-                let isBW = (currentXMP.convertToGrayscale == true || currentXMP.saturation == -100)
                 actionButton(title: isBW ? "Color" : "B&W", icon: "circle.righthalf.filled", isActive: isBW) {
                     appState.toggleMonochrome(for: asset.id)
                 }
@@ -203,6 +232,10 @@ public struct DevelopBasicPanelView: View {
                     defaultValue: 5500,
                     trackStyle: .temperature,
                     valueFormatter: { String(format: "%d K", Int($0)) },
+                    field: .temp,
+                    focusedField: $focusedSlider,
+                    onNextField: { focusedSlider = nextSlider(after: .temp, isBW: isBW) },
+                    onPreviousField: { focusedSlider = previousSlider(before: .temp, isBW: isBW) },
                     onEditingChanged: { isEditing in
                         if !isEditing {
                             appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
@@ -224,6 +257,10 @@ public struct DevelopBasicPanelView: View {
                     defaultValue: 0,
                     trackStyle: .tint,
                     valueFormatter: { String(format: "%+d", Int($0)) },
+                    field: .tint,
+                    focusedField: $focusedSlider,
+                    onNextField: { focusedSlider = nextSlider(after: .tint, isBW: isBW) },
+                    onPreviousField: { focusedSlider = previousSlider(before: .tint, isBW: isBW) },
                     onEditingChanged: { isEditing in
                         if !isEditing {
                             appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
@@ -255,6 +292,10 @@ public struct DevelopBasicPanelView: View {
                     defaultValue: 0.0,
                     trackStyle: .standard,
                     valueFormatter: { String(format: "%+.2f", $0) },
+                    field: .exposure,
+                    focusedField: $focusedSlider,
+                    onNextField: { focusedSlider = nextSlider(after: .exposure, isBW: isBW) },
+                    onPreviousField: { focusedSlider = previousSlider(before: .exposure, isBW: isBW) },
                     onEditingChanged: { isEditing in
                         if !isEditing {
                             appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
@@ -276,6 +317,10 @@ public struct DevelopBasicPanelView: View {
                     defaultValue: 0,
                     trackStyle: .standard,
                     valueFormatter: { String(format: "%+d", Int($0)) },
+                    field: .contrast,
+                    focusedField: $focusedSlider,
+                    onNextField: { focusedSlider = nextSlider(after: .contrast, isBW: isBW) },
+                    onPreviousField: { focusedSlider = previousSlider(before: .contrast, isBW: isBW) },
                     onEditingChanged: { isEditing in
                         if !isEditing {
                             appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
@@ -297,6 +342,10 @@ public struct DevelopBasicPanelView: View {
                     defaultValue: 0,
                     trackStyle: .standard,
                     valueFormatter: { String(format: "%+d", Int($0)) },
+                    field: .highlights,
+                    focusedField: $focusedSlider,
+                    onNextField: { focusedSlider = nextSlider(after: .highlights, isBW: isBW) },
+                    onPreviousField: { focusedSlider = previousSlider(before: .highlights, isBW: isBW) },
                     onEditingChanged: { isEditing in
                         if !isEditing {
                             appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
@@ -318,6 +367,10 @@ public struct DevelopBasicPanelView: View {
                     defaultValue: 0,
                     trackStyle: .standard,
                     valueFormatter: { String(format: "%+d", Int($0)) },
+                    field: .shadows,
+                    focusedField: $focusedSlider,
+                    onNextField: { focusedSlider = nextSlider(after: .shadows, isBW: isBW) },
+                    onPreviousField: { focusedSlider = previousSlider(before: .shadows, isBW: isBW) },
                     onEditingChanged: { isEditing in
                         if !isEditing {
                             appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
@@ -339,6 +392,10 @@ public struct DevelopBasicPanelView: View {
                     defaultValue: 0,
                     trackStyle: .standard,
                     valueFormatter: { String(format: "%+d", Int($0)) },
+                    field: .whites,
+                    focusedField: $focusedSlider,
+                    onNextField: { focusedSlider = nextSlider(after: .whites, isBW: isBW) },
+                    onPreviousField: { focusedSlider = previousSlider(before: .whites, isBW: isBW) },
                     onEditingChanged: { isEditing in
                         if !isEditing {
                             appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
@@ -360,6 +417,10 @@ public struct DevelopBasicPanelView: View {
                     defaultValue: 0,
                     trackStyle: .standard,
                     valueFormatter: { String(format: "%+d", Int($0)) },
+                    field: .blacks,
+                    focusedField: $focusedSlider,
+                    onNextField: { focusedSlider = nextSlider(after: .blacks, isBW: isBW) },
+                    onPreviousField: { focusedSlider = previousSlider(before: .blacks, isBW: isBW) },
                     onEditingChanged: { isEditing in
                         if !isEditing {
                             appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
@@ -391,6 +452,10 @@ public struct DevelopBasicPanelView: View {
                     defaultValue: 0,
                     trackStyle: .standard,
                     valueFormatter: { String(format: "%+d", Int($0)) },
+                    field: .texture,
+                    focusedField: $focusedSlider,
+                    onNextField: { focusedSlider = nextSlider(after: .texture, isBW: isBW) },
+                    onPreviousField: { focusedSlider = previousSlider(before: .texture, isBW: isBW) },
                     onEditingChanged: { isEditing in
                         if !isEditing {
                             appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
@@ -412,6 +477,10 @@ public struct DevelopBasicPanelView: View {
                     defaultValue: 0,
                     trackStyle: .standard,
                     valueFormatter: { String(format: "%+d", Int($0)) },
+                    field: .clarity,
+                    focusedField: $focusedSlider,
+                    onNextField: { focusedSlider = nextSlider(after: .clarity, isBW: isBW) },
+                    onPreviousField: { focusedSlider = previousSlider(before: .clarity, isBW: isBW) },
                     onEditingChanged: { isEditing in
                         if !isEditing {
                             appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
@@ -433,6 +502,10 @@ public struct DevelopBasicPanelView: View {
                     defaultValue: 0,
                     trackStyle: .standard,
                     valueFormatter: { String(format: "%+d", Int($0)) },
+                    field: .dehaze,
+                    focusedField: $focusedSlider,
+                    onNextField: { focusedSlider = nextSlider(after: .dehaze, isBW: isBW) },
+                    onPreviousField: { focusedSlider = previousSlider(before: .dehaze, isBW: isBW) },
                     onEditingChanged: { isEditing in
                         if !isEditing {
                             appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
@@ -441,7 +514,6 @@ public struct DevelopBasicPanelView: View {
                 )
                 
                 // Vibrance & Saturation (Hidden in Black & White mode, matching Lightroom Classic)
-                let isBW = (currentXMP.convertToGrayscale == true || currentXMP.saturation == -100)
                 if !isBW {
                     // Vibrance
                     LightroomSlider(
@@ -457,6 +529,10 @@ public struct DevelopBasicPanelView: View {
                         defaultValue: 0,
                         trackStyle: .saturation,
                         valueFormatter: { String(format: "%+d", Int($0)) },
+                        field: .vibrance,
+                        focusedField: $focusedSlider,
+                        onNextField: { focusedSlider = nextSlider(after: .vibrance, isBW: isBW) },
+                        onPreviousField: { focusedSlider = previousSlider(before: .vibrance, isBW: isBW) },
                         onEditingChanged: { isEditing in
                             if !isEditing {
                                 appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
@@ -478,6 +554,10 @@ public struct DevelopBasicPanelView: View {
                         defaultValue: 0,
                         trackStyle: .saturation,
                         valueFormatter: { String(format: "%+d", Int($0)) },
+                        field: .saturation,
+                        focusedField: $focusedSlider,
+                        onNextField: { focusedSlider = nextSlider(after: .saturation, isBW: isBW) },
+                        onPreviousField: { focusedSlider = previousSlider(before: .saturation, isBW: isBW) },
                         onEditingChanged: { isEditing in
                             if !isEditing {
                                 appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }

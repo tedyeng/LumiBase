@@ -1,5 +1,22 @@
 import SwiftUI
 
+/// Identifiers for all editable Basic panel adjustment sliders
+public enum BasicSliderField: String, CaseIterable, Hashable {
+    case temp
+    case tint
+    case exposure
+    case contrast
+    case highlights
+    case shadows
+    case whites
+    case blacks
+    case texture
+    case clarity
+    case dehaze
+    case vibrance
+    case saturation
+}
+
 /// Custom track background styles matching Lightroom Classic's Develop panel
 public enum LightroomSliderTrackStyle {
     case standard
@@ -8,7 +25,7 @@ public enum LightroomSliderTrackStyle {
     case saturation
 }
 
-/// Professional Lightroom-style slider with color gradient tracks, center ticks, double-click to reset, and direct text input
+/// Professional Lightroom-style slider with color gradient tracks, center ticks, double-click to reset, and direct text input with Tab navigation
 public struct LightroomSlider: View {
     public let title: String
     @Binding public var value: Double
@@ -19,12 +36,23 @@ public struct LightroomSlider: View {
     public let valueFormatter: (Double) -> String
     public var onEditingChanged: ((Bool) -> Void)? = nil
     
-    @FocusState private var isFieldFocused: Bool
-    @State private var isEditingText: Bool = false
+    public var field: BasicSliderField? = nil
+    public var focusedField: FocusState<BasicSliderField?>.Binding? = nil
+    public var onNextField: (() -> Void)? = nil
+    public var onPreviousField: (() -> Void)? = nil
+    
+    @FocusState private var isLocalFocused: Bool
     @State private var textInput: String = ""
     @State private var isHoveringValue: Bool = false
     @State private var isHovering: Bool = false
     @State private var localDragValue: Double? = nil
+    
+    private var isEditing: Bool {
+        if let focusedField = focusedField, let field = field {
+            return focusedField.wrappedValue == field
+        }
+        return isLocalFocused
+    }
     
     private var effectiveValue: Double {
         localDragValue ?? value
@@ -38,6 +66,10 @@ public struct LightroomSlider: View {
         defaultValue: Double = 0.0,
         trackStyle: LightroomSliderTrackStyle = .standard,
         valueFormatter: @escaping (Double) -> String = { String(format: "%+.0f", $0) },
+        field: BasicSliderField? = nil,
+        focusedField: FocusState<BasicSliderField?>.Binding? = nil,
+        onNextField: (() -> Void)? = nil,
+        onPreviousField: (() -> Void)? = nil,
         onEditingChanged: ((Bool) -> Void)? = nil
     ) {
         self.title = title
@@ -47,6 +79,10 @@ public struct LightroomSlider: View {
         self.defaultValue = defaultValue
         self.trackStyle = trackStyle
         self.valueFormatter = valueFormatter
+        self.field = field
+        self.focusedField = focusedField
+        self.onNextField = onNextField
+        self.onPreviousField = onPreviousField
         self.onEditingChanged = onEditingChanged
     }
     
@@ -122,49 +158,23 @@ public struct LightroomSlider: View {
             
             // 3. Numeric Value Display / Editable Field
             ZStack(alignment: .trailing) {
-                if isEditingText {
-                    TextField("", text: $textInput)
-                        .textFieldStyle(.plain)
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
-                        .foregroundColor(LightroomTheme.textPrimary)
-                        .multilineTextAlignment(.trailing)
-                        .padding(.horizontal, 3)
-                        .padding(.vertical, 1)
-                        .background(
-                            RoundedRectangle(cornerRadius: 3)
-                                .fill(Color(white: 0.12))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 3)
-                                .stroke(LightroomTheme.accentYellow.opacity(0.85), lineWidth: 1)
-                        )
-                        .frame(width: 48, alignment: .trailing)
-                        .focused($isFieldFocused)
-                        .onAppear {
-                            isFieldFocused = true
-                        }
-                        .onSubmit {
-                            commitTextInput()
-                        }
-                        .onExitCommand {
-                            cancelTextInput()
-                        }
-                        .onChange(of: isFieldFocused) { _, focused in
-                            if !focused && isEditingText {
-                                commitTextInput()
-                            }
-                        }
-                } else {
+                // Background interactive text field - always in hierarchy so FocusState / FirstResponder is never dropped
+                editableTextField
+                    .opacity(isEditing ? 1.0 : 0.0)
+                    .allowsHitTesting(isEditing)
+                
+                // Static formatted display label - active when not editing
+                if !isEditing {
                     Text(valueFormatter(effectiveValue))
                         .font(.system(size: 10, weight: isNonDefault ? .semibold : .regular, design: .monospaced))
                         .foregroundColor(isNonDefault ? LightroomTheme.textPrimary : LightroomTheme.textMuted)
                         .padding(.horizontal, 3)
                         .padding(.vertical, 1)
+                        .frame(width: 48, height: 18, alignment: .trailing)
                         .background(
                             RoundedRectangle(cornerRadius: 3)
-                                .fill(isHoveringValue ? Color.white.opacity(0.1) : Color.clear)
+                                .fill(isHoveringValue ? Color.white.opacity(0.12) : Color.clear)
                         )
-                        .frame(width: 48, alignment: .trailing)
                         .contentShape(Rectangle())
                         .onHover { hovering in
                             isHoveringValue = hovering
@@ -172,7 +182,7 @@ public struct LightroomSlider: View {
                         .onTapGesture {
                             startEditing()
                         }
-                        .help("Click to edit value (Press Return to apply)")
+                        .help("Click to edit value (Press Tab for next, Return to apply)")
                 }
             }
             .frame(width: 48, height: 18, alignment: .trailing)
@@ -180,6 +190,76 @@ public struct LightroomSlider: View {
         .padding(.vertical, 1)
         .onHover { hover in
             isHovering = hover
+        }
+        .onChange(of: focusedField?.wrappedValue) { oldField, newField in
+            if let field = field {
+                if newField == field {
+                    DispatchQueue.main.async {
+                        syncTextInput()
+                    }
+                } else if oldField == field {
+                    DispatchQueue.main.async {
+                        commitTextInput()
+                    }
+                }
+            }
+        }
+        .onChange(of: isLocalFocused) { oldFocus, newFocus in
+            if newFocus {
+                DispatchQueue.main.async {
+                    syncTextInput()
+                }
+            } else if oldFocus {
+                DispatchQueue.main.async {
+                    commitTextInput()
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var editableTextField: some View {
+        let fieldView = TextField("", text: $textInput)
+            .textFieldStyle(.plain)
+            .font(.system(size: 10, weight: .medium, design: .monospaced))
+            .foregroundColor(LightroomTheme.textPrimary)
+            .multilineTextAlignment(.trailing)
+            .padding(.horizontal, 3)
+            .padding(.vertical, 1)
+            .background(
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(Color(white: 0.12))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 3)
+                    .stroke(LightroomTheme.accentYellow.opacity(0.85), lineWidth: 1)
+            )
+            .frame(width: 48, height: 18, alignment: .trailing)
+            .onSubmit {
+                commitTextInput()
+                exitFocus()
+            }
+            .onExitCommand {
+                cancelTextInput()
+                exitFocus()
+            }
+            .onKeyPress { press in
+                if press.key == .tab {
+                    commitTextInput()
+                    if press.modifiers.contains(.shift) {
+                        onPreviousField?()
+                    } else {
+                        onNextField?()
+                    }
+                    return .handled
+                }
+                return .ignored
+            }
+        
+        if let focusedField = focusedField, let field = field {
+            fieldView.focused(focusedField, equals: field)
+        } else {
+            fieldView.focused($isLocalFocused)
         }
     }
     
@@ -194,43 +274,58 @@ public struct LightroomSlider: View {
         onEditingChanged?(false)
     }
     
-    private func startEditing() {
+    private func syncTextInput() {
         if range.upperBound <= 5.0 || step < 1.0 {
             textInput = String(format: "%.2f", effectiveValue)
         } else {
             textInput = String(format: "%.0f", effectiveValue)
         }
-        isEditingText = true
-        DispatchQueue.main.async {
-            isFieldFocused = true
+    }
+    
+    private func startEditing() {
+        syncTextInput()
+        if let focusedField = focusedField, let field = field {
+            focusedField.wrappedValue = field
+        } else {
+            isLocalFocused = true
         }
     }
     
     private func cancelTextInput() {
-        isEditingText = false
-        isFieldFocused = false
+        // Cancel input without applying
     }
     
     private func commitTextInput() {
-        isEditingText = false
-        isFieldFocused = false
         let cleaned = textInput
             .replacingOccurrences(of: "+", with: "")
             .replacingOccurrences(of: "K", with: "")
             .replacingOccurrences(of: "k", with: "")
             .replacingOccurrences(of: ",", with: "")
+            .replacingOccurrences(of: " ", with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
         if let parsed = Double(cleaned) {
             let clamped = min(max(parsed, range.lowerBound), range.upperBound)
             let stepped: Double
             if step < 1.0 {
-                stepped = (clamped / step).rounded() * step
+                stepped = (clamped * 100.0).rounded() / 100.0
             } else {
                 stepped = clamped.rounded()
             }
-            let finalValue = (stepped * 1000.0).rounded() / 1000.0
-            value = finalValue
-            onEditingChanged?(false)
+            if abs(value - stepped) > 0.0001 {
+                DispatchQueue.main.async {
+                    self.value = stepped
+                    self.onEditingChanged?(false)
+                }
+            }
+        }
+    }
+    
+    private func exitFocus() {
+        if isLocalFocused {
+            isLocalFocused = false
+        }
+        if let focusedField = focusedField, focusedField.wrappedValue == field {
+            focusedField.wrappedValue = nil
         }
     }
     

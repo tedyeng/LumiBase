@@ -383,6 +383,35 @@ LumiBase/
   - `ParseAdobeXMPStandard`：通過
   - `XMPRoundTrip`：通過
   - **共 30/30 測試全數通過，0 錯誤。**
-- **專案建置 (`xcodebuild`)**：`** BUILD SUCCEEDED **`
+---
+
+## 7. 2026-09-23 實作紀錄 (v1.4.4)
+
+### 7.1 Develop Basic Panel 手動數值輸入與 Tab 鍵快速導航 (`LightroomSlider` & `DevelopBasicPanelView`)
+1. **點擊 / 雙擊直接進入編輯模式**：
+   - **問題現象**：先前在修圖滑桿右側數值標籤上點擊或雙擊時，無法穩定進入手動輸入模式。
+   - **根本原因**：`TextField` 原先包覆在條件式判斷中（未進入編輯模式時未掛載到視圖樹），當 `@FocusState` 改變時，SwiftUI 因找不到已掛載的焦點標靶而立即將焦點重設為 `nil`，導致輸入框瞬間被關閉。
+   - **解決方案**：
+     - 將 `TextField` 永久掛載於視圖階層中並綁定焦點，未編輯時隱藏 (`opacity: 0`)，點擊數字時焦點能立即被捕獲並無縫切換至編輯框。
+     - 點擊或雙擊數值標籤即可觸發手動輸入，雙擊滑桿標題（如 `Temp`）或滑桿軌道仍保持快速重設回預設值。
+
+2. **Tab / Shift+Tab 連續跳轉導航**：
+   - 在 `editableTextField` 加入 `.onKeyPress` 按鍵監聽：
+     - **`Tab` 鍵**：自動提交並格式化當前數值，並將焦點推進至下一個修圖選項（`Temp` → `Tint` → `Exposure` → `Contrast` → `Highlights` → `Shadows` → `Whites` → `Blacks` → `Texture` → `Clarity` → `Dehaze` → `Vibrance` → `Saturation`）。
+     - **`Shift + Tab` 鍵**：自動提交當前數值並跳回上一個修圖選項。
+     - **`Return` 鍵**：提交數值並關閉編輯狀態。
+     - **`Esc` 鍵**：取消並退出編輯狀態。
+
+3. **SwiftUI 狀態發布警告消除 (`Publishing changes from within view updates is not allowed`)**：
+   - **成因**：在 `.onKeyPress`（處於 `KeyEventDispatcher` 事務）與 `.onChange` 監聽回調中同步更新 `@Published` 屬性（如 `AppState.liveDevelopXMP`）或 `@State` 狀態。
+   - **解法**：在 `LightroomSlider.commitTextInput`、`LoupeView.onChange` 與 `GridView.calculateGridColumns` 中將狀態變更透過 `DispatchQueue.main.async` 派發，確保在當前渲染事務結束後的下一個 RunLoop 乾淨提交。
+
+### 7.2 左側欄檔案總管最近開啟資料夾持久化與系統卷宗過濾 (`LeftSidebarView`)
+1. **最近開啟 5 個目錄持久化 (`RECENT FOLDERS`)**：
+   - 透過 `UserDefaults`（鍵值 `LumiBase.RecentFolders`）持久化儲存最近開啟與點擊的 5 個資料夾路徑。
+   - 程式重開後自動載入並固定置頂於左側欄最上方，點擊即可直達資料夾。
+2. **系統目錄與 Time Machine 快照過濾**：
+   - 在目錄樹遞迴掃描與磁碟列表過濾掉 `com.apple.TimeMachine.*` 快照、`/` 的 `Macintosh HD` 符號連結，以及系統虛擬卷宗（`Preboot`、`Recovery`、`VM`、`Update`），使側邊欄維持乾淨專業的目錄結構。
+
 
 

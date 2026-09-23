@@ -5,6 +5,31 @@ All notable changes to **LumiBase** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.4] - 2026-09-23
+
+### Added & Improved
+- **Develop Basic Panel Direct Numeric Editing & Tab Navigation (`LightroomSlider` & `DevelopBasicPanelView`)**:
+  - **Click & Double-Click Edit Activation**: Clicking or double-clicking any adjustment slider's numeric value immediately enters manual text input mode with focus and selection.
+  - **Sequential Tab / Shift+Tab Navigation**: Pressing `Tab` automatically commits the current slider's value and advances focus to the next basic slider in sequence (`Temp` → `Tint` → `Exposure` → `Contrast` → `Highlights` → `Shadows` → `Whites` → `Blacks` → `Texture` → `Clarity` → `Dehaze` → `Vibrance` → `Saturation`). Pressing `Shift+Tab` moves to the previous slider.
+  - **Return & Escape Dismissal**: Pressing `Return` commits the entered value and exits edit mode; pressing `Esc` cancels / exits edit mode.
+  - **Double-Click Reset**: Double-clicking a slider title (e.g. `Temp`, `Exposure`) or slider track/thumb resets the slider to its default value.
+- **Top 5 Recent Folders Persistence & System Volume Filtering (`LeftSidebarView`)**:
+  - Automatically persists the top 5 most recently opened/clicked folders in `UserDefaults` (`LumiBase.RecentFolders`), immediately accessible at the top of the Left Sidebar across application relaunches.
+  - Filtered out macOS system artifacts, Time Machine snapshots (`com.apple.TimeMachine.*`), root symlinks (`Macintosh HD`), and hidden system volumes (`Preboot`, `Recovery`, `VM`, `Update`).
+- **SwiftUI View Update Lifecycle & Warning Elimination**:
+  - Resolved `Publishing changes from within view updates is not allowed, this will cause undefined behavior` warnings across `LightroomSlider`, `LoupeView`, and `GridView`.
+  - Decoupled key press event handling (`KeyEventDispatcher`) and slider text commits via asynchronous main queue dispatching (`DispatchQueue.main.async`).
+
+---
+
+## [1.4.3] - 2026-09-22
+
+### Added & Improved
+- **Temporary & Persistent 100% Pixel Inspection Engine (`LoupeView` & `InspectionSurface`)**:
+  - Hold left mouse button for temporary 100% native pixel inspection with pan support.
+  - Double-click or `Z` key to toggle persistent 100% zoom.
+  - AppKit event routing (`NSEvent.addLocalMonitorForEvents`) ensuring flawless mouse capture and clean window teardown.
+
 ---
 
 ## [1.3.1] - 2026-09-22
