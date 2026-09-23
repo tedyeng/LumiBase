@@ -1,6 +1,8 @@
 # Inspection performance: bounded prefetch proposal
 
-Status: research only; NOT implemented in 1.4.3. No promised speedup without measurement.
+Status: implemented conservatively in 1.4.4; this document's broader measurements and native-decode ideas remain research. No speedup is claimed without measurement.
+
+The shipped scope uses a maximum ±3 neighborhood and ImageIO embedded previews, a separate utility worker, and an explicitly accounted 128 MiB speculative bitmap cache. It does not perform speculative native RAW decode. Develop-edited RAW assets are skipped because the preview-only path cannot safely reproduce their foreground develop result without that decode. See [inspection-1.4.4.md](inspection-1.4.4.md) for shipped behavior and validation.
 
 ## Findings from the current code
 
@@ -16,7 +18,7 @@ Interpret “前後 3–5 張” as a configurable maximum radius, not an obliga
 
 1. Start with preview radius ±3; allow ±5 only inside the same byte budget. Prioritize next image in travel direction, previous image, then increasing distance. Use the current sorted/filtered asset list, not filesystem order.
 2. Keep full/native data for the current image and optionally one predicted next image only when there is budget. Do not decode all 6–10 neighbors at native resolution.
-3. Prototype a **128 MiB speculative preview budget**, separate from the current visible frame, with at most one speculative decode/render in flight. This number is an initial experiment parameter, not a measured safe process-memory ceiling.
+3. Shipped prototype: **128 MiB speculative bitmap accounting**, separate from the current visible frame, with at most one speculative decode in flight. This is not a measured safe process-memory ceiling.
 4. Use explicitly accounted LRU eviction plus admission checks. NSCache's totalCostLimit is not a strict limit and eviction order is unspecified; it cannot alone guarantee a hard budget.[2]
 5. Count materialized bitmap bytes (`bytesPerRow × height`) and reserve estimated in-flight cost before dispatch. Track decoder/GPU/CI allocations separately via resident/physical footprint measurement: CIImage graphs and shared backing cannot be accurately costed simply by adding logical dimensions.
 6. Cancel/reprioritize on selection, direction, folder, sort/filter and develop changes. Under memory pressure, clear speculative entries and stop speculation. Eviction must not invalidate the currently displayed frame.

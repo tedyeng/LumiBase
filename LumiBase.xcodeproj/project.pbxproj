@@ -46,6 +46,8 @@
 		A10000012C00000100000024 /* DevelopBasicPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000024 /* DevelopBasicPanelView.swift */; };
 		A10000012C00000100000025 /* LightroomSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000025 /* LightroomSlider.swift */; };
 		A10000012C00000100000026 /* LiveDevelopPreviewEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000026 /* LiveDevelopPreviewEngine.swift */; };
+		A10000012C00000100000028 /* PreviewPreloader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000028 /* PreviewPreloader.swift */; };
+		A10000012C00000100000029 /* ProcessedROICache.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000029 /* ProcessedROICache.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -89,6 +91,8 @@
 		A10000022C00000100000024 /* DevelopBasicPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevelopBasicPanelView.swift; sourceTree = "<group>"; };
 		A10000022C00000100000025 /* LightroomSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LightroomSlider.swift; sourceTree = "<group>"; };
 		A10000022C00000100000026 /* LiveDevelopPreviewEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveDevelopPreviewEngine.swift; sourceTree = "<group>"; };
+		A10000022C00000100000028 /* PreviewPreloader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewPreloader.swift; sourceTree = "<group>"; };
+		A10000022C00000100000029 /* ProcessedROICache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessedROICache.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -177,6 +181,8 @@
 				A10000022C00000100000020 /* AdobeColorPipeline.swift */,
 				A10000022C00000100000021 /* PhotoExportService.swift */,
 				A10000022C00000100000026 /* LiveDevelopPreviewEngine.swift */,
+				A10000022C00000100000028 /* PreviewPreloader.swift */,
+				A10000022C00000100000029 /* ProcessedROICache.swift */,
 			);
 			path = Image;
 			sourceTree = "<group>";
@@ -383,6 +389,8 @@
 				A10000012C00000100000024 /* DevelopBasicPanelView.swift in Sources */,
 				A10000012C00000100000025 /* LightroomSlider.swift in Sources */,
 				A10000012C00000100000026 /* LiveDevelopPreviewEngine.swift in Sources */,
+				A10000012C00000100000028 /* PreviewPreloader.swift in Sources */,
+				A10000012C00000100000029 /* ProcessedROICache.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -462,7 +470,7 @@
 				CODE_SIGN_ENTITLEMENTS = LumiBase/Resources/LumiBase.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1.4.3;
+				CURRENT_PROJECT_VERSION = 1.5.0;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -472,8 +480,8 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.4.3;
-				PRODUCT_BUNDLE_IDENTIFIER = com.lumibase.LumiBase;
+				MARKETING_VERSION = 1.5.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lumibase.LumiBase.Inspection.ROI;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -488,7 +496,7 @@
 				CODE_SIGN_ENTITLEMENTS = LumiBase/Resources/LumiBase.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1.4.3;
+				CURRENT_PROJECT_VERSION = 1.5.0;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -498,8 +506,8 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.4.3;
-				PRODUCT_BUNDLE_IDENTIFIER = com.lumibase.LumiBase;
+				MARKETING_VERSION = 1.5.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.lumibase.LumiBase.Inspection.ROI;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;

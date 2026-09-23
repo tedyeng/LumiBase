@@ -19,6 +19,7 @@ public final class LiveDevelopPreviewEngine: @unchecked Sendable {
         public let xmp: XMPMetadata?
         public let interactive: Bool
         public let fullResolution: Bool
+        public let sourceRect: CGRect?
         public let completion: RenderCompletion
         
         public init(
@@ -27,6 +28,7 @@ public final class LiveDevelopPreviewEngine: @unchecked Sendable {
             xmp: XMPMetadata?,
             interactive: Bool,
             fullResolution: Bool = false,
+            sourceRect: CGRect? = nil,
             completion: @escaping RenderCompletion
         ) {
             self.baseHolder = baseHolder
@@ -34,6 +36,7 @@ public final class LiveDevelopPreviewEngine: @unchecked Sendable {
             self.xmp = xmp
             self.interactive = interactive
             self.fullResolution = fullResolution
+            self.sourceRect = sourceRect
             self.completion = completion
         }
     }
@@ -47,6 +50,7 @@ public final class LiveDevelopPreviewEngine: @unchecked Sendable {
         xmp: XMPMetadata?,
         interactive: Bool = true,
         fullResolution: Bool = false,
+        sourceRect: CGRect? = nil,
         completion: @escaping RenderCompletion
     ) {
         let request = RenderRequest(
@@ -55,6 +59,7 @@ public final class LiveDevelopPreviewEngine: @unchecked Sendable {
             xmp: xmp,
             interactive: interactive,
             fullResolution: fullResolution,
+            sourceRect: sourceRect,
             completion: completion
         )
         
@@ -82,6 +87,7 @@ public final class LiveDevelopPreviewEngine: @unchecked Sendable {
                 }
                 self.pendingRequest = nil
                 self.lock.unlock()
+                InspectionTrace.event(current.fullResolution ? (current.sourceRect == nil ? "renderer.start_native_full" : "renderer.start_native_roi") : (current.interactive ? "renderer.start_fit_interactive" : "renderer.start_fit_full"))
                 
                 // Execute GPU processing completely off the main thread
                 let image = RAWImageLoader.shared.renderProcessed(
@@ -89,8 +95,10 @@ public final class LiveDevelopPreviewEngine: @unchecked Sendable {
                     cameraModel: current.cameraModel,
                     xmp: current.xmp,
                     interactive: current.interactive,
-                    fullResolution: current.fullResolution
+                    fullResolution: current.fullResolution,
+                    sourceRect: current.sourceRect
                 )
+                InspectionTrace.event(current.fullResolution ? (current.sourceRect == nil ? "renderer.complete_native_full" : "renderer.complete_native_roi") : (current.interactive ? "renderer.complete_fit_interactive" : "renderer.complete_fit_full"))
                 DispatchQueue.main.async {
                     current.completion(image)
                 }

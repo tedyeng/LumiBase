@@ -1,0 +1,2811 @@
+{
+  "context_options" : {
+    "highQualityDownsample" : true,
+    "useSoftwareRenderer" : false
+  },
+  "input_hashes" : [
+    {
+      "after_sha256" : "2c9c95cdac4acfc7a9329bb9d5ddbf288899364b1be9df43c32dcb123f45ea65",
+      "before_sha256" : "2c9c95cdac4acfc7a9329bb9d5ddbf288899364b1be9df43c32dcb123f45ea65",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "unchanged" : true
+    },
+    {
+      "after_sha256" : "75dbcc6e50d2a5ba69da9bdb5ac4a89a8cb2da3ef844992eb849dd7164d1db6b",
+      "before_sha256" : "75dbcc6e50d2a5ba69da9bdb5ac4a89a8cb2da3ef844992eb849dd7164d1db6b",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "unchanged" : true
+    },
+    {
+      "after_sha256" : "bff9ce7f12907f90fc8f3515f9471f7c068c63ba3288f809a077bbc4c6fc8af4",
+      "before_sha256" : "bff9ce7f12907f90fc8f3515f9471f7c068c63ba3288f809a077bbc4c6fc8af4",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "unchanged" : true
+    },
+    {
+      "after_sha256" : "7cef0adeede666738a0169ab171288d798f136c65eb884aaa3de24c8c54daabb",
+      "before_sha256" : "7cef0adeede666738a0169ab171288d798f136c65eb884aaa3de24c8c54daabb",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "unchanged" : true
+    }
+  ],
+  "manifest" : "\/Users\/kitleong\/projects\/LumiBase-builds\/dxo-benchmark\/sample-manifest.json",
+  "memory_measurement" : "unavailable: no condition-isolated \/usr\/bin\/time -l run",
+  "output_format" : "RGBA8 sRGB",
+  "parity" : [
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 3.6214580000000001,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 3.6214580000000001,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 0.0002337890625,
+          "mismatched_channel_count" : 3591
+        },
+        {
+          "crop_copy_ms" : 8.0583329999999993,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 0.0002337890625,
+          "mismatched_channel_count" : 3591
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "cbd186b0f315736f34600cf8fbf7570a77d123d39fa5aba0d3232df7613c746e",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 0.0002337890625,
+      "mismatched_channel_count" : 3591,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "roi" : "center",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "c71599e9ec23f42bef1651ec6e4e3772e843e40ca3906703d0e7925be01874dd"
+    },
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 1.9965409999999999,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 1.9965409999999999,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 6.510416666666667e-08,
+          "mismatched_channel_count" : 1
+        },
+        {
+          "crop_copy_ms" : 4.9910839999999999,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 255,
+          "mean_channel_diff" : 59.307949218749997,
+          "mismatched_channel_count" : 11512606
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "34978f1c1bdcbd9b8bb81761f52067e608458b01c5f12488a794945b3ac55e9c",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 6.510416666666667e-08,
+      "mismatched_channel_count" : 1,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "roi" : "top-edge-mid",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "fd1e6ca4a6c09b6e8596939502a0e38c4961f14199677f88a36e35d96e76b22e"
+    },
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 1.849208,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 1.849208,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 1.015625e-05,
+          "mismatched_channel_count" : 156
+        },
+        {
+          "crop_copy_ms" : 5.351,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 255,
+          "mean_channel_diff" : 54.697708463541666,
+          "mismatched_channel_count" : 11501642
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "34f2fe29dd663a0b692b7796637175834890df22d5ea475596f594a1d640cdce",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 1.015625e-05,
+      "mismatched_channel_count" : 156,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "roi" : "top-left",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "05eab54f50e005dc4f848a87f01805f343ce04bc1fdcaac6c63019f96424b693"
+    },
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 1.8499589999999999,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 1.8499589999999999,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 3.9062500000000002e-07,
+          "mismatched_channel_count" : 6
+        },
+        {
+          "crop_copy_ms" : 3.1164170000000002,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 255,
+          "mean_channel_diff" : 66.184183593750006,
+          "mismatched_channel_count" : 11355879
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "ed527ca6ae7ceac527ececc5c4b9cc585d5241e8ed61ff849011fb04966625a9",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 3.9062500000000002e-07,
+      "mismatched_channel_count" : 6,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "roi" : "top-right",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "52150b383fed77d67157db1ee6b1be6a5e9951c05a1145ec0ac3e54d5f8e00e1"
+    },
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 1.8400829999999999,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 1.8400829999999999,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 7.2916666666666666e-06,
+          "mismatched_channel_count" : 112
+        },
+        {
+          "crop_copy_ms" : 2.1336249999999999,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 255,
+          "mean_channel_diff" : 54.6977046875,
+          "mismatched_channel_count" : 11501642
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "a611b59257f79bd9013067556d49c8340c365de34160d830361eb5014cbd2cb1",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 7.2916666666666666e-06,
+      "mismatched_channel_count" : 112,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "roi" : "bottom-left",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "0c5000494519af7b46935bab27e6c7008f34af7fbedd01dac443707c23f3adb3"
+    },
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 1.81125,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 1.81125,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 1.1067708333333334e-06,
+          "mismatched_channel_count" : 17
+        },
+        {
+          "crop_copy_ms" : 3.6992090000000002,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 255,
+          "mean_channel_diff" : 66.184183658854167,
+          "mismatched_channel_count" : 11355878
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "76be3ff46c1a91bc4ff14afb74b9a17598ced011d10a94e16e69c32d8962cf9d",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 1.1067708333333334e-06,
+      "mismatched_channel_count" : 17,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "roi" : "bottom-right",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "6d43bf7bce58821553c5814715b31e1f5f905ae07fb14623e77592ed8bee1857"
+    },
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 1.0365420000000001,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 1.0365420000000001,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 0.0013667317708333333,
+          "mismatched_channel_count" : 20993
+        },
+        {
+          "crop_copy_ms" : 1.0788340000000001,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 255,
+          "mean_channel_diff" : 92.794900130208333,
+          "mismatched_channel_count" : 11454092
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "0706e107e357baa22bade1e956a60508ffc38c5b496b47ce2ff9de9e03fde92d",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 0.0013667317708333333,
+      "mismatched_channel_count" : 20993,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "roi" : "bottom-right",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "a520f049373e04f5773efd9e87e7d77f260243a0b20a3e68adc49a7149394a09"
+    },
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 0.99766699999999997,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 0.99766699999999997,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 0.00072161458333333333,
+          "mismatched_channel_count" : 11084
+        },
+        {
+          "crop_copy_ms" : 1.4238329999999999,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 255,
+          "mean_channel_diff" : 102.76229785156249,
+          "mismatched_channel_count" : 11505957
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "0859e3748b50bd5f873375e67ed90dcc9b94c7fac423d3592ebe6b42daf4b61f",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 0.00072161458333333333,
+      "mismatched_channel_count" : 11084,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "roi" : "bottom-left",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "17a83ee99d5b6ed3b559fd45a470106eea083cc73b26b2f5b899c3ce92bd515f"
+    },
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 1.066667,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 1.066667,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 0.00082141927083333329,
+          "mismatched_channel_count" : 12617
+        },
+        {
+          "crop_copy_ms" : 1.0560419999999999,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 255,
+          "mean_channel_diff" : 92.794909635416673,
+          "mismatched_channel_count" : 11454076
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "f2c9dba45d442ebb618ed3f924bfca80cf1457820fc07269b92882e4e9282792",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 0.00082141927083333329,
+      "mismatched_channel_count" : 12617,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "roi" : "top-right",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "23530299166e3aa4e3b24d5a4235f84c1707603cfb10f44c301302bcb274883d"
+    },
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 1.006791,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 1.006791,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 0.00011015625,
+          "mismatched_channel_count" : 1692
+        },
+        {
+          "crop_copy_ms" : 1.0960000000000001,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 255,
+          "mean_channel_diff" : 102.7622955078125,
+          "mismatched_channel_count" : 11505958
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "5bd0fd257d63d0a2dbb6b35daf732614fa6f1a25200fd4fe7390c37f5a7e67ea",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 0.00011015625,
+      "mismatched_channel_count" : 1692,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "roi" : "top-left",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "02836e3c19d32002f063e1e222d567f8bb2e6c96537a25fc999cf47476d48762"
+    },
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 1.0407919999999999,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 1.0407919999999999,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 0.00062747395833333329,
+          "mismatched_channel_count" : 9638
+        },
+        {
+          "crop_copy_ms" : 1.1476660000000001,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 255,
+          "mean_channel_diff" : 100.0922802734375,
+          "mismatched_channel_count" : 11500578
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "359afbabb0acd729a1461b270d9e37273379a9c467cb25f69f02f31bee76b17f",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 0.00062747395833333329,
+      "mismatched_channel_count" : 9638,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "roi" : "top-edge-mid",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "11b98fa67a3cf5f762b919d66d63e3f39b50e1c57a04dcfbb14365da5c011197"
+    },
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 1.0194589999999999,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 1.0194589999999999,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 0.0014440755208333332,
+          "mismatched_channel_count" : 22181
+        },
+        {
+          "crop_copy_ms" : 1.1652910000000001,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 0.0014440755208333332,
+          "mismatched_channel_count" : 22181
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "0b2b705abe8822f463b1ba919ab8248bfe073dd6768adfc13b879521fe4b13cc",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 0.0014440755208333332,
+      "mismatched_channel_count" : 22181,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "roi" : "center",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "d44ada6c8969318594e01880e148dc8ce75a0642cb71d6bd6d4cfebe5d583e19"
+    },
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 1.4023749999999999,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 1.4023749999999999,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 0.0014928385416666666,
+          "mismatched_channel_count" : 22930
+        },
+        {
+          "crop_copy_ms" : 4.5467500000000003,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 0.0014928385416666666,
+          "mismatched_channel_count" : 22930
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "311466fb4d0baa36d6301da1cb941097d9a7defebf45ad01c4bb7f79013c5e2a",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 0.0014928385416666666,
+      "mismatched_channel_count" : 22930,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "roi" : "center",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "c94e1e1f0db3ca79d74b63439cd8458d7e1f119217e9ce816d4aad4446464409"
+    },
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 1.4263749999999999,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 1.4263749999999999,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 0.00052226562500000005,
+          "mismatched_channel_count" : 8022
+        },
+        {
+          "crop_copy_ms" : 5.4125829999999997,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 255,
+          "mean_channel_diff" : 82.835090625000007,
+          "mismatched_channel_count" : 10477431
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "327ac94165560ab1c38efed13de60d38613c0a0102a885dc1c43fe4624ba9994",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 0.00052226562500000005,
+      "mismatched_channel_count" : 8022,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "roi" : "top-edge-mid",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "d0782ad16230b3d4af4155b81ea354d03ccd3a05a3d1ba6744e0fead0e317e80"
+    },
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 1.4137919999999999,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 1.4137919999999999,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 6.510416666666667e-08,
+          "mismatched_channel_count" : 1
+        },
+        {
+          "crop_copy_ms" : 1.463125,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 255,
+          "mean_channel_diff" : 75.615986653645834,
+          "mismatched_channel_count" : 10619382
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "099b595cd071d62117367b5f37c86a25227c73eca457c9238bfa3a916cca05f9",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 6.510416666666667e-08,
+      "mismatched_channel_count" : 1,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "roi" : "top-left",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "238fddd9654d115fcd091fe2b07aa7bbbc61a0df139ef7407615f3350c7c3017"
+    },
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 1.470583,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 1.470583,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 1.0416666666666667e-06,
+          "mismatched_channel_count" : 16
+        },
+        {
+          "crop_copy_ms" : 2.8087080000000002,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 255,
+          "mean_channel_diff" : 86.659853059895838,
+          "mismatched_channel_count" : 10439597
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "73a8c0e97e6cd3f36023c9c4135a1a1b016d84d7d30b06037d2a1f8f45526221",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 1.0416666666666667e-06,
+      "mismatched_channel_count" : 16,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "roi" : "top-right",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "8f8d7270a02413baff1ef09547fc2f6582584b1a635c3bebc288f71550c419c4"
+    },
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 1.400917,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 1.400917,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 0.0011685546875000001,
+          "mismatched_channel_count" : 17949
+        },
+        {
+          "crop_copy_ms" : 3.1382919999999999,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 255,
+          "mean_channel_diff" : 75.616002408854172,
+          "mismatched_channel_count" : 10619386
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "5529e1620f79994c1cdcd9ee3a62ff32c25331ef9fdc83d78d4427d89011703b",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 0.0011685546875000001,
+      "mismatched_channel_count" : 17949,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "roi" : "bottom-left",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "fa56622b185ed5930b31893bd8d882a185f092fa11b94bd14a401da9fed5ad80"
+    },
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 1.4188339999999999,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 1.4188339999999999,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 0.0013108723958333334,
+          "mismatched_channel_count" : 20135
+        },
+        {
+          "crop_copy_ms" : 1.4407909999999999,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 255,
+          "mean_channel_diff" : 86.659859895833335,
+          "mismatched_channel_count" : 10439596
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "810cd254942b598fe8005e84fa177771d155e9fe456a3b0347dff931adf0aa61",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 0.0013108723958333334,
+      "mismatched_channel_count" : 20135,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "roi" : "bottom-right",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "8c67bd559877e723c48493228c4beeb9414958018eb2133f814d123b53f8969a"
+    },
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 1.537542,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 1.537542,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 0.0015384114583333333,
+          "mismatched_channel_count" : 23630
+        },
+        {
+          "crop_copy_ms" : 3.5148329999999999,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 255,
+          "mean_channel_diff" : 66.832063476562496,
+          "mismatched_channel_count" : 10491764
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "e3caf406fc0f9706c1a7e3e2f1b672b580a47a4cbd31f292f4ee941766115a14",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 0.0015384114583333333,
+      "mismatched_channel_count" : 23630,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "roi" : "bottom-right",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "99decba645ab2f6d8ce40943e51a2a7e5c1d51ac0b4f74c335a48704592202ae"
+    },
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 1.5065,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 1.5065,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 2.6041666666666668e-07,
+          "mismatched_channel_count" : 4
+        },
+        {
+          "crop_copy_ms" : 4.957166,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 255,
+          "mean_channel_diff" : 81.018889583333333,
+          "mismatched_channel_count" : 10734459
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "6cd1e7720e17c4566be41e64315fddb3a6a1f5aa4876aee59cd8ef644ad69ec9",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 2.6041666666666668e-07,
+      "mismatched_channel_count" : 4,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "roi" : "bottom-left",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "c51b549b82df42e19f4740e2b588565f1e28f3901b58c222d7ebbe7f820960e0"
+    },
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 1.506167,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 1.506167,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 0.00169140625,
+          "mismatched_channel_count" : 25980
+        },
+        {
+          "crop_copy_ms" : 8.3798329999999996,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 255,
+          "mean_channel_diff" : 66.832075065104164,
+          "mismatched_channel_count" : 10491779
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "95b49f1e0ee5cef88b39ae75297dbca980802beaf1357bb354461e5a3e19eab0",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 0.00169140625,
+      "mismatched_channel_count" : 25980,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "roi" : "top-right",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "26674fa786ec4d662d5a3540cb0e29ec60092cf3107a820288b70992302620b6"
+    },
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 1.4993749999999999,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 1.4993749999999999,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 8.4635416666666663e-07,
+          "mismatched_channel_count" : 13
+        },
+        {
+          "crop_copy_ms" : 1.5432079999999999,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 255,
+          "mean_channel_diff" : 81.018889778645828,
+          "mismatched_channel_count" : 10734459
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "85a56069f5bb286a405f5444126ec341332cec568b3a0ef5e562e2ff6b66222c",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 8.4635416666666663e-07,
+      "mismatched_channel_count" : 13,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "roi" : "top-left",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "deeb82199095a3d7df27e54b23f667ee78d5d6505a28ce82e38c35e0dcbf7ffd"
+    },
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 1.489959,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 1.489959,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 0.00085722656250000002,
+          "mismatched_channel_count" : 13167
+        },
+        {
+          "crop_copy_ms" : 6.0445840000000004,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 255,
+          "mean_channel_diff" : 78.720833072916662,
+          "mismatched_channel_count" : 10976896
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "a60cdeec59d1140e5736856861f95dfc0841ef9a3ccd855026e99e2aa93d4bfe",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 0.00085722656250000002,
+      "mismatched_channel_count" : 13167,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "roi" : "top-edge-mid",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "97cc6463cb7d98023a3e5429df465c926f80ed25ba9730c9a9420880f6cc6e2e"
+    },
+    {
+      "compared_channel_count" : 15360000,
+      "crop_coordinate_mapping" : "cgimage-top-origin",
+      "crop_copy_ms" : 1.5334589999999999,
+      "crop_mapping_diagnostics" : [
+        {
+          "crop_copy_ms" : 1.5334589999999999,
+          "mapping" : "cgimage-top-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 0.0017162109375000001,
+          "mismatched_channel_count" : 26361
+        },
+        {
+          "crop_copy_ms" : 3.927791,
+          "mapping" : "ci-bottom-origin",
+          "max_channel_diff" : 1,
+          "mean_channel_diff" : 0.0017162109375000001,
+          "mismatched_channel_count" : 26361
+        }
+      ],
+      "cropped_dimensions" : [
+        2400,
+        1600
+      ],
+      "cropped_sha256" : "6248540640f83a6313377ced1c21ce2777a29b9c710c2dff30cd96fc11a59600",
+      "exactly_equal" : false,
+      "max_channel_diff" : 1,
+      "mean_channel_diff" : 0.0017162109375000001,
+      "mismatched_channel_count" : 26361,
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "roi" : "center",
+      "roi_dimensions" : [
+        2400,
+        1600
+      ],
+      "roi_sha256" : "8f944a31abfcd0a20f70913f0fda53010a71322aaf5d45d1a7718ba5c998fa10"
+    }
+  ],
+  "records" : [
+    {
+      "checksum_outside_timed_region" : "08da16eddf4089fe4a836640dafd973293c51231b4b79426dd1e428c6d79f1f0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 3.6214580000000001,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 191.33083400000001,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 6336,
+      "pixel_width" : 9504,
+      "roi" : "center",
+      "roi_order" : "manifest-order",
+      "total_ms" : 194.952292,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "c71599e9ec23f42bef1651ec6e4e3772e843e40ca3906703d0e7925be01874dd",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 8.4925409999999992,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "center",
+      "roi_order" : "manifest-order",
+      "total_ms" : 8.4925409999999992,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "c71599e9ec23f42bef1651ec6e4e3772e843e40ca3906703d0e7925be01874dd",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 7.2534999999999998,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "center",
+      "roi_order" : "manifest-order",
+      "total_ms" : 7.2534999999999998,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "08da16eddf4089fe4a836640dafd973293c51231b4b79426dd1e428c6d79f1f0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 3.6214580000000001,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 174.09575000000001,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 6336,
+      "pixel_width" : 9504,
+      "roi" : "center",
+      "roi_order" : "manifest-order",
+      "total_ms" : 177.717208,
+      "trial" : 4
+    },
+    {
+      "checksum_outside_timed_region" : "08da16eddf4089fe4a836640dafd973293c51231b4b79426dd1e428c6d79f1f0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.9965409999999999,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 187.59325000000001,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 6336,
+      "pixel_width" : 9504,
+      "roi" : "top-edge-mid",
+      "roi_order" : "manifest-order",
+      "total_ms" : 189.58979100000002,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "fd1e6ca4a6c09b6e8596939502a0e38c4961f14199677f88a36e35d96e76b22e",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 9.5393340000000002,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-edge-mid",
+      "roi_order" : "manifest-order",
+      "total_ms" : 9.5393340000000002,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "fd1e6ca4a6c09b6e8596939502a0e38c4961f14199677f88a36e35d96e76b22e",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 8.8769159999999996,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-edge-mid",
+      "roi_order" : "manifest-order",
+      "total_ms" : 8.8769159999999996,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "08da16eddf4089fe4a836640dafd973293c51231b4b79426dd1e428c6d79f1f0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.9965409999999999,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 170.04816700000001,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 6336,
+      "pixel_width" : 9504,
+      "roi" : "top-edge-mid",
+      "roi_order" : "manifest-order",
+      "total_ms" : 172.04470800000001,
+      "trial" : 4
+    },
+    {
+      "checksum_outside_timed_region" : "08da16eddf4089fe4a836640dafd973293c51231b4b79426dd1e428c6d79f1f0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.849208,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 194.903042,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 6336,
+      "pixel_width" : 9504,
+      "roi" : "top-left",
+      "roi_order" : "manifest-order",
+      "total_ms" : 196.75225,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "05eab54f50e005dc4f848a87f01805f343ce04bc1fdcaac6c63019f96424b693",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 9.7129159999999999,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-left",
+      "roi_order" : "manifest-order",
+      "total_ms" : 9.7129159999999999,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "05eab54f50e005dc4f848a87f01805f343ce04bc1fdcaac6c63019f96424b693",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 9.0527920000000002,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-left",
+      "roi_order" : "manifest-order",
+      "total_ms" : 9.0527920000000002,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "08da16eddf4089fe4a836640dafd973293c51231b4b79426dd1e428c6d79f1f0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.849208,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 183.05520799999999,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 6336,
+      "pixel_width" : 9504,
+      "roi" : "top-left",
+      "roi_order" : "manifest-order",
+      "total_ms" : 184.904416,
+      "trial" : 4
+    },
+    {
+      "checksum_outside_timed_region" : "08da16eddf4089fe4a836640dafd973293c51231b4b79426dd1e428c6d79f1f0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.8499589999999999,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 195.55083400000001,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 6336,
+      "pixel_width" : 9504,
+      "roi" : "top-right",
+      "roi_order" : "manifest-order",
+      "total_ms" : 197.40079300000002,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "52150b383fed77d67157db1ee6b1be6a5e9951c05a1145ec0ac3e54d5f8e00e1",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 9.5058749999999996,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-right",
+      "roi_order" : "manifest-order",
+      "total_ms" : 9.5058749999999996,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "52150b383fed77d67157db1ee6b1be6a5e9951c05a1145ec0ac3e54d5f8e00e1",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 8.4398330000000001,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-right",
+      "roi_order" : "manifest-order",
+      "total_ms" : 8.4398330000000001,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "08da16eddf4089fe4a836640dafd973293c51231b4b79426dd1e428c6d79f1f0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.8499589999999999,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 170.13362499999999,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 6336,
+      "pixel_width" : 9504,
+      "roi" : "top-right",
+      "roi_order" : "manifest-order",
+      "total_ms" : 171.98358400000001,
+      "trial" : 4
+    },
+    {
+      "checksum_outside_timed_region" : "08da16eddf4089fe4a836640dafd973293c51231b4b79426dd1e428c6d79f1f0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.8400829999999999,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 186.20358300000001,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 6336,
+      "pixel_width" : 9504,
+      "roi" : "bottom-left",
+      "roi_order" : "manifest-order",
+      "total_ms" : 188.043666,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "0c5000494519af7b46935bab27e6c7008f34af7fbedd01dac443707c23f3adb3",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 10.151083,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "bottom-left",
+      "roi_order" : "manifest-order",
+      "total_ms" : 10.151083,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "0c5000494519af7b46935bab27e6c7008f34af7fbedd01dac443707c23f3adb3",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 9.0847920000000002,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "bottom-left",
+      "roi_order" : "manifest-order",
+      "total_ms" : 9.0847920000000002,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "08da16eddf4089fe4a836640dafd973293c51231b4b79426dd1e428c6d79f1f0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.8400829999999999,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 182.77462499999999,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 6336,
+      "pixel_width" : 9504,
+      "roi" : "bottom-left",
+      "roi_order" : "manifest-order",
+      "total_ms" : 184.61470799999998,
+      "trial" : 4
+    },
+    {
+      "checksum_outside_timed_region" : "08da16eddf4089fe4a836640dafd973293c51231b4b79426dd1e428c6d79f1f0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.81125,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 189.69762499999999,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 6336,
+      "pixel_width" : 9504,
+      "roi" : "bottom-right",
+      "roi_order" : "manifest-order",
+      "total_ms" : 191.50887499999999,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "6d43bf7bce58821553c5814715b31e1f5f905ae07fb14623e77592ed8bee1857",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 9.517042,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "bottom-right",
+      "roi_order" : "manifest-order",
+      "total_ms" : 9.517042,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "6d43bf7bce58821553c5814715b31e1f5f905ae07fb14623e77592ed8bee1857",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 8.4277920000000002,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "bottom-right",
+      "roi_order" : "manifest-order",
+      "total_ms" : 8.4277920000000002,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "08da16eddf4089fe4a836640dafd973293c51231b4b79426dd1e428c6d79f1f0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.81125,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "forced_render_and_materialization_ms" : 177.38012499999999,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "pixel_height" : 6336,
+      "pixel_width" : 9504,
+      "roi" : "bottom-right",
+      "roi_order" : "manifest-order",
+      "total_ms" : 179.19137499999999,
+      "trial" : 4
+    },
+    {
+      "checksum_outside_timed_region" : "12ffcdbe178d9623683ef859d72f79f31d641d7731afc227ddc35fd9203fe8d0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.0365420000000001,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 29.373166000000001,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 3018,
+      "pixel_width" : 4026,
+      "roi" : "bottom-right",
+      "roi_order" : "reverse-order",
+      "total_ms" : 30.409708000000002,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "a520f049373e04f5773efd9e87e7d77f260243a0b20a3e68adc49a7149394a09",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 9.8397089999999992,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "bottom-right",
+      "roi_order" : "reverse-order",
+      "total_ms" : 9.8397089999999992,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "a520f049373e04f5773efd9e87e7d77f260243a0b20a3e68adc49a7149394a09",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 9.0215829999999997,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "bottom-right",
+      "roi_order" : "reverse-order",
+      "total_ms" : 9.0215829999999997,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "12ffcdbe178d9623683ef859d72f79f31d641d7731afc227ddc35fd9203fe8d0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.0365420000000001,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 24.392208,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 3018,
+      "pixel_width" : 4026,
+      "roi" : "bottom-right",
+      "roi_order" : "reverse-order",
+      "total_ms" : 25.428750000000001,
+      "trial" : 4
+    },
+    {
+      "checksum_outside_timed_region" : "12ffcdbe178d9623683ef859d72f79f31d641d7731afc227ddc35fd9203fe8d0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 0.99766699999999997,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 26.157708,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 3018,
+      "pixel_width" : 4026,
+      "roi" : "bottom-left",
+      "roi_order" : "reverse-order",
+      "total_ms" : 27.155374999999999,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "17a83ee99d5b6ed3b559fd45a470106eea083cc73b26b2f5b899c3ce92bd515f",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 9.6389580000000006,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "bottom-left",
+      "roi_order" : "reverse-order",
+      "total_ms" : 9.6389580000000006,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "17a83ee99d5b6ed3b559fd45a470106eea083cc73b26b2f5b899c3ce92bd515f",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 8.9433340000000001,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "bottom-left",
+      "roi_order" : "reverse-order",
+      "total_ms" : 8.9433340000000001,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "12ffcdbe178d9623683ef859d72f79f31d641d7731afc227ddc35fd9203fe8d0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 0.99766699999999997,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 25.312000000000001,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 3018,
+      "pixel_width" : 4026,
+      "roi" : "bottom-left",
+      "roi_order" : "reverse-order",
+      "total_ms" : 26.309667000000001,
+      "trial" : 4
+    },
+    {
+      "checksum_outside_timed_region" : "12ffcdbe178d9623683ef859d72f79f31d641d7731afc227ddc35fd9203fe8d0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.066667,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 25.802834000000001,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 3018,
+      "pixel_width" : 4026,
+      "roi" : "top-right",
+      "roi_order" : "reverse-order",
+      "total_ms" : 26.869501,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "23530299166e3aa4e3b24d5a4235f84c1707603cfb10f44c301302bcb274883d",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 9.8413749999999993,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-right",
+      "roi_order" : "reverse-order",
+      "total_ms" : 9.8413749999999993,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "23530299166e3aa4e3b24d5a4235f84c1707603cfb10f44c301302bcb274883d",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 9.1308330000000009,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-right",
+      "roi_order" : "reverse-order",
+      "total_ms" : 9.1308330000000009,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "12ffcdbe178d9623683ef859d72f79f31d641d7731afc227ddc35fd9203fe8d0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.066667,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 24.878958000000001,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 3018,
+      "pixel_width" : 4026,
+      "roi" : "top-right",
+      "roi_order" : "reverse-order",
+      "total_ms" : 25.945625,
+      "trial" : 4
+    },
+    {
+      "checksum_outside_timed_region" : "12ffcdbe178d9623683ef859d72f79f31d641d7731afc227ddc35fd9203fe8d0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.006791,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 26.439291999999998,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 3018,
+      "pixel_width" : 4026,
+      "roi" : "top-left",
+      "roi_order" : "reverse-order",
+      "total_ms" : 27.446082999999998,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "02836e3c19d32002f063e1e222d567f8bb2e6c96537a25fc999cf47476d48762",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 8.7756670000000003,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-left",
+      "roi_order" : "reverse-order",
+      "total_ms" : 8.7756670000000003,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "02836e3c19d32002f063e1e222d567f8bb2e6c96537a25fc999cf47476d48762",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 7.9642499999999998,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-left",
+      "roi_order" : "reverse-order",
+      "total_ms" : 7.9642499999999998,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "12ffcdbe178d9623683ef859d72f79f31d641d7731afc227ddc35fd9203fe8d0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.006791,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 24.626334,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 3018,
+      "pixel_width" : 4026,
+      "roi" : "top-left",
+      "roi_order" : "reverse-order",
+      "total_ms" : 25.633125,
+      "trial" : 4
+    },
+    {
+      "checksum_outside_timed_region" : "12ffcdbe178d9623683ef859d72f79f31d641d7731afc227ddc35fd9203fe8d0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.0407919999999999,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 26.134374999999999,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 3018,
+      "pixel_width" : 4026,
+      "roi" : "top-edge-mid",
+      "roi_order" : "reverse-order",
+      "total_ms" : 27.175166999999998,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "11b98fa67a3cf5f762b919d66d63e3f39b50e1c57a04dcfbb14365da5c011197",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 9.0124580000000005,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-edge-mid",
+      "roi_order" : "reverse-order",
+      "total_ms" : 9.0124580000000005,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "11b98fa67a3cf5f762b919d66d63e3f39b50e1c57a04dcfbb14365da5c011197",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 8.3038749999999997,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-edge-mid",
+      "roi_order" : "reverse-order",
+      "total_ms" : 8.3038749999999997,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "12ffcdbe178d9623683ef859d72f79f31d641d7731afc227ddc35fd9203fe8d0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.0407919999999999,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 24.921500000000002,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 3018,
+      "pixel_width" : 4026,
+      "roi" : "top-edge-mid",
+      "roi_order" : "reverse-order",
+      "total_ms" : 25.962292000000001,
+      "trial" : 4
+    },
+    {
+      "checksum_outside_timed_region" : "12ffcdbe178d9623683ef859d72f79f31d641d7731afc227ddc35fd9203fe8d0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.0194589999999999,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 26.691541999999998,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 3018,
+      "pixel_width" : 4026,
+      "roi" : "center",
+      "roi_order" : "reverse-order",
+      "total_ms" : 27.711001,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "d44ada6c8969318594e01880e148dc8ce75a0642cb71d6bd6d4cfebe5d583e19",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 9.4403330000000008,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "center",
+      "roi_order" : "reverse-order",
+      "total_ms" : 9.4403330000000008,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "d44ada6c8969318594e01880e148dc8ce75a0642cb71d6bd6d4cfebe5d583e19",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 8.8839170000000003,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "center",
+      "roi_order" : "reverse-order",
+      "total_ms" : 8.8839170000000003,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "12ffcdbe178d9623683ef859d72f79f31d641d7731afc227ddc35fd9203fe8d0",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.0194589999999999,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "forced_render_and_materialization_ms" : 25.052958,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "pixel_height" : 3018,
+      "pixel_width" : 4026,
+      "roi" : "center",
+      "roi_order" : "reverse-order",
+      "total_ms" : 26.072417000000002,
+      "trial" : 4
+    },
+    {
+      "checksum_outside_timed_region" : "a46a4b7737f3be1d792f7fd61c40416352a65c2a8b0e020df7ce3b92c24b2f6c",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.4023749999999999,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 58.319000000000003,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 4162,
+      "pixel_width" : 6240,
+      "roi" : "center",
+      "roi_order" : "manifest-order",
+      "total_ms" : 59.721375000000002,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "c94e1e1f0db3ca79d74b63439cd8458d7e1f119217e9ce816d4aad4446464409",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 9.3394580000000005,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "center",
+      "roi_order" : "manifest-order",
+      "total_ms" : 9.3394580000000005,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "c94e1e1f0db3ca79d74b63439cd8458d7e1f119217e9ce816d4aad4446464409",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 8.3778749999999995,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "center",
+      "roi_order" : "manifest-order",
+      "total_ms" : 8.3778749999999995,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "a46a4b7737f3be1d792f7fd61c40416352a65c2a8b0e020df7ce3b92c24b2f6c",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.4023749999999999,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 49.985999999999997,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 4162,
+      "pixel_width" : 6240,
+      "roi" : "center",
+      "roi_order" : "manifest-order",
+      "total_ms" : 51.388374999999996,
+      "trial" : 4
+    },
+    {
+      "checksum_outside_timed_region" : "a46a4b7737f3be1d792f7fd61c40416352a65c2a8b0e020df7ce3b92c24b2f6c",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.4263749999999999,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 55.370708,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 4162,
+      "pixel_width" : 6240,
+      "roi" : "top-edge-mid",
+      "roi_order" : "manifest-order",
+      "total_ms" : 56.797083000000001,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "d0782ad16230b3d4af4155b81ea354d03ccd3a05a3d1ba6744e0fead0e317e80",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 9.7351659999999995,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-edge-mid",
+      "roi_order" : "manifest-order",
+      "total_ms" : 9.7351659999999995,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "d0782ad16230b3d4af4155b81ea354d03ccd3a05a3d1ba6744e0fead0e317e80",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 8.9761249999999997,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-edge-mid",
+      "roi_order" : "manifest-order",
+      "total_ms" : 8.9761249999999997,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "a46a4b7737f3be1d792f7fd61c40416352a65c2a8b0e020df7ce3b92c24b2f6c",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.4263749999999999,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 52.005375000000001,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 4162,
+      "pixel_width" : 6240,
+      "roi" : "top-edge-mid",
+      "roi_order" : "manifest-order",
+      "total_ms" : 53.431750000000001,
+      "trial" : 4
+    },
+    {
+      "checksum_outside_timed_region" : "a46a4b7737f3be1d792f7fd61c40416352a65c2a8b0e020df7ce3b92c24b2f6c",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.4137919999999999,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 51.659792000000003,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 4162,
+      "pixel_width" : 6240,
+      "roi" : "top-left",
+      "roi_order" : "manifest-order",
+      "total_ms" : 53.073584000000004,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "238fddd9654d115fcd091fe2b07aa7bbbc61a0df139ef7407615f3350c7c3017",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 9.3832090000000008,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-left",
+      "roi_order" : "manifest-order",
+      "total_ms" : 9.3832090000000008,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "238fddd9654d115fcd091fe2b07aa7bbbc61a0df139ef7407615f3350c7c3017",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 8.85975,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-left",
+      "roi_order" : "manifest-order",
+      "total_ms" : 8.85975,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "a46a4b7737f3be1d792f7fd61c40416352a65c2a8b0e020df7ce3b92c24b2f6c",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.4137919999999999,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 50.304124999999999,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 4162,
+      "pixel_width" : 6240,
+      "roi" : "top-left",
+      "roi_order" : "manifest-order",
+      "total_ms" : 51.717917,
+      "trial" : 4
+    },
+    {
+      "checksum_outside_timed_region" : "a46a4b7737f3be1d792f7fd61c40416352a65c2a8b0e020df7ce3b92c24b2f6c",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.470583,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 54.944167,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 4162,
+      "pixel_width" : 6240,
+      "roi" : "top-right",
+      "roi_order" : "manifest-order",
+      "total_ms" : 56.414749999999998,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "8f8d7270a02413baff1ef09547fc2f6582584b1a635c3bebc288f71550c419c4",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 9.5377080000000003,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-right",
+      "roi_order" : "manifest-order",
+      "total_ms" : 9.5377080000000003,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "8f8d7270a02413baff1ef09547fc2f6582584b1a635c3bebc288f71550c419c4",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 8.877167,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-right",
+      "roi_order" : "manifest-order",
+      "total_ms" : 8.877167,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "a46a4b7737f3be1d792f7fd61c40416352a65c2a8b0e020df7ce3b92c24b2f6c",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.470583,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 50.850375,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 4162,
+      "pixel_width" : 6240,
+      "roi" : "top-right",
+      "roi_order" : "manifest-order",
+      "total_ms" : 52.320957999999997,
+      "trial" : 4
+    },
+    {
+      "checksum_outside_timed_region" : "a46a4b7737f3be1d792f7fd61c40416352a65c2a8b0e020df7ce3b92c24b2f6c",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.400917,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 59.553333000000002,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 4162,
+      "pixel_width" : 6240,
+      "roi" : "bottom-left",
+      "roi_order" : "manifest-order",
+      "total_ms" : 60.954250000000002,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "fa56622b185ed5930b31893bd8d882a185f092fa11b94bd14a401da9fed5ad80",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 10.427625000000001,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "bottom-left",
+      "roi_order" : "manifest-order",
+      "total_ms" : 10.427625000000001,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "fa56622b185ed5930b31893bd8d882a185f092fa11b94bd14a401da9fed5ad80",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 9.2587080000000004,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "bottom-left",
+      "roi_order" : "manifest-order",
+      "total_ms" : 9.2587080000000004,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "a46a4b7737f3be1d792f7fd61c40416352a65c2a8b0e020df7ce3b92c24b2f6c",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.400917,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 54.640084000000002,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 4162,
+      "pixel_width" : 6240,
+      "roi" : "bottom-left",
+      "roi_order" : "manifest-order",
+      "total_ms" : 56.041001000000001,
+      "trial" : 4
+    },
+    {
+      "checksum_outside_timed_region" : "a46a4b7737f3be1d792f7fd61c40416352a65c2a8b0e020df7ce3b92c24b2f6c",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.4188339999999999,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 55.372875000000001,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 4162,
+      "pixel_width" : 6240,
+      "roi" : "bottom-right",
+      "roi_order" : "manifest-order",
+      "total_ms" : 56.791708999999997,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "8c67bd559877e723c48493228c4beeb9414958018eb2133f814d123b53f8969a",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 10.252458000000001,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "bottom-right",
+      "roi_order" : "manifest-order",
+      "total_ms" : 10.252458000000001,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "8c67bd559877e723c48493228c4beeb9414958018eb2133f814d123b53f8969a",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 9.2824159999999996,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "bottom-right",
+      "roi_order" : "manifest-order",
+      "total_ms" : 9.2824159999999996,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "a46a4b7737f3be1d792f7fd61c40416352a65c2a8b0e020df7ce3b92c24b2f6c",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.4188339999999999,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "forced_render_and_materialization_ms" : 52.410083,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "pixel_height" : 4162,
+      "pixel_width" : 6240,
+      "roi" : "bottom-right",
+      "roi_order" : "manifest-order",
+      "total_ms" : 53.828916999999997,
+      "trial" : 4
+    },
+    {
+      "checksum_outside_timed_region" : "1e71b2a4b57b2ff1013322e9d22219d0221d612e4f430d365b71c957ef97e925",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.537542,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 93.055042,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 4160,
+      "pixel_width" : 6469,
+      "roi" : "bottom-right",
+      "roi_order" : "reverse-order",
+      "total_ms" : 94.592584000000002,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "99decba645ab2f6d8ce40943e51a2a7e5c1d51ac0b4f74c335a48704592202ae",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 9.3023340000000001,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "bottom-right",
+      "roi_order" : "reverse-order",
+      "total_ms" : 9.3023340000000001,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "99decba645ab2f6d8ce40943e51a2a7e5c1d51ac0b4f74c335a48704592202ae",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 8.4682499999999994,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "bottom-right",
+      "roi_order" : "reverse-order",
+      "total_ms" : 8.4682499999999994,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "1e71b2a4b57b2ff1013322e9d22219d0221d612e4f430d365b71c957ef97e925",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.537542,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 80.742417000000003,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 4160,
+      "pixel_width" : 6469,
+      "roi" : "bottom-right",
+      "roi_order" : "reverse-order",
+      "total_ms" : 82.279959000000005,
+      "trial" : 4
+    },
+    {
+      "checksum_outside_timed_region" : "1e71b2a4b57b2ff1013322e9d22219d0221d612e4f430d365b71c957ef97e925",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.5065,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 90.877332999999993,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 4160,
+      "pixel_width" : 6469,
+      "roi" : "bottom-left",
+      "roi_order" : "reverse-order",
+      "total_ms" : 92.383832999999996,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "c51b549b82df42e19f4740e2b588565f1e28f3901b58c222d7ebbe7f820960e0",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 8.5041250000000002,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "bottom-left",
+      "roi_order" : "reverse-order",
+      "total_ms" : 8.5041250000000002,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "c51b549b82df42e19f4740e2b588565f1e28f3901b58c222d7ebbe7f820960e0",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 7.7373750000000001,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "bottom-left",
+      "roi_order" : "reverse-order",
+      "total_ms" : 7.7373750000000001,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "1e71b2a4b57b2ff1013322e9d22219d0221d612e4f430d365b71c957ef97e925",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.5065,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 81.824540999999996,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 4160,
+      "pixel_width" : 6469,
+      "roi" : "bottom-left",
+      "roi_order" : "reverse-order",
+      "total_ms" : 83.331040999999999,
+      "trial" : 4
+    },
+    {
+      "checksum_outside_timed_region" : "1e71b2a4b57b2ff1013322e9d22219d0221d612e4f430d365b71c957ef97e925",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.506167,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 96.769291999999993,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 4160,
+      "pixel_width" : 6469,
+      "roi" : "top-right",
+      "roi_order" : "reverse-order",
+      "total_ms" : 98.275458999999998,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "26674fa786ec4d662d5a3540cb0e29ec60092cf3107a820288b70992302620b6",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 9.5955410000000008,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-right",
+      "roi_order" : "reverse-order",
+      "total_ms" : 9.5955410000000008,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "26674fa786ec4d662d5a3540cb0e29ec60092cf3107a820288b70992302620b6",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 8.7804169999999999,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-right",
+      "roi_order" : "reverse-order",
+      "total_ms" : 8.7804169999999999,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "1e71b2a4b57b2ff1013322e9d22219d0221d612e4f430d365b71c957ef97e925",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.506167,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 84.617417000000003,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 4160,
+      "pixel_width" : 6469,
+      "roi" : "top-right",
+      "roi_order" : "reverse-order",
+      "total_ms" : 86.123584000000008,
+      "trial" : 4
+    },
+    {
+      "checksum_outside_timed_region" : "1e71b2a4b57b2ff1013322e9d22219d0221d612e4f430d365b71c957ef97e925",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.4993749999999999,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 89.655957999999998,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 4160,
+      "pixel_width" : 6469,
+      "roi" : "top-left",
+      "roi_order" : "reverse-order",
+      "total_ms" : 91.155332999999999,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "deeb82199095a3d7df27e54b23f667ee78d5d6505a28ce82e38c35e0dcbf7ffd",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 9.4878750000000007,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-left",
+      "roi_order" : "reverse-order",
+      "total_ms" : 9.4878750000000007,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "deeb82199095a3d7df27e54b23f667ee78d5d6505a28ce82e38c35e0dcbf7ffd",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 8.5225829999999991,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-left",
+      "roi_order" : "reverse-order",
+      "total_ms" : 8.5225829999999991,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "1e71b2a4b57b2ff1013322e9d22219d0221d612e4f430d365b71c957ef97e925",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.4993749999999999,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 80.654792,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 4160,
+      "pixel_width" : 6469,
+      "roi" : "top-left",
+      "roi_order" : "reverse-order",
+      "total_ms" : 82.154167000000001,
+      "trial" : 4
+    },
+    {
+      "checksum_outside_timed_region" : "1e71b2a4b57b2ff1013322e9d22219d0221d612e4f430d365b71c957ef97e925",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.489959,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 92.788167000000001,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 4160,
+      "pixel_width" : 6469,
+      "roi" : "top-edge-mid",
+      "roi_order" : "reverse-order",
+      "total_ms" : 94.278126,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "97cc6463cb7d98023a3e5429df465c926f80ed25ba9730c9a9420880f6cc6e2e",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 9.6245829999999994,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-edge-mid",
+      "roi_order" : "reverse-order",
+      "total_ms" : 9.6245829999999994,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "97cc6463cb7d98023a3e5429df465c926f80ed25ba9730c9a9420880f6cc6e2e",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 9.8642500000000002,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "top-edge-mid",
+      "roi_order" : "reverse-order",
+      "total_ms" : 9.8642500000000002,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "1e71b2a4b57b2ff1013322e9d22219d0221d612e4f430d365b71c957ef97e925",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.489959,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 85.521291000000005,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 4160,
+      "pixel_width" : 6469,
+      "roi" : "top-edge-mid",
+      "roi_order" : "reverse-order",
+      "total_ms" : 87.011250000000004,
+      "trial" : 4
+    },
+    {
+      "checksum_outside_timed_region" : "1e71b2a4b57b2ff1013322e9d22219d0221d612e4f430d365b71c957ef97e925",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.5334589999999999,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 91.456125,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 4160,
+      "pixel_width" : 6469,
+      "roi" : "center",
+      "roi_order" : "reverse-order",
+      "total_ms" : 92.989583999999994,
+      "trial" : 1
+    },
+    {
+      "checksum_outside_timed_region" : "8f944a31abfcd0a20f70913f0fda53010a71322aaf5d45d1a7718ba5c998fa10",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 8.7479169999999993,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "center",
+      "roi_order" : "reverse-order",
+      "total_ms" : 8.7479169999999993,
+      "trial" : 2
+    },
+    {
+      "checksum_outside_timed_region" : "8f944a31abfcd0a20f70913f0fda53010a71322aaf5d45d1a7718ba5c998fa10",
+      "condition" : "roi",
+      "crop_copy_reference_ms" : 0,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 7.8529580000000001,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 1600,
+      "pixel_width" : 2400,
+      "roi" : "center",
+      "roi_order" : "reverse-order",
+      "total_ms" : 7.8529580000000001,
+      "trial" : 3
+    },
+    {
+      "checksum_outside_timed_region" : "1e71b2a4b57b2ff1013322e9d22219d0221d612e4f430d365b71c957ef97e925",
+      "condition" : "full",
+      "crop_copy_reference_ms" : 1.5334589999999999,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "forced_render_and_materialization_ms" : 81.255959000000004,
+      "matched_order" : "full,roi,roi,full",
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "pixel_height" : 4160,
+      "pixel_width" : 6469,
+      "roi" : "center",
+      "roi_order" : "reverse-order",
+      "total_ms" : 82.789417999999998,
+      "trial" : 4
+    }
+  ],
+  "source_metadata" : [
+    {
+      "actual_processed_extent" : [
+        0,
+        0,
+        9504,
+        6336
+      ],
+      "base_temperature" : 6100,
+      "base_tint" : 8,
+      "decode_and_graph_construction_ms" : 105.295125,
+      "manifest_dimensions" : [
+        9504,
+        6336
+      ],
+      "manifest_metadata" : {
+        "Blacks2012" : null,
+        "Clarity2012" : null,
+        "Contrast2012" : null,
+        "ConvertToGrayscale" : null,
+        "Dehaze" : null,
+        "DNGBackwardVersion" : "1.7.0.0",
+        "DNGVersion" : "1.7.0.0",
+        "Exposure2012" : null,
+        "HasCrop" : null,
+        "Highlights2012" : null,
+        "ImageHeight" : 6336,
+        "ImageWidth" : 9504,
+        "Make" : "SONY",
+        "Model" : "ILCE-7RM5",
+        "OriginalRawFileName" : "DSC09202.ARW",
+        "PhotometricInterpretation" : "Linear Raw",
+        "Saturation" : 0,
+        "Shadows2012" : null,
+        "Software" : "DxO PureRAW 6",
+        "Temperature" : null,
+        "Texture" : null,
+        "Tint" : null,
+        "Vibrance" : null,
+        "Whites2012" : null
+      },
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng",
+      "raw_filter_options" : {
+        "baselineExposure" : 0.29999999999999999,
+        "boostAmount" : 1,
+        "boostShadowAmount" : 0,
+        "exposure" : 0,
+        "highlightRecovery" : "enabled on macOS 26+",
+        "shadowBias" : 0
+      },
+      "rois" : [
+        {
+          "name" : "center",
+          "rect" : [
+            3552,
+            2368,
+            2400,
+            1600
+          ]
+        },
+        {
+          "name" : "top-edge-mid",
+          "rect" : [
+            3552,
+            4736,
+            2400,
+            1600
+          ]
+        },
+        {
+          "name" : "top-left",
+          "rect" : [
+            0,
+            4736,
+            2400,
+            1600
+          ]
+        },
+        {
+          "name" : "top-right",
+          "rect" : [
+            7104,
+            4736,
+            2400,
+            1600
+          ]
+        },
+        {
+          "name" : "bottom-left",
+          "rect" : [
+            0,
+            0,
+            2400,
+            1600
+          ]
+        },
+        {
+          "name" : "bottom-right",
+          "rect" : [
+            7104,
+            0,
+            2400,
+            1600
+          ]
+        }
+      ]
+    },
+    {
+      "actual_processed_extent" : [
+        0,
+        0,
+        4026,
+        3018
+      ],
+      "base_temperature" : 6100,
+      "base_tint" : 8,
+      "decode_and_graph_construction_ms" : 19.2285,
+      "manifest_dimensions" : [
+        4026,
+        3018
+      ],
+      "manifest_metadata" : {
+        "Blacks2012" : -13,
+        "Clarity2012" : "+10",
+        "Contrast2012" : "+10",
+        "ConvertToGrayscale" : false,
+        "Dehaze" : "+30",
+        "DNGBackwardVersion" : "1.7.0.0",
+        "DNGVersion" : "1.7.0.0",
+        "Exposure2012" : "+1.20",
+        "HasCrop" : null,
+        "Highlights2012" : -100,
+        "ImageHeight" : 3018,
+        "ImageWidth" : 4026,
+        "Make" : "DJI",
+        "Model" : "FC3582",
+        "OriginalRawFileName" : "DJI_0653.DNG",
+        "PhotometricInterpretation" : "Linear Raw",
+        "Saturation" : "Normal",
+        "Shadows2012" : "+80",
+        "Software" : "DxO PureRAW 6",
+        "Temperature" : null,
+        "Texture" : "+10",
+        "Tint" : "+13",
+        "Vibrance" : "+10",
+        "Whites2012" : -100
+      },
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng",
+      "raw_filter_options" : {
+        "baselineExposure" : 0.29999999999999999,
+        "boostAmount" : 1,
+        "boostShadowAmount" : 0,
+        "exposure" : 0,
+        "highlightRecovery" : "enabled on macOS 26+",
+        "shadowBias" : 0
+      },
+      "rois" : [
+        {
+          "name" : "center",
+          "rect" : [
+            813,
+            709,
+            2400,
+            1600
+          ]
+        },
+        {
+          "name" : "top-edge-mid",
+          "rect" : [
+            813,
+            1418,
+            2400,
+            1600
+          ]
+        },
+        {
+          "name" : "top-left",
+          "rect" : [
+            0,
+            1418,
+            2400,
+            1600
+          ]
+        },
+        {
+          "name" : "top-right",
+          "rect" : [
+            1626,
+            1418,
+            2400,
+            1600
+          ]
+        },
+        {
+          "name" : "bottom-left",
+          "rect" : [
+            0,
+            0,
+            2400,
+            1600
+          ]
+        },
+        {
+          "name" : "bottom-right",
+          "rect" : [
+            1626,
+            0,
+            2400,
+            1600
+          ]
+        }
+      ]
+    },
+    {
+      "actual_processed_extent" : [
+        0,
+        0,
+        6240,
+        4162
+      ],
+      "base_temperature" : 6100,
+      "base_tint" : 8,
+      "decode_and_graph_construction_ms" : 18.644708000000001,
+      "manifest_dimensions" : [
+        6240,
+        4162
+      ],
+      "manifest_metadata" : {
+        "Blacks2012" : -10,
+        "Clarity2012" : "+10",
+        "Contrast2012" : "+10",
+        "ConvertToGrayscale" : false,
+        "Dehaze" : "+10",
+        "DNGBackwardVersion" : "1.7.0.0",
+        "DNGVersion" : "1.7.0.0",
+        "Exposure2012" : "+0.70",
+        "HasCrop" : null,
+        "Highlights2012" : -80,
+        "ImageHeight" : 4162,
+        "ImageWidth" : 6240,
+        "Make" : "SONY",
+        "Model" : "ILCE-7RM5",
+        "OriginalRawFileName" : "DSC07818.ARW",
+        "PhotometricInterpretation" : "Linear Raw",
+        "Saturation" : 0,
+        "Shadows2012" : "+70",
+        "Software" : "DxO PureRAW 6",
+        "Temperature" : null,
+        "Texture" : -10,
+        "Tint" : "+33",
+        "Vibrance" : "+10",
+        "Whites2012" : -80
+      },
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng",
+      "raw_filter_options" : {
+        "baselineExposure" : 0.29999999999999999,
+        "boostAmount" : 1,
+        "boostShadowAmount" : 0,
+        "exposure" : 0,
+        "highlightRecovery" : "enabled on macOS 26+",
+        "shadowBias" : 0
+      },
+      "rois" : [
+        {
+          "name" : "center",
+          "rect" : [
+            1920,
+            1281,
+            2400,
+            1600
+          ]
+        },
+        {
+          "name" : "top-edge-mid",
+          "rect" : [
+            1920,
+            2562,
+            2400,
+            1600
+          ]
+        },
+        {
+          "name" : "top-left",
+          "rect" : [
+            0,
+            2562,
+            2400,
+            1600
+          ]
+        },
+        {
+          "name" : "top-right",
+          "rect" : [
+            3840,
+            2562,
+            2400,
+            1600
+          ]
+        },
+        {
+          "name" : "bottom-left",
+          "rect" : [
+            0,
+            0,
+            2400,
+            1600
+          ]
+        },
+        {
+          "name" : "bottom-right",
+          "rect" : [
+            3840,
+            0,
+            2400,
+            1600
+          ]
+        }
+      ]
+    },
+    {
+      "actual_processed_extent" : [
+        0,
+        0,
+        6469,
+        4160
+      ],
+      "base_temperature" : 6100,
+      "base_tint" : 8,
+      "decode_and_graph_construction_ms" : 18.30125,
+      "manifest_dimensions" : [
+        6469,
+        4160
+      ],
+      "manifest_metadata" : {
+        "Blacks2012" : -10,
+        "Clarity2012" : -10,
+        "Contrast2012" : "+10",
+        "ConvertToGrayscale" : null,
+        "Dehaze" : "+10",
+        "DNGBackwardVersion" : "1.7.0.0",
+        "DNGVersion" : "1.7.0.0",
+        "Exposure2012" : "+0.90",
+        "HasCrop" : null,
+        "Highlights2012" : -80,
+        "ImageHeight" : 4160,
+        "ImageWidth" : 6469,
+        "Make" : "SONY",
+        "Model" : "ILCE-7RM5",
+        "OriginalRawFileName" : "DSC07821.ARW",
+        "PhotometricInterpretation" : "Linear Raw",
+        "Saturation" : 0,
+        "Shadows2012" : "+70",
+        "Software" : "DxO PureRAW 6",
+        "Temperature" : null,
+        "Texture" : -10,
+        "Tint" : "+40",
+        "Vibrance" : "+10",
+        "Whites2012" : -80
+      },
+      "path" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng",
+      "raw_filter_options" : {
+        "baselineExposure" : 0.29999999999999999,
+        "boostAmount" : 1,
+        "boostShadowAmount" : 0,
+        "exposure" : 0,
+        "highlightRecovery" : "enabled on macOS 26+",
+        "shadowBias" : 0
+      },
+      "rois" : [
+        {
+          "name" : "center",
+          "rect" : [
+            2034,
+            1280,
+            2400,
+            1600
+          ]
+        },
+        {
+          "name" : "top-edge-mid",
+          "rect" : [
+            2034,
+            2560,
+            2400,
+            1600
+          ]
+        },
+        {
+          "name" : "top-left",
+          "rect" : [
+            0,
+            2560,
+            2400,
+            1600
+          ]
+        },
+        {
+          "name" : "top-right",
+          "rect" : [
+            4069,
+            2560,
+            2400,
+            1600
+          ]
+        },
+        {
+          "name" : "bottom-left",
+          "rect" : [
+            0,
+            0,
+            2400,
+            1600
+          ]
+        },
+        {
+          "name" : "bottom-right",
+          "rect" : [
+            4069,
+            0,
+            2400,
+            1600
+          ]
+        }
+      ]
+    }
+  ],
+  "synthetic_settings" : {
+    "blacks2012" : -5,
+    "clarity2012" : 8,
+    "contrast2012" : 12,
+    "exposure2012" : 0.34999999999999998,
+    "highlights2012" : -18,
+    "shadows2012" : 22,
+    "source" : "explicit in-memory synthetic experiment values; not read from selected DNG metadata",
+    "temperature" : 6100,
+    "texture" : 4,
+    "tint" : 8,
+    "vibrance" : 14,
+    "whites2012" : 8
+  },
+  "viewport_native_pixels" : [
+    2400,
+    1600
+  ]
+}

@@ -51,8 +51,18 @@ public final class AppState: ObservableObject {
     // Watcher & Keyboard Monitor
     private let directoryWatcher = DirectoryWatcher()
     private var keyMonitor: Any?
-    
-    public init() {
+    private var previewSubscriptions = Set<AnyCancellable>()
+    private var priorPreviewAssetIDs: [String] = []
+    private var priorPreviewSelectionID: String?
+    private var priorPreviewViewMode: ViewMode = .grid
+    private var previewRefreshGeneration: UInt64 = 0
+    private var previewRefreshTask: Task<Void, Never>?
+    private let previewPreloader: PreviewPreloader
+    struct PreviewSnapshotForTesting { let assetIDs: [String]; let selectedID: String? }
+    var previewSnapshotForTesting = PreviewSnapshotForTesting(assetIDs: [], selectedID: nil)
+
+    public init(preloader: PreviewPreloader = .shared) {
+        self.previewPreloader = preloader
         directoryWatcher.onChange = { [weak self] in
             Task { @MainActor in
                 self?.refreshCurrentFolder()
@@ -60,6 +70,51 @@ public final class AppState: ObservableObject {
         }
         
         setupKeyMonitor()
+        Publishers.MergeMany(
+            $allAssets.map { _ in () }.eraseToAnyPublisher(),
+            $primarySelectedAssetID.map { _ in () }.eraseToAnyPublisher(),
+            $filterCriteria.map { _ in () }.eraseToAnyPublisher(),
+            $sortOrder.map { _ in () }.eraseToAnyPublisher(),
+            $currentFolderURL.map { _ in () }.eraseToAnyPublisher(),
+            $liveDevelopXMP.map { _ in () }.eraseToAnyPublisher(),
+            $viewMode.map { _ in () }.eraseToAnyPublisher()
+        )
+        .sink { [weak self] in self?.schedulePreviewRefresh() }
+        .store(in: &previewSubscriptions)
+    }
+
+    deinit {
+        let preloader = previewPreloader
+        Task { await preloader.cancelAndClear() }
+    }
+
+    private func schedulePreviewRefresh() {
+        previewRefreshGeneration &+= 1
+        let generation = previewRefreshGeneration
+        previewRefreshTask?.cancel()
+        previewRefreshTask = Task { @MainActor [weak self] in
+            await Task.yield()
+            guard let self, !Task.isCancelled, self.previewRefreshGeneration == generation else { return }
+            let assets = self.displayedAssets
+            let selectedID = self.primarySelectedAssetID
+            let ids = assets.map(\.id)
+            let oldIndex = self.priorPreviewSelectionID.flatMap { self.priorPreviewAssetIDs.firstIndex(of: $0) }
+            let newIndex = selectedID.flatMap { id in ids.firstIndex(of: id) }
+            let direction: PreviewTravelDirection = self.priorPreviewAssetIDs == ids && oldIndex != nil && newIndex != nil && oldIndex != newIndex
+                ? (newIndex! > oldIndex! ? .forward : .backward) : .stationary
+            self.priorPreviewAssetIDs = ids
+            let shouldArmForeground = self.viewMode == .loupe &&
+                (selectedID != self.priorPreviewSelectionID || self.priorPreviewViewMode != .loupe)
+            self.priorPreviewSelectionID = selectedID
+            self.priorPreviewViewMode = self.viewMode
+            self.previewSnapshotForTesting = PreviewSnapshotForTesting(assetIDs: ids, selectedID: selectedID)
+            if shouldArmForeground, let selectedID {
+                await self.previewPreloader.armForegroundSelection(selectedID)
+            } else if self.viewMode != .loupe || selectedID == nil {
+                await self.previewPreloader.foregroundSelectionEnded()
+            }
+            await self.previewPreloader.update(assets: assets, selectedID: selectedID, direction: direction)
+        }
     }
     
     private func setupKeyMonitor() {
@@ -772,4 +827,3 @@ public final class AppState: ObservableObject {
         self.showDeleteConfirmation = false
     }
 }
-
