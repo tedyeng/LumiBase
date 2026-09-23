@@ -139,7 +139,9 @@ public struct GridView: View {
         let itemWidthWithSpacing = appState.thumbnailSize + 10
         let count = max(1, Int((availableWidth + 10) / itemWidthWithSpacing))
         if appState.gridColumnsCount != count {
-            appState.gridColumnsCount = count
+            DispatchQueue.main.async {
+                self.appState.gridColumnsCount = count
+            }
         }
     }
     

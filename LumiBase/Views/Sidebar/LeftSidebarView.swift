@@ -23,6 +23,9 @@ public struct LeftSidebarView: View {
     @State private var recentFolders: [URL] = []
     @State private var expandedFolderPaths: Set<String> = []
     
+    private let recentFoldersKey = "LumiBase.RecentFolders"
+    private let maxRecentFolders = 5
+    
     // Quick access system locations and mounted volumes
     private var rootLocations: [RootLocation] {
         var list: [RootLocation] = []
@@ -49,10 +52,23 @@ public struct LeftSidebarView: View {
         if let volumeContents = try? fm.contentsOfDirectory(at: volumesURL, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) {
             for vol in volumeContents {
                 let name = vol.lastPathComponent
-                if !name.starts(with: ".") {
-                    if !list.contains(where: { $0.url.standardizedFileURL.path == vol.standardizedFileURL.path }) {
-                        list.append(RootLocation(name: name, icon: "externaldrive.fill", url: vol))
-                    }
+                let resolvedPath = vol.standardizedFileURL.resolvingSymlinksInPath().path
+                
+                // Filter out system hidden files, Time Machine snapshots, system root symlink, and internal system volumes
+                if name.starts(with: ".") ||
+                   name.starts(with: "com.apple.TimeMachine") ||
+                   name.contains("localsnapshots") ||
+                   name == "Macintosh HD" ||
+                   name == "Preboot" ||
+                   name == "Recovery" ||
+                   name == "VM" ||
+                   name == "Update" ||
+                   resolvedPath == "/" {
+                    continue
+                }
+                
+                if !list.contains(where: { $0.url.standardizedFileURL.path == vol.standardizedFileURL.path }) {
+                    list.append(RootLocation(name: name, icon: "externaldrive.fill", url: vol))
                 }
             }
         }
@@ -104,7 +120,7 @@ public struct LeftSidebarView: View {
                                     .foregroundColor(LightroomTheme.textMuted)
                                 Spacer()
                                 Button("Clear") {
-                                    recentFolders.removeAll()
+                                    clearRecentFolders()
                                 }
                                 .font(.system(size: 9))
                                 .foregroundColor(LightroomTheme.textMuted.opacity(0.8))
@@ -235,6 +251,7 @@ public struct LeftSidebarView: View {
         .frame(minWidth: 220, idealWidth: 260, maxWidth: 340)
         .background(LightroomTheme.panelBackground)
         .onAppear {
+            loadRecentFolders()
             if let current = appState.currentFolderURL {
                 recordRecentFolder(current)
             }
@@ -246,13 +263,39 @@ public struct LeftSidebarView: View {
         }
     }
     
+    private func loadRecentFolders() {
+        if let paths = UserDefaults.standard.stringArray(forKey: recentFoldersKey) {
+            let urls = paths.compactMap { path -> URL? in
+                let url = URL(fileURLWithPath: path)
+                var isDir: ObjCBool = false
+                if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), isDir.boolValue {
+                    return url
+                }
+                return nil
+            }
+            self.recentFolders = Array(urls.prefix(maxRecentFolders))
+        }
+    }
+    
     private func recordRecentFolder(_ url: URL) {
         let normalizedPath = url.standardizedFileURL.resolvingSymlinksInPath().path
-        recentFolders.removeAll { $0.standardizedFileURL.resolvingSymlinksInPath().path == normalizedPath }
-        recentFolders.insert(url, at: 0)
-        if recentFolders.count > 15 {
-            recentFolders.removeLast()
+        var updated = recentFolders.filter { $0.standardizedFileURL.resolvingSymlinksInPath().path != normalizedPath }
+        updated.insert(url, at: 0)
+        if updated.count > maxRecentFolders {
+            updated = Array(updated.prefix(maxRecentFolders))
         }
+        self.recentFolders = updated
+        saveRecentFolders()
+    }
+    
+    private func saveRecentFolders() {
+        let paths = recentFolders.map { $0.standardizedFileURL.resolvingSymlinksInPath().path }
+        UserDefaults.standard.set(paths, forKey: recentFoldersKey)
+    }
+    
+    private func clearRecentFolders() {
+        recentFolders.removeAll()
+        UserDefaults.standard.removeObject(forKey: recentFoldersKey)
     }
     
     private func smartCollectionRow(

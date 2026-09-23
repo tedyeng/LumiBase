@@ -818,10 +818,14 @@ public struct LoupeView: View {
             Task { await PreviewPreloader.shared.cancelForegroundSelection() }
         }
         .onChange(of: appState.liveDevelopXMP) { _, newXMP in
-            updateProcessedImage(with: newXMP)
+            DispatchQueue.main.async {
+                updateProcessedImage(with: newXMP)
+            }
         }
         .onChange(of: appState.primarySelectedAsset?.xmp) { _, newXMP in
-            updateProcessedImage(with: newXMP)
+            DispatchQueue.main.async {
+                updateProcessedImage(with: newXMP)
+            }
         }
     }
     

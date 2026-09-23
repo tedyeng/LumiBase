@@ -16,15 +16,15 @@ LumiBase 是一套專為 macOS (特別是 Apple Silicon M 系列晶片) 打造�
   - **處理模式 (Treatment)**：一鍵 Color / Black & White 切換，黑白模式下自動聯動 `crs:ConvertToGrayscale="True"` 並隱藏彩度滑桿。
   - **色調控制 (Tone)**：線性光子曝光（-5.00 ~ +5.00 EV）、對比、雙階段高光還原（Apple 雙邊濾波挽救死白雲層）、全域陰影提升/加深、極致白色端點與黑色沉澱。
   - **外觀控制 (Presence)**：紋理（正向微距毛髮銳利、負向人像皮膚自然磨皮）、清晰度（正向中頻對比、負向浪漫夢幻柔焦）、去朦朧（大氣去霧/加霧）、自然飽和度（膚色保護）與標準線性飽和度。
-  - **精緻滑桿組件 (`LightroomSlider`)**：0ms 本機跟手手感、雙擊復位、**單擊數值標籤直接以鍵盤打字輸入，按 Enter 即刻套用**。
+  - **精緻滑桿組件 (`LightroomSlider`)**：0ms 本機跟手手感、雙擊標題/軌道復位、**點擊/雙擊數值標籤直接進入打字輸入，支援 `Tab` / `Shift+Tab` 在各修圖選項間連續跳轉切換，按 Enter 即刻套用**。
 - 🎨 **1:1 Adobe Camera RAW 色彩還原**：
   - 整合 **Adobe Standard DCP (Digital Camera Profile)** 管理管線。
   - 完整支援 Adobe PV2012 色彩管線（曝光、色溫/色調、高光/陰影、對比、白色/黑色、鮮豔度、飽和度、去朦朧）。
   - 確保 **Grid 縮圖**、**Filmstrip 底片列** 與 **Loupe 大圖預覽** 色彩 100% 完全一致。
 - 📂 **檔案總管樹狀目錄導覽 (File Explorer Tree)**：
-  - 無限制層級目錄展開與即時瀏覽。
+  - 無限制層級目錄展開與即時瀏覽，智慧過濾系統隱藏與虛擬卷宗。
   - 直接存取本機目錄與外接 SSD/隨身碟（如 `/Volumes/Super SSD`）。
-  - 自動記錄「曾經點擊過的目錄」（RECENT FOLDERS），並以清楚的分隔線與本機磁碟分開。
+  - 自動記錄並持久化「最近開啟的 5 個目錄」（RECENT FOLDERS），置頂於左側欄上方。
 - 🔄 **雙向 XMP Sidecar 同步 (Non-Destructive)**：
   - 支援讀取與寫入標準 Adobe `.xmp` 副檔。
   - 評星等（Rating）、旗標（Pick/Reject）或調整任何 Develop 參數時自動防抖寫入 `.xmp`，不修改 RAW 原檔，並可無縫在 Adobe Lightroom Classic / Bridge / Capture One 中開啟。
