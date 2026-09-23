@@ -3,6 +3,15 @@ import AppKit
 import CoreImage
 import ImageIO
 
+struct RAWDecodeSettings: Equatable {
+    let temperature: Int?
+    let tint: Int?
+    init(_ xmp: XMPMetadata?) {
+        temperature = xmp?.temperature
+        tint = xmp?.tint
+    }
+}
+
 public struct BaseImageHolder: @unchecked Sendable {
     public let full: CIImage
     public let display: CIImage
@@ -14,6 +23,8 @@ public struct BaseImageHolder: @unchecked Sendable {
     public let baseTint: Float?
     public let baseExposure: Float?
     public let isRaw: Bool
+    /// False for embedded previews and unverified ImageIO RAW fallbacks.
+    public var supportsNativeInspection: Bool = true
 }
 
 /// High-resolution RAW and raster image loader for Loupe view
@@ -31,19 +42,21 @@ public final class RAWImageLoader: @unchecked Sendable {
     }
     
     // In-memory cache for the currently active base CIImage holder
+    private var cachedSettings = RAWDecodeSettings(nil)
     private var cachedBaseURL: URL?
     private var cachedBaseHolder: BaseImageHolder?
     private let cacheLock = NSLock()
     
-    private func getCached(for url: URL) -> BaseImageHolder? {
+    private func getCached(for url: URL, settings: RAWDecodeSettings) -> BaseImageHolder? {
         cacheLock.lock()
         defer { cacheLock.unlock() }
-        return (cachedBaseURL == url) ? cachedBaseHolder : nil
+        return (cachedBaseURL == url && cachedSettings == settings) ? cachedBaseHolder : nil
     }
     
-    private func setCached(url: URL, holder: BaseImageHolder) {
+    private func setCached(url: URL, holder: BaseImageHolder, settings: RAWDecodeSettings) {
         cacheLock.lock()
         defer { cacheLock.unlock() }
+        cachedSettings = settings
         cachedBaseURL = url
         cachedBaseHolder = holder
     }
@@ -57,26 +70,17 @@ public final class RAWImageLoader: @unchecked Sendable {
     
     /// Asynchronously decodes and retrieves the base neutral CIImage holder (with full, display, and interactive proxies)
     public func loadBaseHolder(from url: URL, xmp: XMPMetadata? = nil) async -> BaseImageHolder? {
-        if let cached = getCached(for: url) {
-            if !cached.isRaw {
-                return cached
-            }
-            let targetEV = Float(xmp?.exposure2012 ?? 0.0)
-            let currentEV = cached.baseExposure ?? 0.0
-            let targetTemp = Float(xmp?.temperature ?? 0)
-            let currentTemp = cached.baseTemperature ?? 0.0
-            let targetTint = Float(xmp?.tint ?? 0)
-            let currentTint = cached.baseTint ?? 0.0
-            if abs(targetEV - currentEV) < 0.05 && (targetTemp == 0 || abs(targetTemp - currentTemp) < 10.0) && (xmp?.tint == nil || abs(targetTint - currentTint) < 0.5) {
-                return cached
-            }
-        }
+        let settings = RAWDecodeSettings(xmp)
+        if let cached = getCached(for: url, settings: settings) { return cached }
+        guard !Task.isCancelled else { return nil }
         
-        return await Task.detached(priority: .userInitiated) { [weak self] () -> BaseImageHolder? in
+        let work = Task.detached(priority: .userInitiated) { [weak self] () -> BaseImageHolder? in
+            guard !Task.isCancelled else { return nil }
             let pathExtension = url.pathExtension.lowercased()
             let isRaw = SupportedFileType(rawValue: pathExtension)?.isRaw ?? false
             
             var baseCIImage: CIImage?
+            var supportsNativeInspection = !isRaw
             var baseTemp: Float? = nil
             var baseTint: Float? = nil
             var baseExp: Float? = nil
@@ -118,6 +122,7 @@ public final class RAWImageLoader: @unchecked Sendable {
                     }
                     
                     baseCIImage = rawFilter.outputImage
+                    supportsNativeInspection = baseCIImage != nil
                 }
             }
             
@@ -129,7 +134,9 @@ public final class RAWImageLoader: @unchecked Sendable {
                         kCGImageSourceShouldAllowFloat: true
                     ]
                     if let cgImage = CGImageSourceCreateImageAtIndex(source, 0, options as CFDictionary) {
-                        baseCIImage = CIImage(cgImage: cgImage)
+                        let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+                        let orientation = (properties?[kCGImagePropertyOrientation] as? NSNumber)?.int32Value ?? 1
+                        baseCIImage = CIImage(cgImage: cgImage).oriented(forExifOrientation: orientation)
                     } else {
                         // Fallback to high-res embedded preview
                         let thumbOptions: [CFString: Any] = [
@@ -139,6 +146,7 @@ public final class RAWImageLoader: @unchecked Sendable {
                         ]
                         if let thumbCG = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbOptions as CFDictionary) {
                             baseCIImage = CIImage(cgImage: thumbCG)
+                            supportsNativeInspection = false
                         }
                     }
                 }
@@ -183,13 +191,16 @@ public final class RAWImageLoader: @unchecked Sendable {
                 baseTemperature: baseTemp,
                 baseTint: baseTint,
                 baseExposure: baseExp,
-                isRaw: isRaw
+                isRaw: isRaw,
+                supportsNativeInspection: supportsNativeInspection
             )
             
-            self?.setCached(url: url, holder: holder)
+            guard !Task.isCancelled else { return nil }
+            self?.setCached(url: url, holder: holder, settings: settings)
             
             return holder
-        }.value
+        }
+        return await withTaskCancellationHandler { await work.value } onCancel: { work.cancel() }
     }
     
     /// Ultra-fast GPU re-render of a base CIImage with develop edits applied.
@@ -198,10 +209,12 @@ public final class RAWImageLoader: @unchecked Sendable {
         baseHolder: BaseImageHolder,
         cameraModel: String?,
         xmp: XMPMetadata?,
-        interactive: Bool = false
+        interactive: Bool = false,
+        fullResolution: Bool = false
     ) -> NSImage? {
-        let targetBase = interactive ? baseHolder.interactive : baseHolder.display
-        let targetExtent = interactive ? baseHolder.interactiveExtent : baseHolder.displayExtent
+        guard !fullResolution || baseHolder.supportsNativeInspection else { return nil }
+        let targetBase = fullResolution ? baseHolder.full : (interactive ? baseHolder.interactive : baseHolder.display)
+        let targetExtent = fullResolution ? baseHolder.fullExtent : (interactive ? baseHolder.interactiveExtent : baseHolder.displayExtent)
         
         let processed = AdobeColorPipeline.shared.process(
             image: targetBase,
@@ -211,7 +224,7 @@ public final class RAWImageLoader: @unchecked Sendable {
         )
         
         let srgb = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
-        if let cgImage = ciContext.createCGImage(processed, from: targetExtent, format: .RGBA8, colorSpace: srgb) {
+        if let cgImage = ciContext.createCGImage(processed, from: targetExtent, format: .RGBA8, colorSpace: srgb, deferred: false) {
             return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
         }
         return nil

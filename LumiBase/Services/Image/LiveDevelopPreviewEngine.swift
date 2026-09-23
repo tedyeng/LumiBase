@@ -11,13 +11,14 @@ public final class LiveDevelopPreviewEngine: @unchecked Sendable {
     private var isRendering: Bool = false
     private var pendingRequest: RenderRequest?
     
-    public typealias RenderCompletion = @MainActor @Sendable (NSImage) -> Void
+    public typealias RenderCompletion = @MainActor @Sendable (NSImage?) -> Void
     
     public struct RenderRequest: Sendable {
         public let baseHolder: BaseImageHolder
         public let cameraModel: String?
         public let xmp: XMPMetadata?
         public let interactive: Bool
+        public let fullResolution: Bool
         public let completion: RenderCompletion
         
         public init(
@@ -25,12 +26,14 @@ public final class LiveDevelopPreviewEngine: @unchecked Sendable {
             cameraModel: String?,
             xmp: XMPMetadata?,
             interactive: Bool,
+            fullResolution: Bool = false,
             completion: @escaping RenderCompletion
         ) {
             self.baseHolder = baseHolder
             self.cameraModel = cameraModel
             self.xmp = xmp
             self.interactive = interactive
+            self.fullResolution = fullResolution
             self.completion = completion
         }
     }
@@ -43,6 +46,7 @@ public final class LiveDevelopPreviewEngine: @unchecked Sendable {
         cameraModel: String?,
         xmp: XMPMetadata?,
         interactive: Bool = true,
+        fullResolution: Bool = false,
         completion: @escaping RenderCompletion
     ) {
         let request = RenderRequest(
@@ -50,6 +54,7 @@ public final class LiveDevelopPreviewEngine: @unchecked Sendable {
             cameraModel: cameraModel,
             xmp: xmp,
             interactive: interactive,
+            fullResolution: fullResolution,
             completion: completion
         )
         
@@ -79,15 +84,15 @@ public final class LiveDevelopPreviewEngine: @unchecked Sendable {
                 self.lock.unlock()
                 
                 // Execute GPU processing completely off the main thread
-                if let image = RAWImageLoader.shared.renderProcessed(
+                let image = RAWImageLoader.shared.renderProcessed(
                     baseHolder: current.baseHolder,
                     cameraModel: current.cameraModel,
                     xmp: current.xmp,
-                    interactive: current.interactive
-                ) {
-                    DispatchQueue.main.async {
-                        current.completion(image)
-                    }
+                    interactive: current.interactive,
+                    fullResolution: current.fullResolution
+                )
+                DispatchQueue.main.async {
+                    current.completion(image)
                 }
             }
         }
