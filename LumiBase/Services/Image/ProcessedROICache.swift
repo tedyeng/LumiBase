@@ -4,6 +4,87 @@ import CoreImage
 import CryptoKit
 import ImageIO
 
+/// The sole retained bitmap owner shared by preview and processed ROI producers. CGImage is
+/// immutable after construction, so it can cross the lock boundary; AppKit wrappers are made
+/// only by the synchronous main-thread consumer.
+final class InspectionReadyFrameStore: @unchecked Sendable {
+    static let shared = InspectionReadyFrameStore()
+    static let budgetBytes = 128 * 1024 * 1024
+    enum Key: Hashable { case preview(PreviewCacheKey); case roi(ProcessedROIIdentity) }
+    enum Kind: Equatable { case fullPreview; case nativeROI }
+    struct Frame: @unchecked Sendable {
+        let image: CGImage
+        let kind: Kind
+        let fullExtent: CGRect
+        let sourceRect: CGRect?
+        let bytes: Int
+    }
+    private struct Stored { let frame: Frame; let sequence: UInt64 }
+    private let lock = NSLock()
+    private var entries: [Key: Stored] = [:]
+    private var sequence: UInt64 = 0
+    private var bytes = 0
+    private init() {}
+
+    func publish(_ frame: Frame, for key: Key) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        guard frame.bytes > 0, frame.bytes <= Self.budgetBytes else { return false }
+        removeLocked(key)
+        while bytes + frame.bytes > Self.budgetBytes,
+              let oldest = entries.min(by: { $0.value.sequence < $1.value.sequence })?.key { removeLocked(oldest) }
+        sequence &+= 1; entries[key] = Stored(frame: frame, sequence: sequence); bytes += frame.bytes
+        return true
+    }
+
+    func publishFullPreview(asset: PhotoAsset, xmp: XMPMetadata, image: NSImage, fullExtent: CGRect) {
+        guard let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            InspectionTrace.event("ready.producer.render_discard_no_cgimage"); return
+        }
+        var identityAsset = asset; identityAsset.xmp = xmp
+        let frame = Frame(image: cg, kind: .fullPreview, fullExtent: fullExtent, sourceRect: nil,
+                          bytes: cg.bytesPerRow * cg.height)
+        let accepted = publish(frame, for: .preview(PreviewCacheKey(asset: identityAsset,
+            maxPixelSize: PreviewPreloader.previewSize, pipelineIdentity: "imageio-embedded-transformed-rgba-v1")))
+        InspectionTrace.event(accepted ? "ready.producer.rendered_fit_published" : "ready.producer.rendered_fit_budget_rejected")
+    }
+
+    func preview(for key: PreviewCacheKey) -> Frame? {
+        lock.lock(); defer { lock.unlock() }
+        guard let stored = entries[.preview(key)], stored.frame.kind == .fullPreview else { return nil }
+        sequence &+= 1; entries[.preview(key)] = Stored(frame: stored.frame, sequence: sequence)
+        return stored.frame
+    }
+
+    func roi(assetID: String, fileVersion: String, settings: String, cameraModel: String,
+             center: CGPoint, viewport: CGSize, backing: CGFloat, orientation: Int) -> Frame? {
+        lock.lock(); defer { lock.unlock() }
+        let key = entries.keys.compactMap { key -> ProcessedROIIdentity? in
+            guard case .roi(let identity) = key,
+                  identity.assetID == assetID, identity.fileVersion == fileVersion,
+                  identity.developSettings == settings, identity.cameraModel == cameraModel,
+                  identity.normalizedCenter == center, identity.viewport == viewport,
+                  identity.backingScale == backing,
+                  identity.orientation == orientation,
+                  identity.sourceRect == InspectionROI.sourceRect(extent: identity.fullExtent, center: center, viewport: viewport, backing: backing) else { return nil }
+            return identity
+        }.max { (entries[.roi($0)]?.sequence ?? 0) < (entries[.roi($1)]?.sequence ?? 0) }
+        guard let key, let stored = entries[.roi(key)] else { return nil }
+        sequence &+= 1; entries[.roi(key)] = Stored(frame: stored.frame, sequence: sequence)
+        return stored.frame
+    }
+
+    func clearPreviews() { clear(where: { if case .preview = $0 { return true }; return false }) }
+    func clearROIs() { clear(where: { if case .roi = $0 { return true }; return false }) }
+    func clearAll() { clear(where: { _ in true }) }
+    var accountedBytes: Int { lock.lock(); defer { lock.unlock() }; return bytes }
+    var roiEntryCount: Int { lock.lock(); defer { lock.unlock() }; return entries.keys.reduce(0) { count, key in if case .roi = key { count + 1 } else { count } } }
+    private func clear(where predicate: (Key) -> Bool) {
+        lock.lock(); defer { lock.unlock() }
+        for key in entries.keys.filter(predicate) { removeLocked(key) }
+    }
+    private func removeLocked(_ key: Key) { if let old = entries.removeValue(forKey: key) { bytes -= old.frame.bytes } }
+}
+
 struct ProcessedROIIdentity: Hashable, Sendable {
     let assetID: String
     let fileVersion: String
@@ -18,48 +99,10 @@ struct ProcessedROIIdentity: Hashable, Sendable {
 }
 
 struct ProcessedROIEntry: @unchecked Sendable {
-    let image: NSImage
+    /// Immutable pixel storage is the only image object that crosses actor/lock boundaries.
+    let image: CGImage
     let identity: ProcessedROIIdentity
     let costBytes: Int
-}
-
-struct ProcessedROIBitmapCache {
-    private struct Stored { let entry: ProcessedROIEntry; let sequence: UInt64 }
-    let capacityBytes: Int
-    let maximumEntries: Int
-    private var entries: [ProcessedROIIdentity: Stored] = [:]
-    private var sequence: UInt64 = 0
-    private(set) var accountedBytes = 0
-    init(capacityBytes: Int = 128 * 1024 * 1024, maximumEntries: Int = 3) {
-        self.capacityBytes = max(0, capacityBytes); self.maximumEntries = max(0, maximumEntries)
-    }
-    var count: Int { entries.count }
-    mutating func matching(_ predicate: (ProcessedROIIdentity) -> Bool) -> ProcessedROIEntry? {
-        guard let key = entries.values.filter({ predicate($0.entry.identity) })
-            .max(by: { $0.sequence < $1.sequence })?.entry.identity,
-              let stored = entries[key] else { return nil }
-        sequence &+= 1; entries[key] = Stored(entry: stored.entry, sequence: sequence)
-        return stored.entry
-    }
-    mutating func value(for identity: ProcessedROIIdentity) -> ProcessedROIEntry? {
-        guard let stored = entries[identity] else { return nil }
-        sequence &+= 1; entries[identity] = Stored(entry: stored.entry, sequence: sequence)
-        return stored.entry
-    }
-    mutating func insert(_ entry: ProcessedROIEntry) {
-        guard entry.costBytes > 0, entry.costBytes <= capacityBytes, maximumEntries > 0 else { return }
-        remove(entry.identity)
-        while accountedBytes + entry.costBytes > capacityBytes || entries.count >= maximumEntries {
-            guard let oldest = entries.min(by: { $0.value.sequence < $1.value.sequence })?.key else { break }
-            remove(oldest)
-        }
-        sequence &+= 1; entries[entry.identity] = Stored(entry: entry, sequence: sequence)
-        accountedBytes += entry.costBytes
-    }
-    mutating func removeAll() { entries.removeAll(); accountedBytes = 0 }
-    private mutating func remove(_ key: ProcessedROIIdentity) {
-        if let old = entries.removeValue(forKey: key) { accountedBytes -= old.entry.costBytes }
-    }
 }
 
 struct ProcessedROIJob: Equatable, Sendable {
@@ -111,16 +154,10 @@ struct ProcessedROIRequest: @unchecked Sendable {
     static func make(asset: PhotoAsset, xmp: XMPMetadata, cameraModel: String?, center: CGPoint,
                      viewport: CGSize, backing: CGFloat, orientation: Int, extent: CGRect,
                      sourceRect: CGRect) -> ProcessedROIRequest {
-        let attrs = (try? FileManager.default.attributesOfItem(atPath: asset.fileURL.path)) ?? [:]
-        let modified = (attrs[.modificationDate] as? Date)?.timeIntervalSince1970 ?? asset.dateModified.timeIntervalSince1970
-        let size = (attrs[.size] as? NSNumber)?.int64Value ?? asset.fileSize
-        let resourceID = (try? asset.fileURL.resourceValues(forKeys: [.fileResourceIdentifierKey]).fileResourceIdentifier)
-            .map { String(describing: $0) } ?? "unavailable"
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         let settingsData = (try? encoder.encode(xmp)) ?? Data("encoding-failed".utf8)
         let settings = SHA256.hash(data: settingsData).map { String(format: "%02x", $0) }.joined()
-        let versionMaterial = "\(asset.fileURL.standardizedFileURL.path)|\(resourceID)|\(size)|\(modified.bitPattern)"
-        let version = SHA256.hash(data: Data(versionMaterial.utf8)).map { String(format: "%02x", $0) }.joined()
+        let version = fileVersion(for: asset)
         let identity = ProcessedROIIdentity(assetID: asset.id, fileVersion: version, developSettings: settings,
             cameraModel: cameraModel ?? "", fullExtent: extent, sourceRect: sourceRect,
             normalizedCenter: center, viewport: viewport, backingScale: backing, orientation: orientation)
@@ -128,12 +165,8 @@ struct ProcessedROIRequest: @unchecked Sendable {
     }
 
     static func fileVersion(for asset: PhotoAsset) -> String {
-        let attrs = (try? FileManager.default.attributesOfItem(atPath: asset.fileURL.path)) ?? [:]
-        let modified = (attrs[.modificationDate] as? Date)?.timeIntervalSince1970 ?? asset.dateModified.timeIntervalSince1970
-        let size = (attrs[.size] as? NSNumber)?.int64Value ?? asset.fileSize
-        let resourceID = (try? asset.fileURL.resourceValues(forKeys: [.fileResourceIdentifierKey]).fileResourceIdentifier)
-            .map { String(describing: $0) } ?? "unavailable"
-        let material = "\(asset.fileURL.standardizedFileURL.path)|\(resourceID)|\(size)|\(modified.bitPattern)"
+        // Use scanner-owned metadata so synchronous selection handoff never stats the file.
+        let material = "\(asset.fileURL.standardizedFileURL.path)|\(asset.fileSize)|\(asset.dateModified.timeIntervalSince1970.bitPattern)"
         return SHA256.hash(data: Data(material.utf8)).map { String(format: "%02x", $0) }.joined()
     }
     static func settingsIdentity(_ xmp: XMPMetadata) -> String {
@@ -156,7 +189,6 @@ struct ProcessedROIRequest: @unchecked Sendable {
 actor ProcessedROICacheService {
     static let shared = ProcessedROICacheService()
     typealias Renderer = @Sendable (ProcessedROIRequest) async -> ProcessedROIEntry?
-    private var cache = ProcessedROIBitmapCache()
     private var scheduler = ProcessedROIScheduler()
     private var requests: [ProcessedROIIdentity: ProcessedROIRequest] = [:]
     private var worker: Task<Void, Never>?
@@ -169,15 +201,16 @@ actor ProcessedROICacheService {
         else { self.renderer = { request in await Self.renderIsolated(request) } }
         Task { await installMemoryPressureObserver() }
     }
-    func cached(_ request: ProcessedROIRequest) -> ProcessedROIEntry? { cache.value(for: request.identity) }
+    func cached(_ request: ProcessedROIRequest) -> InspectionReadyFrameStore.Frame? {
+        InspectionReadyFrameStore.shared.roi(assetID: request.identity.assetID, fileVersion: request.identity.fileVersion,
+            settings: request.identity.developSettings, cameraModel: request.identity.cameraModel,
+            center: request.identity.normalizedCenter, viewport: request.identity.viewport, backing: request.identity.backingScale,
+            orientation: request.identity.orientation)
+    }
     func cachedMatch(assetID: String, fileVersion: String, developSettings: String, cameraModel: String,
-                     center: CGPoint, viewport: CGSize, backing: CGFloat, orientation: Int) -> ProcessedROIEntry? {
-        cache.matching { key in
-            key.assetID == assetID && key.fileVersion == fileVersion && key.developSettings == developSettings &&
-            key.cameraModel == cameraModel && key.normalizedCenter == center && key.viewport == viewport &&
-            key.backingScale == backing && key.orientation == orientation &&
-            key.sourceRect == InspectionROI.sourceRect(extent: key.fullExtent, center: center, viewport: viewport, backing: backing)
-        }
+                     center: CGPoint, viewport: CGSize, backing: CGFloat, orientation: Int) -> InspectionReadyFrameStore.Frame? {
+        InspectionReadyFrameStore.shared.roi(assetID: assetID, fileVersion: fileVersion, settings: developSettings,
+            cameraModel: cameraModel, center: center, viewport: viewport, backing: backing, orientation: orientation)
     }
     func foregroundStarted(owner: String) { foregroundOwner = owner; scheduler.foregroundStarted(); worker?.cancel(); requests.removeAll(); pump() }
     func foregroundFinished(owner: String) {
@@ -186,18 +219,24 @@ actor ProcessedROICacheService {
     }
     func insertForeground(_ entry: ProcessedROIEntry, owner: String) {
         guard foregroundOwner == owner, !scheduler.isSuspended else { return }
-        cache.insert(entry); foregroundOwner = nil; scheduler.foregroundFinished(); pump()
+        publish(entry); foregroundOwner = nil; scheduler.foregroundFinished(); pump()
     }
     func prioritize(_ jobs: [ProcessedROIRequest]) {
         worker?.cancel()
-        let uncached = jobs.filter { cache.value(for: $0.identity) == nil }
+        let uncached = jobs.filter { request in
+            let identity = request.identity
+            return InspectionReadyFrameStore.shared.roi(assetID: identity.assetID, fileVersion: identity.fileVersion,
+                settings: identity.developSettings, cameraModel: identity.cameraModel,
+                center: identity.normalizedCenter, viewport: identity.viewport, backing: identity.backingScale,
+                orientation: identity.orientation) == nil
+        }
         requests = Dictionary(uncached.map { ($0.identity, $0) }, uniquingKeysWith: { _, last in last })
         scheduler.prioritize(uncached.map(\.identity)); pump()
     }
-    func memoryPressure() { scheduler.setMemorySuspended(true); worker?.cancel(); cache.removeAll(); requests.removeAll(); pump() }
+    func memoryPressure() { scheduler.setMemorySuspended(true); worker?.cancel(); InspectionReadyFrameStore.shared.clearAll(); requests.removeAll(); pump() }
     func memoryRestored() { scheduler.setMemorySuspended(false); pump() }
-    var cachedEntryCount: Int { cache.count }
-    var accountedBitmapBytes: Int { cache.accountedBytes }
+    var cachedEntryCount: Int { InspectionReadyFrameStore.shared.roiEntryCount }
+    var accountedBitmapBytes: Int { InspectionReadyFrameStore.shared.accountedBytes }
     var activeSpeculativeCount: Int { scheduler.runningCount }
     var foregroundOwnerID: String? { foregroundOwner }
 
@@ -225,9 +264,18 @@ actor ProcessedROICacheService {
     private func complete(_ job: ProcessedROIJob, entry: ProcessedROIEntry?) {
         let mayPublish = scheduler.finish(job)
         worker = nil
-        if mayPublish, let entry, entry.identity == job.identity { cache.insert(entry) }
+        if mayPublish, let entry, entry.identity == job.identity { publish(entry) }
+        else if !mayPublish { InspectionTrace.event("ready.producer.roi_discard_stale_or_cancelled") }
+        else { InspectionTrace.event("ready.producer.roi_discard_render_failed") }
         if !scheduler.isPending(job.identity) { requests.removeValue(forKey: job.identity) }
         pump()
+    }
+    private func publish(_ entry: ProcessedROIEntry) {
+        let identity = entry.identity
+        let ok = InspectionReadyFrameStore.shared.publish(.init(image: entry.image, kind: .nativeROI,
+            fullExtent: identity.fullExtent, sourceRect: identity.sourceRect,
+            bytes: entry.image.bytesPerRow * entry.image.height), for: .roi(identity))
+        InspectionTrace.event(ok ? "ready.producer.roi_published" : "ready.producer.roi_budget_rejected")
     }
     private nonisolated static func renderIsolated(_ request: ProcessedROIRequest) async -> ProcessedROIEntry? {
         guard !Task.isCancelled else { return nil }
@@ -240,7 +288,7 @@ actor ProcessedROICacheService {
               let image = loader.renderProcessed(baseHolder: holder, cameraModel: request.cameraModel,
                   xmp: request.xmp, fullResolution: true, sourceRect: request.identity.sourceRect),
               let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
-        let entry = ProcessedROIEntry(image: image, identity: request.identity, costBytes: cg.bytesPerRow * cg.height)
+        let entry = ProcessedROIEntry(image: cg, identity: request.identity, costBytes: cg.bytesPerRow * cg.height)
         return entry
     }
 }

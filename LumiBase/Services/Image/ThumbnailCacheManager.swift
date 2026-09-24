@@ -18,7 +18,8 @@ public final class ThumbnailCacheManager: @unchecked Sendable {
         
         // Setup disk cache in Application Support / Caches / LumiBase (versioned)
         let cachesDirectory = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first!
-        diskCacheURL = cachesDirectory.appendingPathComponent("com.lumibase.thumbnails.v3", isDirectory: true)
+        // v4 keys include the complete render-affecting XMP develop identity; never read v3's partial-key files.
+        diskCacheURL = cachesDirectory.appendingPathComponent("com.lumibase.thumbnails.v4", isDirectory: true)
         
         try? fileManager.createDirectory(at: diskCacheURL, withIntermediateDirectories: true)
     }
@@ -48,6 +49,11 @@ public final class ThumbnailCacheManager: @unchecked Sendable {
         }
         
         return nil
+    }
+
+    /// Memory-only lookup for selection handoff. It never performs disk I/O.
+    public func memoryImage(forKey key: String) -> NSImage? {
+        memoryCache.object(forKey: key as NSString)
     }
     
     /// Stores an image in memory and asynchronously persists to disk

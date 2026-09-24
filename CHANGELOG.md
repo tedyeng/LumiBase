@@ -5,6 +5,20 @@ All notable changes to **LumiBase** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.5] — Inspection ROI delivery
+
+### Fixed / Changed (1.5.1–1.5.5)
+- Share preloaded previews, completed Fit frames and processed ROIs through a bounded 128 MiB ready-frame LRU; preserve foreground priority, preview ±3 and native ROI neighbor ±1 scheduling.
+- Reject stale async develop/cache publications and isolate frame ownership; retain the same photo's last valid frame while updated settings render.
+- Keep proxy previews aligned with original oriented geometry at held 100%, and validate cached ROI extent against the warmed holder.
+- Move quick folder scans off the main actor, bound metadata concurrency and reject cancelled or obsolete folder/refresh completions.
+- Keep version/build 1.5.5 and the dedicated `com.lumibase.LumiBase.Inspection.ROI` bundle ID. No highlight experiment is included.
+
+### Verification / Limits
+- User reports ROI 1.5.5 now works normally. Delivery rerun: 96 tests, 3 opt-in benchmark skips, 0 failures.
+- The original folder-switch force-quit incident is **not proven resolved**; the available sample did not capture a confirmed hang.
+- See the [consolidated release and review notes](docs/inspection-1.5.5-release.md) for version history, scope, reproducible verification and remaining limits. Older entries below describe historical checkpoints rather than the final cache architecture.
+
 ## [1.4.4] - 2026-09-23
 
 ### Added & Improved

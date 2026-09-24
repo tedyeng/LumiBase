@@ -137,6 +137,30 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
         (convertToGrayscale == true) ||
         hasCrop
     }
+
+    /// Stable identity for every develop value that can affect rendered thumbnail pixels.
+    /// Optional markers keep this independent of locale and avoid ambiguous concatenation.
+    var thumbnailDevelopCacheIdentity: String {
+        func integer(_ value: Int?) -> String { value.map(String.init) ?? "-" }
+        func decimal(_ value: Double?) -> String {
+            guard let value else { return "-" }
+            return String(value.bitPattern, radix: 16)
+        }
+        func string(_ value: String?) -> String {
+            guard let value else { return "-" }
+            return "\(value.utf8.count):\(value)"
+        }
+        return [
+            "exposure=\(decimal(exposure2012))", "temperature=\(integer(temperature))",
+            "tint=\(integer(tint))", "contrast=\(integer(contrast2012))",
+            "highlights=\(integer(highlights2012))", "shadows=\(integer(shadows2012))",
+            "whites=\(integer(whites2012))", "blacks=\(integer(blacks2012))",
+            "dehaze=\(integer(dehaze))", "vibrance=\(integer(vibrance))",
+            "saturation=\(integer(saturation))", "clarity=\(integer(clarity2012))",
+            "texture=\(integer(texture))", "crop=\(hasCrop ? 1 : 0)",
+            "profile=\(string(cameraProfile))", "grayscale=\(convertToGrayscale.map { $0 ? 1 : 0 } ?? -1)"
+        ].joined(separator: "|")
+    }
     
     /// Resets all develop (Basic) settings to camera default / zero
     public mutating func resetDevelopSettings() {

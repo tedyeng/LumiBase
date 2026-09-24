@@ -18,33 +18,6 @@ final class PreviewPreloaderTests: XCTestCase {
         )
     }
 
-    func testCacheAccountsBytesEvictsLRUAndRejectsOversizedEntry() {
-        var cache = PreviewBitmapCache<String>(capacityBytes: 100)
-        cache.insert("A", forKey: "a", costBytes: 40)
-        cache.insert("B", forKey: "b", costBytes: 40)
-        XCTAssertEqual(cache.value(forKey: "a"), "A") // a is now least-recently used
-        cache.insert("C", forKey: "c", costBytes: 70)
-        XCTAssertNil(cache.value(forKey: "b"))
-        XCTAssertNil(cache.value(forKey: "a"))
-        XCTAssertEqual(cache.value(forKey: "c"), "C")
-        XCTAssertEqual(cache.accountedBytes, 70)
-        cache.insert("large", forKey: "large", costBytes: 101)
-        XCTAssertNil(cache.value(forKey: "large"))
-        XCTAssertLessThanOrEqual(cache.accountedBytes, 100)
-    }
-
-    func testCacheReservationLeavesRoomForInFlightBitmapAndPressurePurgeClearsSpeculation() {
-        var cache = PreviewBitmapCache<String>(capacityBytes: 100)
-        cache.insert("old", forKey: "old", costBytes: 40)
-        XCTAssertTrue(cache.reserve(70))
-        XCTAssertEqual(cache.accountedBytes, 0)
-        cache.insert("new", forKey: "new", costBytes: 70)
-        XCTAssertEqual(cache.accountedBytes, 70)
-        cache.removeAll() // same operation used by memory-pressure and teardown handling
-        XCTAssertEqual(cache.accountedBytes, 0)
-        XCTAssertNil(cache.value(forKey: "new"))
-    }
-
     func testCancelledRunningJobBlocksNextUntilItFinishesAndCannotPublish() throws {
         var scheduler = PreviewPreloadScheduler()
         scheduler.reprioritize(keys: ["a", "b"])
@@ -182,7 +155,7 @@ final class PreviewPreloaderTests: XCTestCase {
 
     func testActorDecodesSyntheticImageAndPublishesReusablePreview() async throws {
         func makeFixture() throws -> URL {
-            let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".png")
+            let url = inspectionTestScratchURL(UUID().uuidString + ".png")
             let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 48, pixelsHigh: 32, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
             NSGraphicsContext.saveGraphicsState()
             NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: bitmap)
@@ -206,12 +179,16 @@ final class PreviewPreloaderTests: XCTestCase {
         let duringPressure = await preloader.cachedPreview(for: asset)
         XCTAssertNil(duringPressure, "foreground completion cannot bypass active memory pressure")
         await preloader.handleMemoryPressure(.normal)
-        var cached: NSImage?
+        var cached: CGImage?
         for _ in 0..<100 {
             cached = await preloader.cachedPreview(for: asset)
             if cached != nil { break }
             try await Task.sleep(nanoseconds: 10_000_000)
         }
         XCTAssertNotNil(cached, "actor must decode the neighbor fixture and serve it to the Loupe consumer")
+        let producedFrame = try XCTUnwrap(PreviewPreloader.readyPreviewFrame(for: asset))
+        XCTAssertEqual(producedFrame.image.width, 48)
+        XCTAssertEqual(producedFrame.fullExtent, CGRect(x: 0, y: 0, width: 48, height: 32),
+                       "the actual ImageIO preview producer must publish source geometry independently of bitmap storage")
     }
 }

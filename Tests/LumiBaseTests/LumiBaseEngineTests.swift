@@ -221,7 +221,7 @@ final class LumiBaseEngineTests: XCTestCase {
     
     @MainActor
     func testConfirmDeleteRemovesFilesAndXMP() throws {
-        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let tempDir = inspectionTestScratchURL(UUID().uuidString)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         defer {
             try? FileManager.default.removeItem(at: tempDir)
@@ -310,7 +310,7 @@ final class LumiBaseEngineTests: XCTestCase {
     
     @MainActor
     func testConfirmDeleteRemovesRawJpgAndXmp() throws {
-        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let tempDir = inspectionTestScratchURL(UUID().uuidString)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         defer {
             try? FileManager.default.removeItem(at: tempDir)
@@ -588,4 +588,10 @@ final class LumiBaseEngineTests: XCTestCase {
         XCTAssertGreaterThan(processed.extent.height, 0)
         fputs("Pipeline processing completed successfully.\n", stderr)
     }
+}
+
+func inspectionTestScratchURL(_ component: String) -> URL {
+    let root = URL(fileURLWithPath: "/Users/kitleong/.hermes/cache/scratch/lumibase-folder-switch-1.5.4/test-artifacts", isDirectory: true)
+    try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    return root.appendingPathComponent(component)
 }

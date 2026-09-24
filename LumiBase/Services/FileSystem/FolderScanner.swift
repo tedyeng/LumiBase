@@ -1,4 +1,5 @@
 import Foundation
+import ImageIO
 
 /// Fast asynchronous scanner for photo assets and XMP sidecars in a directory
 public final class FolderScanner: Sendable {
@@ -15,25 +16,32 @@ public final class FolderScanner: Sendable {
         ) else {
             return []
         }
-        
-        let filtered = fileURLs.filter { supportedExtensions.contains($0.pathExtension.lowercased()) }
-        
-        let scanned = filtered.sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
-            .map { fileURL in
-                PhotoAsset(
-                    fileURL: fileURL,
-                    fileSize: (try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize).map { Int64($0) } ?? 0,
-                    dateModified: (try? fileURL.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? Date(),
-                    dateCreated: Date(),
-                    companionURLs: [],
-                    xmp: .empty,
-                    cameraMetadata: .empty
-                )
-            }
-        
+
+        var filtered: [URL] = []
+        for fileURL in fileURLs {
+            if Task.isCancelled { return [] }
+            if supportedExtensions.contains(fileURL.pathExtension.lowercased()) { filtered.append(fileURL) }
+        }
+
+        var scanned: [PhotoAsset] = []
+        for fileURL in filtered.sorted(by: { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }) {
+            if Task.isCancelled { return [] }
+            let values = try? fileURL.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+            scanned.append(PhotoAsset(
+                fileURL: fileURL,
+                fileSize: values?.fileSize.map(Int64.init) ?? 0,
+                dateModified: values?.contentModificationDate ?? Date(),
+                dateCreated: Date(),
+                companionURLs: [],
+                xmp: .empty,
+                cameraMetadata: .empty
+            ))
+        }
+
+        if Task.isCancelled { return [] }
         return groupRawAndCompanionAssets(scanned)
     }
-    
+
     /// Scans a directory URL for supported RAW and image files with full metadata and XMP sidecars
     public static func scanDirectory(
         url: URL,
@@ -42,13 +50,13 @@ public final class FolderScanner: Sendable {
     ) async -> [PhotoAsset] {
         let fileManager = FileManager.default
         let supportedExtensions = SupportedFileType.allExtensions
-        
+
         var imageURLs: [URL] = []
-        
+
         if recursive {
             let keys: [URLResourceKey] = [.isRegularFileKey, .fileSizeKey, .contentModificationDateKey, .creationDateKey]
             if let enumerator = fileManager.enumerator(at: url, includingPropertiesForKeys: keys, options: [.skipsHiddenFiles, .skipsPackageDescendants]) {
-                while let fileURL = enumerator.nextObject() as? URL {
+                while !Task.isCancelled, let fileURL = enumerator.nextObject() as? URL {
                     let ext = fileURL.pathExtension.lowercased()
                     if supportedExtensions.contains(ext) {
                         imageURLs.append(fileURL)
@@ -60,22 +68,38 @@ public final class FolderScanner: Sendable {
                 imageURLs = contents.filter { supportedExtensions.contains($0.pathExtension.lowercased()) }
             }
         }
+        guard !Task.isCancelled else { return [] }
         
-        // Concurrently process metadata and XMP sidecars in parallel
+        // Keep metadata parsing concurrent without creating one task per file. Folder switches
+        // cancel producers, so only this bounded batch may still be doing blocking ImageIO I/O.
         return await withTaskGroup(of: PhotoAsset?.self, returning: [PhotoAsset].self) { group in
-            for fileURL in imageURLs {
+            let workerCount = min(4, imageURLs.count)
+            var nextIndex = 0
+            func addNext() {
+                guard nextIndex < imageURLs.count else { return }
+                let fileURL = imageURLs[nextIndex]
+                nextIndex += 1
                 group.addTask {
+                    guard !Task.isCancelled else { return nil }
                     return parseAsset(fileURL: fileURL)
                 }
             }
+            for _ in 0..<workerCount { addNext() }
             
             var results: [PhotoAsset] = []
-            for await asset in group {
+            while let asset = await group.next() {
+                if Task.isCancelled {
+                    group.cancelAll()
+                    continue
+                }
                 if let asset = asset {
                     results.append(asset)
                     onAssetFound?(asset)
                 }
+                addNext()
             }
+
+            guard !Task.isCancelled else { return [] }
             
             // Group RAW and companion JPG pairs
             let grouped = groupRawAndCompanionAssets(results)
@@ -169,11 +193,15 @@ public final class FolderScanner: Sendable {
             xmpMetadata = XMPParser.parse(url: baseNameXmp)
         }
         
+        let source = CGImageSourceCreateWithURL(fileURL as CFURL, nil)
+        let properties = source.flatMap { CGImageSourceCopyPropertiesAtIndex($0, 0, nil) as? [CFString: Any] }
+        let orientation = (properties?[kCGImagePropertyOrientation] as? NSNumber)?.intValue
         return PhotoAsset(
             fileURL: fileURL,
             fileSize: fileSize,
             dateModified: dateModified,
             dateCreated: dateCreated,
+            sourceOrientation: orientation,
             xmp: xmpMetadata,
             cameraMetadata: cameraMetadata
         )

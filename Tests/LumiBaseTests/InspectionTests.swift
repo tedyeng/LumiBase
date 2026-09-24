@@ -4,6 +4,245 @@ import CoreImage
 @testable import LumiBase
 
 final class InspectionTests: XCTestCase {
+    func testProducedPreviewKeepsNativeViewportGeometryAcrossHeldSelectionFitAndRepress() async throws {
+        InspectionReadyFrameStore.shared.clearAll()
+        defer { InspectionReadyFrameStore.shared.clearAll() }
+        let asset = PhotoAsset(fileURL: URL(fileURLWithPath: "/private/tmp/preview-geometry-8192.jpg"))
+        let selected = PhotoAsset(fileURL: URL(fileURLWithPath: "/private/tmp/preview-geometry-selected.jpg"))
+        let xmp = XMPMetadata.empty
+        let fullExtent = CGRect(x: 0, y: 0, width: 8192, height: 4096)
+        var display = InspectionDisplay()
+        var pendingSizes: [CGSize] = []
+        var pendingPositions: [CGPoint] = []
+        for previewWidth in [400, 1600] {
+            InspectionReadyFrameStore.shared.clearPreviews()
+            let previewHeight = previewWidth / 2
+            let preloader = PreviewPreloader(observeMemoryPressure: false, previewDecoder: { _, _ in
+                let bounds = CGRect(x: 0, y: 0, width: previewWidth, height: previewHeight)
+                guard let cg = CIContext().createCGImage(CIImage(color: .blue).cropped(to: bounds), from: bounds) else { return nil }
+                return PreviewBitmap(image: cg, fullExtent: fullExtent)
+            })
+            await preloader.foregroundSelectionStarted(selected.id)
+            await preloader.update(assets: [selected, asset], selectedID: selected.id, direction: .forward)
+            await preloader.foregroundSelectionCompleted(selected.id)
+            var producedFrame: InspectionReadyFrameStore.Frame?
+            for _ in 0..<100 {
+                producedFrame = PreviewPreloader.readyPreviewFrame(for: asset, xmp: xmp)
+                if producedFrame != nil { break }
+                try await Task.sleep(nanoseconds: 10_000_000)
+            }
+            let previewFrame = try XCTUnwrap(producedFrame, "worker must publish the synthetic preview before selection")
+            XCTAssertEqual(previewFrame.image.width, previewWidth)
+            XCTAssertEqual(previewFrame.fullExtent, fullExtent)
+            let preview = NSImage(cgImage: previewFrame.image, size: NSSize(width: previewWidth, height: previewHeight))
+
+            var ticket = InspectionLoadTransition.beginSelection(for: asset, display: &display)
+            let handoff = try XCTUnwrap(InspectionReadyFrameHandoff.current(for: asset, xmp: xmp, display: display,
+                zoomed: true, center: CGPoint(x: 0.7, y: 0.4), viewport: CGSize(width: 900, height: 700), backing: 2,
+                allowROI: false))
+            display.accept(handoff.image, assetID: asset.id, filename: asset.filename,
+                pixels: handoff.sourceRect?.size ?? handoff.image.size, native: handoff.native, ticket: ticket,
+                sourceRect: handoff.sourceRect, fullExtent: handoff.fullExtent)
+            XCTAssertEqual(handoff.provenance, "current-preview-native-pending")
+            let pending = InspectionFrameLayout.make(pixels: display.pixels, sourceRect: display.sourceRect,
+                fullExtent: display.fullExtent, zoomed: true, viewport: CGSize(width: 900, height: 700), backing: 2)
+            XCTAssertEqual(pending.imageSize, CGSize(width: 4096, height: 2048),
+                           "held 100% preview must use original dimensions, regardless of 400/1600 proxy size")
+            XCTAssertEqual(display.fullExtent, fullExtent)
+            pendingSizes.append(pending.imageSize)
+            var heldState = InspectionState()
+            heldState.persistent = true
+            heldState.center = CGPoint(x: 0.7, y: 0.4)
+            heldState.clamp(displayed: pending.clampSize, viewport: CGSize(width: 900, height: 700))
+            let pendingPosition = pending.imagePosition(viewport: CGSize(width: 900, height: 700),
+                center: heldState.center, sourceRect: display.sourceRect)
+            pendingPositions.append(pendingPosition)
+
+            let fit = InspectionFrameLayout.make(pixels: preview.size, sourceRect: nil, fullExtent: fullExtent,
+                zoomed: false, viewport: CGSize(width: 900, height: 700), backing: 2)
+            XCTAssertLessThanOrEqual(fit.imageSize.width, 900)
+            XCTAssertLessThanOrEqual(fit.imageSize.height, 700)
+
+            display.restoreFullFit()
+            ticket = display.beginSelection(assetID: asset.id, filename: asset.filename)
+            let native = NSImage(size: NSSize(width: 8192, height: 4096))
+            display.accept(native, assetID: asset.id, filename: asset.filename, pixels: fullExtent.size,
+                native: true, ticket: ticket, fullExtent: fullExtent)
+            let repressed = InspectionFrameLayout.make(pixels: display.pixels, sourceRect: display.sourceRect,
+                fullExtent: display.fullExtent, zoomed: true, viewport: CGSize(width: 900, height: 700), backing: 2)
+            XCTAssertEqual(repressed.imageSize, pending.imageSize,
+                           "native completion must retain the preview's center and 100% scale")
+            XCTAssertEqual(repressed.imagePosition(viewport: CGSize(width: 900, height: 700),
+                center: heldState.center, sourceRect: display.sourceRect), pendingPosition,
+                "native completion must retain the selected center's viewport position")
+            XCTAssertTrue(display.native)
+            await preloader.cancelAndClear()
+        }
+        XCTAssertEqual(pendingSizes[0], pendingSizes[1])
+        XCTAssertEqual(pendingPositions[0], pendingPositions[1])
+    }
+
+    func testUnknownPreviewExtentUsesFitFallbackWithoutTreatingProxyAsNativeGeometry() throws {
+        InspectionReadyFrameStore.shared.clearAll()
+        defer { InspectionReadyFrameStore.shared.clearAll() }
+        let asset = PhotoAsset(fileURL: URL(fileURLWithPath: "/private/tmp/preview-unknown-extent.jpg"))
+        let ci = CIImage(color: .red).cropped(to: CGRect(x: 0, y: 0, width: 400, height: 200))
+        let cg = try XCTUnwrap(CIContext().createCGImage(ci, from: ci.extent))
+        let image = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
+        InspectionReadyFrameStore.shared.publishFullPreview(asset: asset, xmp: .empty, image: image, fullExtent: .zero)
+        var display = InspectionDisplay()
+        let ticket = display.beginSelection(assetID: asset.id, filename: asset.filename)
+        let handoff = try XCTUnwrap(InspectionReadyFrameHandoff.current(for: asset, xmp: .empty, display: display,
+            zoomed: true, center: CGPoint(x: 0.5, y: 0.5), viewport: CGSize(width: 900, height: 700), backing: 2,
+            allowROI: false))
+        display.accept(handoff.image, assetID: asset.id, filename: asset.filename, pixels: handoff.image.size,
+            native: false, ticket: ticket, fullExtent: handoff.fullExtent)
+        XCTAssertTrue(display.fullExtent.isEmpty)
+        let layout = InspectionFrameLayout.make(pixels: display.pixels, sourceRect: nil, fullExtent: display.fullExtent,
+            zoomed: true, viewport: CGSize(width: 900, height: 700), backing: 2)
+        XCTAssertLessThanOrEqual(layout.imageSize.width, 900)
+        XCTAssertLessThanOrEqual(layout.imageSize.height, 700)
+    }
+
+    func testCachedROIRequiresDecodedHolderExtentToMatchIncludingOriginAndOrientationGeometry() {
+        let portraitExtent = CGRect(x: -21, y: 47, width: 4200, height: 8000)
+        var transition = InspectionCachedROITransition()
+        _ = transition.publishCachedROI(fullExtent: portraitExtent)
+        XCTAssertEqual(transition.baseHolderPrepared(isZoomed: true, holderFullExtent: portraitExtent), .keepCachedNativeROI)
+
+        var mismatch = InspectionCachedROITransition()
+        _ = mismatch.publishCachedROI(fullExtent: portraitExtent)
+        XCTAssertEqual(mismatch.baseHolderPrepared(isZoomed: true,
+            holderFullExtent: CGRect(x: -21, y: 47, width: 4000, height: 8000)), .renderCurrentNative,
+            "a warmed holder with different oriented full extent must trigger a fresh render")
+        XCTAssertFalse(InspectionCachedROITransition.matchesKnownExtent(.zero, .zero))
+    }
+
+    @MainActor
+    func testRapidFolderSwitchUsesBackgroundQuickScanAndRejectsStaleABACompletion() async throws {
+        let root = URL(fileURLWithPath: "/Users/kitleong/.hermes/cache/scratch/lumibase-folder-switch-1.5.4/synthetic", isDirectory: true)
+        let folderA = root.appendingPathComponent("A", isDirectory: true)
+        let folderB = root.appendingPathComponent("B", isDirectory: true)
+        let scanner = ControlledFolderScanGate()
+        let decoder = ControlledFolderDecodeGate()
+        let quickScanThreads = FolderQuickScanThreadRecorder()
+        let state = AppState(
+            preloader: PreviewPreloader(observeMemoryPressure: false),
+            quickFolderScan: { _ in quickScanThreads.record(Thread.isMainThread); return [] },
+            fullFolderScan: { url in
+                let scanned = await scanner.scan(url: url)
+                return await decoder.decode(assets: scanned)
+            }
+        )
+
+        state.openFolder(url: folderA)
+        await scanner.waitForCalls(1)
+        state.openFolder(url: folderB)
+        await scanner.waitForCalls(2)
+        state.openFolder(url: folderA)
+        await scanner.waitForCalls(3)
+
+        XCTAssertEqual(quickScanThreads.mainThreadCallCount, 0,
+                       "folder listing and per-file metadata lookups must not run on the main actor")
+
+        await scanner.resolve(call: 2, with: [PhotoAsset(fileURL: folderA.appendingPathComponent("latest-A.jpg"))])
+        await decoder.waitForCalls(1)
+        await decoder.resolve(call: 0)
+        for _ in 0..<100 { if state.allAssets.first?.filename == "latest-A.jpg" { break }; await Task.yield() }
+        XCTAssertEqual(state.allAssets.first?.filename, "latest-A.jpg")
+
+        await scanner.resolve(call: 1, with: [PhotoAsset(fileURL: folderB.appendingPathComponent("stale-B.jpg"))])
+        await decoder.waitForCalls(2)
+        await decoder.resolve(call: 1)
+        await scanner.resolve(call: 0, with: [PhotoAsset(fileURL: folderA.appendingPathComponent("stale-A.jpg"))])
+        await decoder.waitForCalls(3)
+        await decoder.resolve(call: 2)
+        for _ in 0..<100 { if state.allAssets.first?.filename == "stale-A.jpg" { break }; await Task.yield() }
+        XCTAssertEqual(state.currentFolderURL, folderA)
+        XCTAssertEqual(state.allAssets.first?.filename, "latest-A.jpg",
+                       "the first A scan must not replace results from the latest A generation")
+        let cancelledScans = await scanner.cancelledCalls
+        XCTAssertEqual(cancelledScans, Set([0, 1]),
+                       "switching folders must cancel both obsolete scans, including the earlier A request")
+        let cancelledDecodes = await decoder.cancelledCalls
+        XCTAssertEqual(cancelledDecodes, Set([1, 2]),
+                       "late decode completions must observe cancellation and remain unpublished")
+    }
+
+    @MainActor
+    func testDelayedCachedROIQueryRejectsDevelopSettingsChangedWhileSuspended() async throws {
+        let gate = CachedROIQueryGate()
+        let load = UUID(), render = UUID()
+        let captured = InspectionCachedROIPublicationState(assetID: "photo-A", loadRevision: load,
+            renderRevision: render, developSettings: "old-exposure-temp", zoomed: true, roiEnabled: true,
+            center: CGPoint(x: 0.5, y: 0.5), viewport: CGSize(width: 900, height: 700), backingScale: 2)
+        var current = captured
+        let task = Task { @MainActor in
+            await InspectionCachedROIPublication.lookup(captured: captured, current: { current }) {
+                await gate.query()
+            }
+        }
+        await gate.waitUntilStarted()
+        current.developSettings = "new-exposure-temp"
+        await gate.resolve("old-cached-bitmap")
+        let published = await task.value
+        XCTAssertNil(published, "a cached ROI rendered with old exposure/temperature must never publish after current settings change")
+    }
+
+    @MainActor
+    func testDelayedCachedROIQueryRejectsSelectionA_B_AAndChangedROIRequestGeometry() async throws {
+        let gate = CachedROIQueryGate()
+        let captured = InspectionCachedROIPublicationState(assetID: "photo-A", loadRevision: UUID(),
+            renderRevision: UUID(), developSettings: "settings-A", zoomed: true, roiEnabled: true,
+            center: CGPoint(x: 0.5, y: 0.5), viewport: CGSize(width: 900, height: 700), backingScale: 2)
+        var current = captured
+        let task = Task { @MainActor in
+            await InspectionCachedROIPublication.lookup(captured: captured, current: { current }) {
+                await gate.query()
+            }
+        }
+        await gate.waitUntilStarted()
+        // The selected ID returns to A, but a fresh selection ticket must still invalidate A's old lookup.
+        current.assetID = "photo-B"
+        current.assetID = "photo-A"
+        current.loadRevision = UUID()
+        current.center = CGPoint(x: 0.7, y: 0.5)
+        await gate.resolve("stale-ROI")
+        let published = await task.value
+        XCTAssertNil(published, "A/B/A and panned ROI geometry must invalidate the old cache result")
+    }
+
+    func testDeferredDevelopObserverResolvesCurrentSettingsInsteadOfQueuedPayload() {
+        let queuedOldValue = "old-photo-settings"
+        let currentValue = "selected-photo-settings"
+        let resolved = InspectionCachedROIPublication.resolveDeferredDevelopUpdate(captured: queuedOldValue) { currentValue }
+        XCTAssertEqual(resolved, currentValue, "a deferred observer must read current selection settings when its main-queue block runs")
+    }
+
+    @MainActor
+    func testDelayedCachedROIQueryKeepsFastHitWhenAllInputsRemainCurrent() async throws {
+        let gate = CachedROIQueryGate()
+        let captured = InspectionCachedROIPublicationState(assetID: "photo-A", loadRevision: UUID(),
+            renderRevision: UUID(), developSettings: "settings-A", zoomed: true, roiEnabled: true,
+            center: CGPoint(x: 0.5, y: 0.5), viewport: CGSize(width: 900, height: 700), backingScale: 2)
+        let task = Task { @MainActor in
+            await InspectionCachedROIPublication.lookup(captured: captured, current: { captured }) {
+                await gate.query()
+            }
+        }
+        await gate.waitUntilStarted()
+        await gate.resolve("valid-cached-bitmap")
+        let published = await task.value
+        XCTAssertEqual(published, "valid-cached-bitmap", "an unchanged cache identity retains the existing immediate-hit path")
+    }
+
+    func testRejectedCachedROIContinuesWithCurrentDevelopSettings() {
+        let capturedOldSettings = "cached-with-old-white-balance"
+        let currentSettings = "current-white-balance-and-exposure"
+        let decodeSettings = InspectionCachedROIPublication.resolveDeferredDevelopUpdate(captured: capturedOldSettings) { currentSettings }
+        XCTAssertEqual(decodeSettings, currentSettings, "a rejected ROI lookup must decode the holder with current active settings")
+    }
+
     func testCachedROITransitionWaitsForHolderThenRequestsFullFitWithoutReplacingNativeROI() {
         var transition = InspectionCachedROITransition()
         var display = InspectionDisplay()
@@ -194,6 +433,85 @@ final class InspectionTests: XCTestCase {
         display.accept(image, assetID: firstAsset.id, filename: firstAsset.filename, pixels: image.size, native: false, ticket: first)
         XCTAssertNil(display.image)
         XCTAssertNotEqual(ticket, first)
+    }
+
+    func testSamePhotoSettingsEditRetainsLastValidFrameAndMarksItStaleForUpdating() {
+        var display = InspectionDisplay()
+        let ticket = display.beginSelection(assetID: "same-photo", filename: "photo.jpg")
+        let oldSettings = "settings-r1", newSettings = "settings-r2"
+        let frame = NSImage(size: NSSize(width: 640, height: 480))
+        display.accept(frame, assetID: "same-photo", filename: "photo.jpg", pixels: frame.size,
+                       native: false, ticket: ticket, developSettingsIdentity: oldSettings)
+
+        let updating = display.presentation(for: "same-photo", settingsIdentity: newSettings)
+        XCTAssertTrue(updating.image === frame, "same-photo edits keep the last valid displayed bitmap during the exact-settings render")
+        XCTAssertFalse(updating.settingsCurrent, "retained pixels must not be labeled as current settings")
+        let otherPhoto = display.presentation(for: "another-photo", settingsIdentity: newSettings)
+        XCTAssertNil(otherPhoto.image, "a retained frame never crosses photo ownership")
+    }
+
+    @MainActor
+    func testActualPreviewPreloaderPublishesCurrentFitFrameBeforeSelectionAsyncLoad() async throws {
+        InspectionReadyFrameStore.shared.clearAll()
+        let root = inspectionTestScratchURL("fixtures").deletingLastPathComponent().appendingPathComponent("fixtures", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let anchorURL = root.appendingPathComponent("anchor.jpg")
+        let selectedURL = root.appendingPathComponent("selected.jpg")
+        try fixtureJPEG().write(to: anchorURL, options: .atomic)
+        try fixtureJPEG().write(to: selectedURL, options: .atomic)
+        let anchor = PhotoAsset(fileURL: anchorURL, fileSize: 1)
+        let selected = PhotoAsset(fileURL: selectedURL, fileSize: 1,
+                                  xmp: XMPMetadata(exposure2012: 0.25, highlights2012: -100))
+        let preloader = PreviewPreloader(observeMemoryPressure: false)
+        await preloader.update(assets: [anchor, selected], selectedID: anchor.id, direction: .forward)
+        var produced: CGImage?
+        for _ in 0..<200 {
+            produced = await preloader.cachedPreview(for: selected)
+            if produced != nil { break }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTAssertNotNil(produced, "the real ImageIO preload worker must publish before selection")
+
+        var display = InspectionDisplay()
+        _ = InspectionLoadTransition.beginSelection(for: selected, display: &display)
+        XCTAssertNil(display.image, "selection clears previous ownership before rendering")
+        let handoff = InspectionReadyFrameHandoff.current(for: selected, xmp: selected.xmp, display: display,
+            zoomed: false, center: CGPoint(x: 0.5, y: 0.5), viewport: CGSize(width: 900, height: 600), backing: 2)
+        XCTAssertEqual(handoff?.provenance, "preloaded-preview")
+        XCTAssertEqual(handoff?.image.size.width, produced.map { CGFloat($0.width) })
+        XCTAssertEqual(handoff?.image.size.height, produced.map { CGFloat($0.height) })
+        XCTAssertLessThanOrEqual(InspectionReadyFrameStore.shared.accountedBytes, InspectionReadyFrameStore.budgetBytes)
+        let firstFrameTicket = InspectionLoadTransition.beginSelection(for: selected, display: &display)
+        if let handoff {
+            display.accept(handoff.image, assetID: selected.id, filename: selected.filename, pixels: handoff.image.size,
+                           native: false, ticket: firstFrameTicket, fullExtent: handoff.fullExtent)
+        }
+        XCTAssertTrue(display.owns(assetID: selected.id))
+        XCTAssertNotNil(display.image, "the producer's bitmap becomes the first selected display frame without a loader await")
+
+        var staleSettings = selected.xmp; staleSettings.highlights2012 = -80
+        XCTAssertNil(InspectionReadyFrameHandoff.current(for: selected, xmp: staleSettings, display: display,
+            zoomed: false, center: CGPoint(x: 0.5, y: 0.5), viewport: CGSize(width: 900, height: 600), backing: 2),
+            "complete settings identity rejects a warm frame from a different edit revision")
+        let cold = PhotoAsset(fileURL: root.appendingPathComponent("cold.jpg"))
+        XCTAssertNil(InspectionReadyFrameHandoff.current(for: cold, xmp: cold.xmp, display: display,
+            zoomed: false, center: CGPoint(x: 0.5, y: 0.5), viewport: CGSize(width: 900, height: 600), backing: 2))
+        XCTAssertNil(InspectionReadyFrameHandoff.current(for: anchor, xmp: anchor.xmp, display: display,
+            zoomed: false, center: CGPoint(x: 0.5, y: 0.5), viewport: CGSize(width: 900, height: 600), backing: 2),
+            "a different selected owner cannot borrow another ready frame")
+        await preloader.handleMemoryPressure(.critical)
+        XCTAssertEqual(InspectionReadyFrameStore.shared.accountedBytes, 0, "pressure clears the unified consumer-visible store")
+        XCTAssertNil(InspectionReadyFrameHandoff.current(for: selected, xmp: selected.xmp, display: display,
+            zoomed: false, center: CGPoint(x: 0.5, y: 0.5), viewport: CGSize(width: 900, height: 600), backing: 2))
+        await preloader.cancelAndClear()
+    }
+
+    private func fixtureJPEG() throws -> Data {
+        let color = CIColor(red: 0.2, green: 0.6, blue: 0.9)
+        let ci = CIImage(color: color).cropped(to: CGRect(x: 0, y: 0, width: 320, height: 200))
+        let context = CIContext(options: [.useSoftwareRenderer: true])
+        let cg = try XCTUnwrap(context.createCGImage(ci, from: ci.extent))
+        return try XCTUnwrap(NSBitmapImageRep(cgImage: cg).representation(using: .jpeg, properties: [:]))
     }
 
     func testFailedSelectionAndFitRestoreNeverRevealPreviousOwner() {
@@ -451,7 +769,7 @@ final class InspectionTests: XCTestCase {
     }
 
     func testSynthetic24MPDecodeRenderSwitchTiming() async throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let root = inspectionTestScratchURL(UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
         let context = CIContext()
@@ -654,5 +972,98 @@ final class InspectionTests: XCTestCase {
                         displayed: CGSize(width: 3000, height: 2000), viewport: CGSize(width: 1200, height: 800))
         XCTAssertTrue(state.held, "The first drag must not restore held=false from the captured pre-down layout value")
         XCTAssertNotEqual(state.center, CGPoint(x: 0.5, y: 0.5), "The drag must preserve the center established by mouseDown")
+    }
+}
+
+private actor CachedROIQueryGate {
+    private var started = false
+    private var startWaiters: [CheckedContinuation<Void, Never>] = []
+    private var resultWaiter: CheckedContinuation<String?, Never>?
+
+    func query() async -> String? {
+        started = true
+        startWaiters.forEach { $0.resume() }
+        startWaiters.removeAll()
+        return await withCheckedContinuation { resultWaiter = $0 }
+    }
+
+    func waitUntilStarted() async {
+        if started { return }
+        await withCheckedContinuation { startWaiters.append($0) }
+    }
+
+    func resolve(_ result: String?) {
+        resultWaiter?.resume(returning: result)
+        resultWaiter = nil
+    }
+}
+
+private actor ControlledFolderScanGate {
+    private var callCount = 0
+    private var pending: [Int: CheckedContinuation<[PhotoAsset], Never>] = [:]
+    private var countWaiters: [(Int, CheckedContinuation<Void, Never>)] = []
+    private(set) var cancelledCalls: Set<Int> = []
+
+    func scan(url: URL) async -> [PhotoAsset] {
+        let call = callCount
+        let result = await withCheckedContinuation { continuation in
+            callCount += 1
+            pending[call] = continuation
+            let ready = countWaiters.filter { callCount >= $0.0 }
+            countWaiters.removeAll { callCount >= $0.0 }
+            ready.forEach { $0.1.resume() }
+        }
+        if Task.isCancelled { cancelledCalls.insert(call) }
+        return result
+    }
+
+    func waitForCalls(_ count: Int) async {
+        if callCount >= count { return }
+        await withCheckedContinuation { countWaiters.append((count, $0)) }
+    }
+
+    func resolve(call: Int, with assets: [PhotoAsset]) {
+        pending.removeValue(forKey: call)?.resume(returning: assets)
+    }
+}
+
+private actor ControlledFolderDecodeGate {
+    private var callCount = 0
+    private var pending: [Int: CheckedContinuation<Void, Never>] = [:]
+    private var countWaiters: [(Int, CheckedContinuation<Void, Never>)] = []
+    private(set) var cancelledCalls: Set<Int> = []
+
+    func decode(assets: [PhotoAsset]) async -> [PhotoAsset] {
+        let call = callCount
+        await withCheckedContinuation { continuation in
+            callCount += 1
+            pending[call] = continuation
+            let ready = countWaiters.filter { callCount >= $0.0 }
+            countWaiters.removeAll { callCount >= $0.0 }
+            ready.forEach { $0.1.resume() }
+        }
+        if Task.isCancelled { cancelledCalls.insert(call) }
+        return assets
+    }
+
+    func waitForCalls(_ count: Int) async {
+        if callCount >= count { return }
+        await withCheckedContinuation { countWaiters.append((count, $0)) }
+    }
+
+    func resolve(call: Int) {
+        pending.removeValue(forKey: call)?.resume()
+    }
+}
+
+private final class FolderQuickScanThreadRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var mainThreadCalls = 0
+    func record(_ isMainThread: Bool) {
+        guard isMainThread else { return }
+        lock.lock(); mainThreadCalls += 1; lock.unlock()
+    }
+    var mainThreadCallCount: Int {
+        lock.lock(); defer { lock.unlock() }; return mainThreadCalls
     }
 }

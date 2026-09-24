@@ -19,7 +19,7 @@ final class PhotoExportServiceTests: XCTestCase {
     
     func testExportRasterImageToJPEG() throws {
         // Create a temporary test JPG
-        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("LumiBaseExportTest_\(UUID().uuidString)")
+        let tempDir = inspectionTestScratchURL("LumiBaseExportTest_\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempDir) }
         
@@ -84,7 +84,7 @@ final class PhotoExportServiceTests: XCTestCase {
             return
         }
         
-        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("LumiBaseRealExportTest_\(UUID().uuidString)")
+        let tempDir = inspectionTestScratchURL("LumiBaseRealExportTest_\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempDir) }
         
@@ -137,7 +137,7 @@ final class PhotoExportServiceTests: XCTestCase {
             return
         }
         
-        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("LumiBasePortraitExportTest_\(UUID().uuidString)")
+        let tempDir = inspectionTestScratchURL("LumiBasePortraitExportTest_\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempDir) }
         
