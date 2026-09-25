@@ -591,7 +591,9 @@ final class LumiBaseEngineTests: XCTestCase {
 }
 
 func inspectionTestScratchURL(_ component: String) -> URL {
-    let root = URL(fileURLWithPath: "/Users/kitleong/.hermes/cache/scratch/lumibase-folder-switch-1.5.4/test-artifacts", isDirectory: true)
+    let root = ProcessInfo.processInfo.environment["LUMIBASE_TEST_OUTPUT"].map {
+        URL(fileURLWithPath: $0, isDirectory: true)
+    } ?? FileManager.default.temporaryDirectory.appendingPathComponent("lumibase-test-artifacts", isDirectory: true)
     try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
     return root.appendingPathComponent(component)
 }

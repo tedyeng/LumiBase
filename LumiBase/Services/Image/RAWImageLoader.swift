@@ -48,6 +48,7 @@ public struct BaseImageHolder: @unchecked Sendable {
     public let isRaw: Bool
     /// False for embedded previews and unverified ImageIO RAW fallbacks.
     public var supportsNativeInspection: Bool = true
+    public var highlightsSource: HighlightsSourceRecipe? = nil
 }
 
 /// High-resolution RAW and raster image loader for Loupe view
@@ -72,8 +73,10 @@ public final class RAWImageLoader: @unchecked Sendable {
     
     private func getCached(for url: URL, settings: RAWDecodeSettings) -> BaseImageHolder? {
         cacheLock.lock()
-        defer { cacheLock.unlock() }
-        return (cachedBaseURL == url && cachedSettings == settings) ? cachedBaseHolder : nil
+        let holder = (cachedBaseURL == url && cachedSettings == settings) ? cachedBaseHolder : nil
+        cacheLock.unlock()
+        if let source = holder?.highlightsSource, !source.isCurrent { return nil }
+        return holder
     }
     
     private func setCached(url: URL, holder: BaseImageHolder, settings: RAWDecodeSettings) {
@@ -85,6 +88,7 @@ public final class RAWImageLoader: @unchecked Sendable {
     }
     
     public func clearCache() {
+        NativeHighlightsService.shared.clear()
         cacheLock.lock()
         defer { cacheLock.unlock() }
         cachedBaseURL = nil
@@ -217,7 +221,8 @@ public final class RAWImageLoader: @unchecked Sendable {
                 baseTint: baseTint,
                 baseExposure: baseExp,
                 isRaw: isRaw,
-                supportsNativeInspection: supportsNativeInspection
+                supportsNativeInspection: supportsNativeInspection,
+                highlightsSource: supportsNativeInspection && isRaw ? HighlightsSourceRecipe(url: url) : nil
             )
             
             guard !Task.isCancelled else { return nil }
@@ -243,12 +248,15 @@ public final class RAWImageLoader: @unchecked Sendable {
         let targetBase = fullResolution ? baseHolder.full : (interactive ? baseHolder.interactive : baseHolder.display)
         let targetExtent = fullResolution ? baseHolder.fullExtent : (interactive ? baseHolder.interactiveExtent : baseHolder.displayExtent)
         
-        let processed = AdobeColorPipeline.shared.process(
-            image: targetBase,
-            cameraModel: cameraModel,
-            xmp: xmp,
-            baseHolder: baseHolder
-        )
+        let processed: CIImage
+        if NativeHighlightsService.applies(holder: baseHolder, xmp: xmp),
+           let source = baseHolder.highlightsSource, let xmp {
+            guard let native = NativeHighlightsService.shared.image(source: source, xmp: xmp, cameraModel: cameraModel) else { return nil }
+            let scale = targetExtent.width / baseHolder.fullExtent.width
+            processed = fullResolution ? native : native.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+        } else {
+            processed = AdobeColorPipeline.shared.process(image: targetBase, cameraModel: cameraModel, xmp: xmp, baseHolder: baseHolder)
+        }
         
         let srgb = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
         let outputExtent: CGRect
@@ -258,7 +266,9 @@ public final class RAWImageLoader: @unchecked Sendable {
         } else {
             outputExtent = targetExtent
         }
-        if let cgImage = ciContext.createCGImage(processed, from: outputExtent, format: .RGBA8, colorSpace: srgb, deferred: false) {
+        let renderContext = NativeHighlightsService.applies(holder: baseHolder, xmp: xmp) ? NativeHighlightsService.shared.renderContext : ciContext
+        if let cgImage = renderContext.createCGImage(processed, from: outputExtent, format: .RGBA8, colorSpace: srgb, deferred: false) {
+            guard !Task.isCancelled, baseHolder.highlightsSource?.isCurrent != false else { return nil }
             return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
         }
         return nil
@@ -286,7 +296,7 @@ public final class RAWImageLoader: @unchecked Sendable {
     
     /// Asynchronously loads full resolution image with Adobe DCP and XMP develop settings applied
     public func loadFullImage(from url: URL, cameraModel: String? = nil, xmp: XMPMetadata? = nil, maxDimension: CGFloat? = nil) async -> NSImage? {
-        guard let holder = await loadBaseHolder(from: url) else { return nil }
-        return renderProcessed(baseHolder: holder, cameraModel: cameraModel, xmp: xmp, interactive: false)
+        guard let holder = await loadBaseHolder(from: url, xmp: xmp) else { return nil }
+        return await Task.detached { self.renderProcessed(baseHolder: holder, cameraModel: cameraModel, xmp: xmp, interactive: false) }.value
     }
 }

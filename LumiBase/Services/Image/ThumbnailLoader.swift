@@ -19,7 +19,7 @@ public actor ThumbnailLoader {
     /// The single key path used by insertion/loading and synchronous handoff.
     static func cacheKey(for asset: PhotoAsset, maxPixelSize: Int) -> String {
         ThumbnailCacheManager.shared.cacheKey(for: asset.fileURL, maxPixelSize: maxPixelSize,
-            dateModified: asset.dateModified, developTag: asset.xmp.thumbnailDevelopCacheIdentity)
+            dateModified: asset.dateModified, developTag: "highlights-1.6.0|" + asset.xmp.thumbnailDevelopCacheIdentity)
     }
     
     /// Loads a thumbnail asynchronously with memory/disk caching and request deduplication
@@ -54,6 +54,17 @@ public actor ThumbnailLoader {
     
     /// Synchronously creates a thumbnail from disk using CIRAWFilter draft mode (for exact preview match) or ImageIO
     private nonisolated static func createThumbnail(for asset: PhotoAsset, maxPixelSize: Int) -> NSImage? {
+        if asset.isRaw, (asset.xmp.highlights2012 ?? 0) < 0 {
+            guard let recipe = HighlightsSourceRecipe(url: asset.fileURL),
+                  let native = NativeHighlightsService.shared.image(source: recipe, xmp: asset.xmp, cameraModel: asset.cameraMetadata.model),
+                  !Task.isCancelled else { return nil }
+            let scale = min(1, CGFloat(maxPixelSize) / max(native.extent.width, native.extent.height))
+            let scaled = native.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+            let context = NativeHighlightsService.shared.renderContext
+            guard let rendered = context.createCGImage(scaled, from: scaled.extent, format: .RGBA8,
+                colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!, deferred: false) else { return nil }
+            return NSImage(cgImage: rendered, size: NSSize(width: rendered.width, height: rendered.height))
+        }
         // 1. For RAW assets with develop edits, use CIRAWFilter to get identical color science as Loupe View
         if asset.isRaw && asset.xmp.hasDevelopEdits {
             if let rawFilter = CIRAWFilter(imageURL: asset.fileURL) {

@@ -104,14 +104,17 @@ public struct HistogramView: View {
         isCalculating = true
         
         // 1. Compute histogram from the actual developed image with all XMP adjustments
-        if let baseHolder = await RAWImageLoader.shared.loadBaseHolder(from: asset.fileURL, xmp: asset.xmp),
-           let processed = RAWImageLoader.shared.renderProcessed(
-               baseHolder: baseHolder,
-               cameraModel: asset.cameraMetadata.model,
-               xmp: asset.xmp,
-               interactive: true
-           ) {
+        let work = Task.detached {
+            guard let holder = await RAWImageLoader.shared.loadBaseHolder(from: asset.fileURL, xmp: asset.xmp),
+                  !Task.isCancelled else { return Optional<NSImage>.none }
+            return RAWImageLoader.shared.renderProcessed(baseHolder: holder, cameraModel: asset.cameraMetadata.model,
+                                                        xmp: asset.xmp, interactive: true)
+        }
+        let processed = await withTaskCancellationHandler { await work.value } onCancel: { work.cancel() }
+        guard !Task.isCancelled else { return }
+        if let processed {
             let data = await HistogramCalculator.computeHistogram(for: processed)
+            guard !Task.isCancelled else { return }
             await MainActor.run {
                 self.histogramData = data
                 self.isCalculating = false
