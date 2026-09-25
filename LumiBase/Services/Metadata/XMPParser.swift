@@ -48,6 +48,11 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
     private var parsedClarity: Int?
     private var parsedTexture: Int?
     private var parsedHasCrop: Bool = false
+    private var parsedCropTop: Double?
+    private var parsedCropLeft: Double?
+    private var parsedCropBottom: Double?
+    private var parsedCropRight: Double?
+    private var parsedCropAngle: Double?
     private var parsedCameraProfile: String?
     private var parsedConvertToGrayscale: Bool?
     
@@ -88,6 +93,11 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
                 clarity2012: parsedClarity,
                 texture: parsedTexture,
                 hasCrop: parsedHasCrop,
+                cropTop: parsedCropTop,
+                cropLeft: parsedCropLeft,
+                cropBottom: parsedCropBottom,
+                cropRight: parsedCropRight,
+                cropAngle: parsedCropAngle,
                 cameraProfile: parsedCameraProfile,
                 convertToGrayscale: parsedConvertToGrayscale
             )
@@ -152,6 +162,16 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
                 parsedTexture = Int(val)
             } else if key.hasSuffix("hascrop") {
                 parsedHasCrop = (val.lowercased() == "true" || val == "1")
+            } else if key.hasSuffix("croptop") {
+                parsedCropTop = Double(val)
+            } else if key.hasSuffix("cropleft") {
+                parsedCropLeft = Double(val)
+            } else if key.hasSuffix("cropbottom") {
+                parsedCropBottom = Double(val)
+            } else if key.hasSuffix("cropright") {
+                parsedCropRight = Double(val)
+            } else if key.hasSuffix("cropangle") {
+                parsedCropAngle = Double(val)
             } else if key.hasSuffix("cameraprofile") {
                 parsedCameraProfile = val
             } else if key.hasSuffix("converttograyscale") {
@@ -200,6 +220,16 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
             parsedContrast = Int(trimmed)
         } else if lowerElement.hasSuffix("hascrop") {
             parsedHasCrop = (trimmed.lowercased() == "true" || trimmed == "1")
+        } else if lowerElement.hasSuffix("croptop") {
+            parsedCropTop = Double(trimmed)
+        } else if lowerElement.hasSuffix("cropleft") {
+            parsedCropLeft = Double(trimmed)
+        } else if lowerElement.hasSuffix("cropbottom") {
+            parsedCropBottom = Double(trimmed)
+        } else if lowerElement.hasSuffix("cropright") {
+            parsedCropRight = Double(trimmed)
+        } else if lowerElement.hasSuffix("cropangle") {
+            parsedCropAngle = Double(trimmed)
         } else if lowerElement.hasSuffix("li") {
             if inSubjectBag && !trimmed.isEmpty && !parsedKeywords.contains(trimmed) {
                 parsedKeywords.append(trimmed)
@@ -345,6 +375,20 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
             hasCrop = !cropMatch.isEmpty
         }
         
+        var cropTop: Double? = nil
+        var cropLeft: Double? = nil
+        var cropBottom: Double? = nil
+        var cropRight: Double? = nil
+        var cropAngle: Double? = nil
+        if let match = matchFirst(pattern: #"CropTop="([^"]+)""#, in: content) { cropTop = Double(match) }
+        if let match = matchFirst(pattern: #"CropLeft="([^"]+)""#, in: content) { cropLeft = Double(match) }
+        if let match = matchFirst(pattern: #"CropBottom="([^"]+)""#, in: content) { cropBottom = Double(match) }
+        if let match = matchFirst(pattern: #"CropRight="([^"]+)""#, in: content) { cropRight = Double(match) }
+        if let match = matchFirst(pattern: #"CropAngle="([^"]+)""#, in: content) { cropAngle = Double(match) }
+        if cropTop != nil || cropLeft != nil || cropBottom != nil || cropRight != nil || cropAngle != nil {
+            hasCrop = true
+        }
+        
         let keywordMatches = matchAll(pattern: #"<[^:>]+:li>([^<]+)</[^:>]+:li>"#, in: content)
         for kw in keywordMatches {
             let clean = kw.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -388,6 +432,11 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
             clarity2012: clarity,
             texture: texture,
             hasCrop: hasCrop,
+            cropTop: cropTop,
+            cropLeft: cropLeft,
+            cropBottom: cropBottom,
+            cropRight: cropRight,
+            cropAngle: cropAngle,
             cameraProfile: cameraProfile,
             convertToGrayscale: convertToGrayscale
         )

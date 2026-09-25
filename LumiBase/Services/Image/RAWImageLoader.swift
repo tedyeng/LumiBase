@@ -264,7 +264,8 @@ public final class RAWImageLoader: @unchecked Sendable {
             outputExtent = sourceRect.intersection(targetExtent)
             guard !outputExtent.isEmpty else { return nil }
         } else {
-            outputExtent = targetExtent
+            let pExtent = processed.extent
+            outputExtent = (pExtent.isInfinite || pExtent.isEmpty) ? targetExtent : pExtent
         }
         let renderContext = NativeHighlightsService.applies(holder: baseHolder, xmp: xmp) ? NativeHighlightsService.shared.renderContext : ciContext
         if let cgImage = renderContext.createCGImage(processed, from: outputExtent, format: .RGBA8, colorSpace: srgb, deferred: false) {

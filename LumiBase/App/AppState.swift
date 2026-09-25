@@ -23,6 +23,20 @@ public final class AppState: ObservableObject {
     @Published public var liveDevelopAssetID: String?
     @Published public var liveDevelopXMP: XMPMetadata?
     
+    // Sync & Copy/Paste Develop State (Lightroom Classic Workflow)
+    @Published public var isAutoSyncEnabled: Bool = false
+    @Published public var showSyncDialog: Bool = false
+    @Published public var showCopySettingsDialog: Bool = false
+    @Published public var copiedDevelopSettings: XMPMetadata? = nil
+    @Published public var copiedSyncOptions: DevelopSyncOptions = .default
+    @Published public var lastSyncOptions: DevelopSyncOptions = .default
+    
+    // Active Develop Tool Mode (Edit vs Crop & Rotate)
+    @Published public var activeDevelopTool: DevelopToolMode = .edit
+    @Published public var cropAspectRatioPreset: CropAspectRatioPreset = .original
+    @Published public var isCropAspectLocked: Bool = true
+    @Published public var cropOverlayStyle: CropOverlayStyle = .grid
+    
     // View state
     @Published public var viewMode: ViewMode = .grid
     @Published public var thumbnailSize: CGFloat = 220
@@ -158,31 +172,85 @@ public final class AppState: ObservableObject {
     }
     
     public func handleGlobalKeyEvent(_ event: NSEvent) -> Bool {
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let keyCode = event.keyCode
+        
         // Only ignore keyboard shortcuts if user is currently typing in an active text input field
-        if let responder = NSApp.keyWindow?.firstResponder {
-            if responder is NSTextView || responder is NSTextField {
-                return false
+        if let responder = NSApp.keyWindow?.firstResponder, (responder is NSTextView || responder is NSTextField) {
+            // If user presses Escape while in a text input field, dismiss focus and consume event
+            if keyCode == 53 { // Escape
+                DispatchQueue.main.async {
+                    NSApp.keyWindow?.makeFirstResponder(nil)
+                }
+                return true
+            }
+            // If user presses Cmd+F, refocus search
+            if flags.contains(.command) {
+                let lower = (event.charactersIgnoringModifiers ?? "").lowercased()
+                if lower == "f" {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseFocusSearch"), object: nil)
+                    return true
+                }
+            }
+            return false
+        }
+        
+        // 0. Modifier Key Combinations (Export, Sync, Copy/Paste Develop Settings)
+        if flags.contains([.command, .shift, .option]) {
+            let lower = (event.charactersIgnoringModifiers ?? "").lowercased()
+            if lower == "s" {
+                self.toggleAutoSync()
+                return true
             }
         }
         
-        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        
-        // 0. Modifier Key Combinations (e.g. ⇧⌘E for Export)
-        if flags.contains([.command, .shift]) {
+        if flags.contains([.command, .shift]) && !flags.contains(.option) {
             let lower = (event.charactersIgnoringModifiers ?? "").lowercased()
             if lower == "e" {
                 self.exportSelectedPhotos()
                 return true
             }
+            if lower == "s" {
+                if self.selectedAssetIDs.count > 1 {
+                    self.showSyncDialog = true
+                    return true
+                }
+            }
+            if lower == "c" {
+                if self.primarySelectedAsset != nil {
+                    self.showCopySettingsDialog = true
+                    return true
+                }
+            }
+            if lower == "v" {
+                self.pasteDevelopSettings()
+                return true
+            }
         }
         
-        // Command combinations (⌘A for Select All, ⌘D for Deselect All, ⌘⌫ for Delete)
+        if flags.contains([.command, .option]) && !flags.contains(.shift) {
+            let lower = (event.charactersIgnoringModifiers ?? "").lowercased()
+            if lower == "v" {
+                self.pasteDevelopSettings()
+                return true
+            }
+            if lower == "s" {
+                self.toggleAutoSync()
+                return true
+            }
+        }
+        
+        // Command combinations (⌘F for Search, ⌘A for Select All, ⌘D for Deselect All, ⌘⌫ for Delete)
         if flags.contains(.command) && !flags.contains(.shift) && !flags.contains(.option) && !flags.contains(.control) {
             if event.keyCode == 51 { // 51 is Backspace / Delete
                 self.requestDeleteSelectedPhotos()
                 return true
             }
             let lower = (event.charactersIgnoringModifiers ?? "").lowercased()
+            if lower == "f" {
+                NotificationCenter.default.post(name: NSNotification.Name("LumiBaseFocusSearch"), object: nil)
+                return true
+            }
             if lower == "a" {
                 self.selectAll()
                 return true
@@ -199,7 +267,6 @@ public final class AppState: ObservableObject {
         }
         
         let chars = event.charactersIgnoringModifiers ?? ""
-        let keyCode = event.keyCode
         
         // 1. Star Ratings (0 - 5, [ decrease, ] increase)
         if ["0", "1", "2", "3", "4", "5"].contains(chars) {
@@ -217,7 +284,29 @@ public final class AppState: ObservableObject {
             return true
         }
         
-        // 2. Flags, Navigation & Layout Shortcuts
+        // 2. Crop, Flags, Navigation & Layout Shortcuts
+        if chars == "r" || chars == "R" {
+            self.toggleCropMode()
+            return true
+        }
+        
+        if self.activeDevelopTool == .crop {
+            if chars == "o" || chars == "O" {
+                self.cycleCropOverlayStyle()
+                return true
+            }
+            if chars == "x" || chars == "X" {
+                self.flipCropOrientation()
+                return true
+            }
+            if keyCode == 36 || keyCode == 76 || keyCode == 53 { // Enter / Return / Esc exits crop
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    self.activeDevelopTool = .edit
+                }
+                return true
+            }
+        }
+        
         switch chars {
         case "p", "P": self.setFlag(.pick); return true
         case "x", "X": self.setFlag(.reject); return true
@@ -408,6 +497,13 @@ public final class AppState: ObservableObject {
     /// - Toggle (Control/Command + click): toggle individual asset in selection without resetting others
     /// - Range (Shift + click): select contiguous range of assets between anchor and clicked asset
     public func selectAsset(_ asset: PhotoAsset, isToggle: Bool = false, isRange: Bool = false) {
+        // Resign any active text input focus (like search bar) when user clicks to select photos
+        if let responder = NSApp.keyWindow?.firstResponder, (responder is NSTextView || responder is NSTextField) {
+            DispatchQueue.main.async {
+                NSApp.keyWindow?.makeFirstResponder(nil)
+            }
+        }
+        
         let currentList = displayedAssets
         
         // If primary selection changes, commit any pending live develop XMP and reset live cache
@@ -610,18 +706,38 @@ public final class AppState: ObservableObject {
         self.liveDevelopAssetID = id
         self.liveDevelopXMP = currentXMP
         
+        // Auto Sync: if active and multiple assets selected, also apply mutation to other selected assets
+        let applyAutoSync = isAutoSyncEnabled && selectedAssetIDs.count > 1 && (targetID == nil || targetID == primarySelectedAssetID || selectedAssetIDs.contains(id))
+        let otherSelectedIDs = applyAutoSync ? selectedAssetIDs.filter { $0 != id } : []
+        
         if !isDragging {
             // Mouse released or discrete tap: commit immediately to allAssets
             liveCommitTask?.cancel()
             allAssets[index].xmp = currentXMP
             debouncedSyncXMP(for: allAssets[index])
+            
+            if applyAutoSync {
+                for otherID in otherSelectedIDs {
+                    if let otherIdx = allAssets.firstIndex(where: { $0.id == otherID }) {
+                        mutate(&allAssets[otherIdx].xmp)
+                        debouncedSyncXMP(for: allAssets[otherIdx])
+                    }
+                }
+            }
         } else {
             // Dragging in progress: debounce catalog mutation by 200ms so main thread is 100% free for 120fps slider UI
-            debouncedCommitLiveDevelop(assetID: id, index: index)
+            if applyAutoSync {
+                for otherID in otherSelectedIDs {
+                    if let otherIdx = allAssets.firstIndex(where: { $0.id == otherID }) {
+                        mutate(&allAssets[otherIdx].xmp)
+                    }
+                }
+            }
+            debouncedCommitLiveDevelop(assetID: id, index: index, autoSyncIDs: otherSelectedIDs)
         }
     }
     
-    private func debouncedCommitLiveDevelop(assetID: String, index: Int) {
+    private func debouncedCommitLiveDevelop(assetID: String, index: Int, autoSyncIDs: [String] = []) {
         liveCommitTask?.cancel()
         liveCommitTask = Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: 200_000_000) // 200ms
@@ -630,6 +746,74 @@ public final class AppState: ObservableObject {
                 self.allAssets[index].xmp = live
                 self.debouncedSyncXMP(for: self.allAssets[index])
             }
+            for otherID in autoSyncIDs {
+                if let otherIdx = self.allAssets.firstIndex(where: { $0.id == otherID }) {
+                    self.debouncedSyncXMP(for: self.allAssets[otherIdx])
+                }
+            }
+        }
+    }
+    
+    // MARK: - Synchronize & Copy/Paste Develop Settings (Lightroom Classic Workflow)
+    
+    public func toggleAutoSync() {
+        isAutoSyncEnabled.toggle()
+    }
+    
+    /// Synchronizes develop settings from the primary (or specified) asset to all other selected assets
+    public func syncDevelopSettings(from sourceID: String? = nil, to targetIDs: Set<String>? = nil, options: DevelopSyncOptions = .default) {
+        let srcID = sourceID ?? primarySelectedAssetID
+        guard let validSourceID = srcID, let sourceAsset = allAssets.first(where: { $0.id == validSourceID }) else { return }
+        
+        let sourceXMP = (liveDevelopAssetID == validSourceID && liveDevelopXMP != nil) ? liveDevelopXMP! : sourceAsset.xmp
+        let targets = targetIDs ?? selectedAssetIDs.filter { $0 != validSourceID }
+        guard !targets.isEmpty else { return }
+        
+        for targetID in targets {
+            guard let idx = allAssets.firstIndex(where: { $0.id == targetID }) else { continue }
+            var targetXMP = allAssets[idx].xmp
+            options.apply(from: sourceXMP, to: &targetXMP)
+            allAssets[idx].xmp = targetXMP
+            if liveDevelopAssetID == targetID {
+                liveDevelopXMP = targetXMP
+            }
+            debouncedSyncXMP(for: allAssets[idx])
+        }
+    }
+    
+    /// Copies develop settings from the primary (or specified) asset with the given selective options
+    public func copyDevelopSettings(from sourceID: String? = nil, options: DevelopSyncOptions = .default) {
+        let srcID = sourceID ?? primarySelectedAssetID
+        guard let validSourceID = srcID, let sourceAsset = allAssets.first(where: { $0.id == validSourceID }) else { return }
+        
+        let sourceXMP = (liveDevelopAssetID == validSourceID && liveDevelopXMP != nil) ? liveDevelopXMP! : sourceAsset.xmp
+        self.copiedDevelopSettings = sourceXMP
+        self.copiedSyncOptions = options
+    }
+    
+    /// Pastes copied develop settings to selected assets (or primary asset if single selection)
+    public func pasteDevelopSettings(to targetIDs: Set<String>? = nil) {
+        guard let sourceXMP = copiedDevelopSettings else { return }
+        let targets: Set<String>
+        if let explicit = targetIDs, !explicit.isEmpty {
+            targets = explicit
+        } else if !selectedAssetIDs.isEmpty {
+            targets = selectedAssetIDs
+        } else if let primary = primarySelectedAssetID {
+            targets = [primary]
+        } else {
+            return
+        }
+        
+        for targetID in targets {
+            guard let idx = allAssets.firstIndex(where: { $0.id == targetID }) else { continue }
+            var targetXMP = allAssets[idx].xmp
+            copiedSyncOptions.apply(from: sourceXMP, to: &targetXMP)
+            allAssets[idx].xmp = targetXMP
+            if liveDevelopAssetID == targetID {
+                liveDevelopXMP = targetXMP
+            }
+            debouncedSyncXMP(for: allAssets[idx])
         }
     }
     
@@ -666,6 +850,125 @@ public final class AppState: ObservableObject {
                 xmp.convertToGrayscale = true
             }
         }
+    }
+    
+    // MARK: - Crop & Rotate Actions
+    
+    /// Toggles between Edit (Develop adjustments) and Crop & Straighten mode
+    public func toggleCropMode() {
+        if let responder = NSApp.keyWindow?.firstResponder, (responder is NSTextView || responder is NSTextField) {
+            DispatchQueue.main.async {
+                NSApp.keyWindow?.makeFirstResponder(nil)
+            }
+        }
+        if activeDevelopTool == .crop {
+            activeDevelopTool = .edit
+        } else {
+            activeDevelopTool = .crop
+            if viewMode == .grid {
+                viewMode = .loupe
+            }
+        }
+    }
+    
+    /// Updates normalized crop geometry with live preview and catalog persistence
+    public func updateCropGeometry(_ geometry: CropGeometry, for assetID: String? = nil, isDragging: Bool = false) {
+        updateDevelopSettings(for: assetID, isDragging: isDragging) { xmp in
+            xmp.cropTop = geometry.top
+            xmp.cropLeft = geometry.left
+            xmp.cropBottom = geometry.bottom
+            xmp.cropRight = geometry.right
+            xmp.cropAngle = geometry.angle
+        }
+    }
+    
+    /// Updates straighten / rotation angle (-45° to +45°)
+    public func updateCropAngle(_ angle: Double, for assetID: String? = nil, isDragging: Bool = false) {
+        updateDevelopSettings(for: assetID, isDragging: isDragging) { xmp in
+            xmp.cropAngle = max(-45.0, min(45.0, angle))
+        }
+    }
+    
+    /// Resets crop box to full uncropped photo and angle to 0°
+    public func resetCrop(for assetID: String? = nil) {
+        updateDevelopSettings(for: assetID, isDragging: false) { xmp in
+            xmp.resetCrop()
+        }
+    }
+    
+    /// Flips crop frame orientation between portrait and landscape (X key)
+    public func flipCropOrientation(for assetID: String? = nil) {
+        let targetID = assetID ?? primarySelectedAssetID
+        guard let id = targetID, let asset = allAssets.first(where: { $0.id == id }) else { return }
+        let currentXMP = (liveDevelopAssetID == id && liveDevelopXMP != nil) ? liveDevelopXMP! : asset.xmp
+        let g = currentXMP.cropGeometry
+        
+        let curW = g.widthFraction
+        let curH = g.heightFraction
+        let centerX = (g.left + g.right) / 2.0
+        let centerY = (g.top + g.bottom) / 2.0
+        
+        let newW = min(1.0, curH)
+        let newH = min(1.0, curW)
+        
+        let newLeft = max(0.0, min(1.0 - newW, centerX - newW / 2.0))
+        let newTop = max(0.0, min(1.0 - newH, centerY - newH / 2.0))
+        
+        let newGeom = CropGeometry(
+            top: newTop,
+            left: newLeft,
+            bottom: newTop + newH,
+            right: newLeft + newW,
+            angle: g.angle
+        )
+        updateCropGeometry(newGeom, for: targetID, isDragging: false)
+    }
+    
+    /// Cycles crop overlay guide style between dynamic alignment Grid and Rule of Thirds (O key)
+    public func cycleCropOverlayStyle() {
+        cropOverlayStyle = (cropOverlayStyle == .grid) ? .thirds : .grid
+    }
+    
+    /// Sets crop aspect ratio preset and adjusts crop geometry
+    public func setCropPreset(_ preset: CropAspectRatioPreset, for assetID: String? = nil) {
+        self.cropAspectRatioPreset = preset
+        self.isCropAspectLocked = (preset != .custom)
+        
+        guard preset != .custom else { return }
+        
+        let targetID = assetID ?? primarySelectedAssetID
+        guard let id = targetID, let asset = allAssets.first(where: { $0.id == id }) else { return }
+        let currentXMP = (liveDevelopAssetID == id && liveDevelopXMP != nil) ? liveDevelopXMP! : asset.xmp
+        let g = currentXMP.cropGeometry
+        
+        let rawW: CGFloat = 3.0
+        let rawH: CGFloat = 2.0
+        guard let ratio = preset.ratio(originalWidth: rawW, originalHeight: rawH) else { return }
+        
+        let curAspect = rawW / rawH
+        let desiredFractionRatio = ratio / curAspect
+        
+        var w = g.widthFraction
+        var h = w / desiredFractionRatio
+        if h > 1.0 {
+            h = 1.0
+            w = h * desiredFractionRatio
+        }
+        
+        let centerX = (g.left + g.right) / 2.0
+        let centerY = (g.top + g.bottom) / 2.0
+        
+        let newLeft = max(0.0, min(1.0 - w, centerX - w / 2.0))
+        let newTop = max(0.0, min(1.0 - h, centerY - h / 2.0))
+        
+        let newGeom = CropGeometry(
+            top: newTop,
+            left: newLeft,
+            bottom: newTop + h,
+            right: newLeft + w,
+            angle: g.angle
+        )
+        updateCropGeometry(newGeom, for: targetID, isDragging: false)
     }
     
     private func updateAsset(_ updated: PhotoAsset) {

@@ -564,10 +564,12 @@ public struct LoupeView: View {
                     Color.black.edgesIgnoringSafeArea(.all)
                     
                     if let img = img {
+                        let currentAngle = (appState.activeDevelopTool == .crop) ? (appState.liveDevelopXMP?.cropAngle ?? appState.primarySelectedAsset?.xmp.cropAngle ?? 0.0) : 0.0
                         Image(nsImage: img)
                             .resizable()
                             .interpolation(is100PercentZoom ? .none : .high)
                             .frame(width: size.width, height: size.height)
+                            .rotationEffect(.degrees(-currentAngle))
                             .position(layout.imagePosition(viewport: viewportSize, center: clamped.center, sourceRect: sourceRect))
                     } else if isLoading || visibleDisplay.image == nil && selectedHandoff == nil {
                         ProgressView().allowsHitTesting(false)
@@ -587,35 +589,39 @@ public struct LoupeView: View {
                                 .padding(8).background(Color.black.opacity(0.7)).cornerRadius(4)
                         }.padding(12).allowsHitTesting(false)
                     }
-                    InspectionSurface(
-                        down: { point, count in
-                            Logger(subsystem: "com.lumibase.inspection", category: "state").debug("intent count=\(count) loading=\(isLoading) nativeFrame=\(display.native) hasFrame=\(display.image != nil) error=\(imageError != nil)")
-                            if count == 2 { inspection.end(); toggleZoom() }
-                            else if showingHandoffProxy {
-                                inspection.held = true
-                            } else {
-                                inspection.begin(at: point, pixels: pixels, viewport: viewportSize)
-                                InspectionTrace.event("state.held_after_down_callback", state: inspection)
+                    if appState.activeDevelopTool == .crop && !is100PercentZoom {
+                        CropOverlayView(imageSize: size, containerSize: viewportSize, appState: appState)
+                    } else {
+                        InspectionSurface(
+                            down: { point, count in
+                                Logger(subsystem: "com.lumibase.inspection", category: "state").debug("intent count=\(count) loading=\(isLoading) nativeFrame=\(display.native) hasFrame=\(display.image != nil) error=\(imageError != nil)")
+                                if count == 2 { inspection.end(); toggleZoom() }
+                                else if showingHandoffProxy {
+                                    inspection.held = true
+                                } else {
+                                    inspection.begin(at: point, pixels: pixels, viewport: viewportSize)
+                                    InspectionTrace.event("state.held_after_down_callback", state: inspection)
+                                }
+                            },
+                            drag: { delta in
+                                guard inspection.held, !showingHandoffProxy else { return }
+                                inspection.applyDrag(delta: delta, displayed: clampSize, viewport: viewportSize)
+                                if roiPrototypeEnabled, inspection.zoomed, let asset = appState.primarySelectedAsset {
+                                    updateProcessedImage(with: activeXMP(for: asset))
+                                }
+                            },
+                            up: { inspection.end(); InspectionTrace.event("state.held_after_release_callback", state: inspection) },
+                            navigate: { step in
+                                if step > 0 { appState.selectNextPhoto() } else { appState.selectPreviousPhoto() }
+                            },
+                            backingChanged: { scale in
+                                backingScale = scale
+                                if roiPrototypeEnabled, inspection.zoomed, let asset = appState.primarySelectedAsset {
+                                    updateProcessedImage(with: activeXMP(for: asset))
+                                }
                             }
-                        },
-                        drag: { delta in
-                            guard inspection.held, !showingHandoffProxy else { return }
-                            inspection.applyDrag(delta: delta, displayed: clampSize, viewport: viewportSize)
-                            if roiPrototypeEnabled, inspection.zoomed, let asset = appState.primarySelectedAsset {
-                                updateProcessedImage(with: activeXMP(for: asset))
-                            }
-                        },
-                        up: { inspection.end(); InspectionTrace.event("state.held_after_release_callback", state: inspection) },
-                        navigate: { step in
-                            if step > 0 { appState.selectNextPhoto() } else { appState.selectPreviousPhoto() }
-                        },
-                        backingChanged: { scale in
-                            backingScale = scale
-                            if roiPrototypeEnabled, inspection.zoomed, let asset = appState.primarySelectedAsset {
-                                updateProcessedImage(with: activeXMP(for: asset))
-                            }
-                        }
-                    )
+                        )
+                    }
 
                     // Left / Right Navigation Buttons (Only shown when not zoomed to 100%)
                     if !is100PercentZoom {
@@ -877,6 +883,34 @@ public struct LoupeView: View {
             }
             return .ignored
         }
+        .onKeyPress(KeyEquivalent("r")) {
+            if !NSEvent.modifierFlags.contains(.command) {
+                appState.toggleCropMode()
+                return .handled
+            }
+            return .ignored
+        }
+        .onKeyPress(KeyEquivalent("x")) {
+            if appState.activeDevelopTool == .crop && !NSEvent.modifierFlags.contains(.command) {
+                appState.flipCropOrientation()
+                return .handled
+            }
+            return .ignored
+        }
+        .onKeyPress(.return) {
+            if appState.activeDevelopTool == .crop {
+                appState.activeDevelopTool = .edit
+                return .handled
+            }
+            return .ignored
+        }
+        .onKeyPress(.escape) {
+            if appState.activeDevelopTool == .crop {
+                appState.activeDevelopTool = .edit
+                return .handled
+            }
+            return .ignored
+        }
         .onKeyPress(.delete) {
             if NSEvent.modifierFlags.contains(.command) {
                 appState.requestDeleteSelectedPhotos()
@@ -944,6 +978,13 @@ public struct LoupeView: View {
                     return activeXMP(for: asset)
                 }
                 updateProcessedImage(with: latest)
+            }
+        }
+        .onChange(of: appState.activeDevelopTool) { _, _ in
+            DispatchQueue.main.async {
+                if let asset = appState.primarySelectedAsset {
+                    updateProcessedImage(with: activeXMP(for: asset))
+                }
             }
         }
     }
@@ -1143,8 +1184,11 @@ public struct LoupeView: View {
     }
 
     private func activeXMP(for asset: PhotoAsset) -> XMPMetadata {
-        if appState.liveDevelopAssetID == asset.id, let xmp = appState.liveDevelopXMP { return xmp }
-        return asset.xmp
+        var xmp = (appState.liveDevelopAssetID == asset.id && appState.liveDevelopXMP != nil) ? appState.liveDevelopXMP! : asset.xmp
+        if appState.activeDevelopTool == .crop {
+            xmp.resetCrop()
+        }
+        return xmp
     }
 
     private func updateProcessedImage(with xmp: XMPMetadata?) {

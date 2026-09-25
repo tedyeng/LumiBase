@@ -99,6 +99,29 @@ struct LumiBaseApp: App {
                 Button("Flag as Reject") { NotificationCenter.default.post(name: NSNotification.Name("LumiBaseFlag"), object: FlagStatus.reject) }.keyboardShortcut("x", modifiers: [])
                 Button("Unflag") { NotificationCenter.default.post(name: NSNotification.Name("LumiBaseFlag"), object: FlagStatus.unflagged) }.keyboardShortcut("u", modifiers: [])
             }
+            CommandMenu("Develop") {
+                Button("Copy Settings...") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseCopySettings"), object: nil)
+                }
+                .keyboardShortcut("c", modifiers: [.command, .shift])
+                
+                Button("Paste Settings") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBasePasteSettings"), object: nil)
+                }
+                .keyboardShortcut("v", modifiers: [.command, .shift])
+                
+                Divider()
+                
+                Button("Sync Settings...") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseSyncSettings"), object: nil)
+                }
+                .keyboardShortcut("s", modifiers: [.command, .shift])
+                
+                Button("Toggle Auto Sync") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseToggleAutoSync"), object: nil)
+                }
+                .keyboardShortcut("s", modifiers: [.command, .shift, .option])
+            }
         }
     }
 }

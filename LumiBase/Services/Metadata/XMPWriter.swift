@@ -104,6 +104,21 @@ public final class XMPWriter: Sendable {
             }
             if metadata.hasCrop {
                 developAttrs += " crs:HasCrop=\"true\""
+                if let top = metadata.cropTop {
+                    developAttrs += String(format: " crs:CropTop=\"%.6f\"", top)
+                }
+                if let left = metadata.cropLeft {
+                    developAttrs += String(format: " crs:CropLeft=\"%.6f\"", left)
+                }
+                if let bottom = metadata.cropBottom {
+                    developAttrs += String(format: " crs:CropBottom=\"%.6f\"", bottom)
+                }
+                if let right = metadata.cropRight {
+                    developAttrs += String(format: " crs:CropRight=\"%.6f\"", right)
+                }
+                if let angle = metadata.cropAngle, abs(angle) > 0.001 {
+                    developAttrs += String(format: " crs:CropAngle=\"%.6f\"", angle)
+                }
             }
             if metadata.convertToGrayscale == true {
                 developAttrs += " crs:ConvertToGrayscale=\"True\""

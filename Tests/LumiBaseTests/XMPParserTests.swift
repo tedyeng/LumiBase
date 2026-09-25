@@ -144,4 +144,57 @@ final class XMPParserTests: XCTestCase {
         XCTAssertNil(resetTarget.temperature)
         XCTAssertNil(resetTarget.convertToGrayscale)
     }
+    
+    func testCropSettingsAndXMPRoundTrip() {
+        var xmp = XMPMetadata()
+        xmp.cropTop = 0.10
+        xmp.cropLeft = 0.15
+        xmp.cropBottom = 0.85
+        xmp.cropRight = 0.90
+        xmp.cropAngle = -4.5
+        
+        XCTAssertTrue(xmp.hasCrop)
+        XCTAssertEqual(xmp.cropGeometry.widthFraction, 0.75, accuracy: 0.001)
+        XCTAssertEqual(xmp.cropGeometry.heightFraction, 0.75, accuracy: 0.001)
+        
+        let xml = XMPWriter.generateXMPXML(metadata: xmp)
+        let parsed = XMPParser.parse(data: xml.data(using: .utf8)!)
+        
+        XCTAssertTrue(parsed.hasCrop)
+        XCTAssertEqual(parsed.cropTop ?? 0, 0.10, accuracy: 0.001)
+        XCTAssertEqual(parsed.cropLeft ?? 0, 0.15, accuracy: 0.001)
+        XCTAssertEqual(parsed.cropBottom ?? 0, 0.85, accuracy: 0.001)
+        XCTAssertEqual(parsed.cropRight ?? 0, 0.90, accuracy: 0.001)
+        XCTAssertEqual(parsed.cropAngle ?? 0, -4.5, accuracy: 0.001)
+        
+        var resetCropTarget = parsed
+        resetCropTarget.resetCrop()
+        XCTAssertFalse(resetCropTarget.hasCrop)
+        XCTAssertEqual(resetCropTarget.cropGeometry, .full)
+    }
+    
+    func testDevelopSyncCropOptions() {
+        var src = XMPMetadata()
+        src.exposure2012 = 0.5
+        src.cropTop = 0.05
+        src.cropLeft = 0.05
+        src.cropBottom = 0.95
+        src.cropRight = 0.95
+        src.cropAngle = 2.0
+        
+        var dst = XMPMetadata()
+        
+        // 1. Sync without crop
+        var opt = DevelopSyncOptions.default
+        opt.crop = false
+        opt.apply(from: src, to: &dst)
+        XCTAssertEqual(dst.exposure2012, 0.5)
+        XCTAssertFalse(dst.hasCrop)
+        
+        // 2. Sync with crop
+        opt.crop = true
+        opt.apply(from: src, to: &dst)
+        XCTAssertTrue(dst.hasCrop)
+        XCTAssertEqual(dst.cropAngle, 2.0)
+    }
 }

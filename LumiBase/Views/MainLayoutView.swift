@@ -80,6 +80,11 @@ public struct MainLayoutView: View {
                 .help("Toggle Right Panel (F8)")
             }
         }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                NSApp.keyWindow?.makeFirstResponder(nil)
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseOpenFolder"))) { notif in
             if let url = notif.object as? URL {
                 appState.openFolder(url: url)
@@ -121,6 +126,40 @@ public struct MainLayoutView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseDeletePhotos"))) { _ in
             appState.requestDeleteSelectedPhotos()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseSyncSettings"))) { _ in
+            if appState.selectedAssetIDs.count > 1 {
+                appState.showSyncDialog = true
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseCopySettings"))) { _ in
+            if appState.primarySelectedAsset != nil {
+                appState.showCopySettingsDialog = true
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBasePasteSettings"))) { _ in
+            appState.pasteDevelopSettings()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseToggleAutoSync"))) { _ in
+            appState.toggleAutoSync()
+        }
+        .sheet(isPresented: $appState.showSyncDialog) {
+            SyncSettingsDialogView(
+                mode: .synchronize,
+                sourceAsset: appState.primarySelectedAsset,
+                targetCount: max(0, appState.selectedAssetIDs.count - 1),
+                appState: appState,
+                onDismiss: { appState.showSyncDialog = false }
+            )
+        }
+        .sheet(isPresented: $appState.showCopySettingsDialog) {
+            SyncSettingsDialogView(
+                mode: .copy,
+                sourceAsset: appState.primarySelectedAsset,
+                targetCount: appState.selectedAssetIDs.count,
+                appState: appState,
+                onDismiss: { appState.showCopySettingsDialog = false }
+            )
         }
         .alert(
             deleteAlertTitle,

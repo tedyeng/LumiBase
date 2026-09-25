@@ -17,6 +17,10 @@ LumiBase 是一套專為 macOS (特別是 Apple Silicon M 系列晶片) 打造�
   - **色調控制 (Tone)**：線性光子曝光（-5.00 ~ +5.00 EV）、對比、雙階段高光還原（Apple 雙邊濾波挽救死白雲層）、全域陰影提升/加深、極致白色端點與黑色沉澱。
   - **外觀控制 (Presence)**：紋理（正向微距毛髮銳利、負向人像皮膚自然磨皮）、清晰度（正向中頻對比、負向浪漫夢幻柔焦）、去朦朧（大氣去霧/加霧）、自然飽和度（膚色保護）與標準線性飽和度。
   - **精緻滑桿組件 (`LightroomSlider`)**：0ms 本機跟手手感、雙擊標題/軌道復位、**點擊/雙擊數值標籤直接進入打字輸入，支援 `Tab` / `Shift+Tab` 在各修圖選項間連續跳轉切換，按 Enter 即刻套用**。
+- 🔄 **Lightroom 等級 Develop Sync 批次同步與修圖管理**：
+  - **選擇性同步 (Sync Settings Dialog)**：`⌘⇧S` 快捷鍵或右側底部 `Sync` 按鈕，支援選擇性勾選白平衡、基礎曝光、Presence、相機描述檔、黑白處理與幾何裁切，提供 `Check All`、`Check None` 與 `Modified Only` 智慧過濾。
+  - **即時自動同步 (Auto Sync)**：`⌥⌘⇧S` 快捷鍵或點選 Auto Sync 開關，開啟後多選照片拉動任一滑桿即時連動所有選取照片。
+  - **複製／貼上設定 (Copy & Paste Settings)**：`⌘⇧C` 複製自訂修圖設定，`⌘⇧V` / `⌥⌘V` 批次貼上至選取照片。
 - 🎨 **1:1 Adobe Camera RAW 色彩還原**：
   - 整合 **Adobe Standard DCP (Digital Camera Profile)** 管理管線。
   - 完整支援 Adobe PV2012 色彩管線（曝光、色溫/色調、高光/陰影、對比、白色/黑色、鮮豔度、飽和度、去朦朧）。
@@ -121,7 +125,9 @@ xcodebuild -scheme LumiBase -destination 'platform=macOS' build
 
 ## 📖 專案文件與版本紀錄 (Documentation & Changelog)
 
+- 📖 **使用者操作手冊與快捷鍵教學 (Usage Guide)**：[`docs/USAGE_GUIDE.md`](docs/USAGE_GUIDE.md)
 - 📝 **版本更新日誌 (Changelog)**：[`CHANGELOG.md`](CHANGELOG.md)
 - 📐 **架構演進與實作紀錄**：[`docs/implementation-record.md`](docs/implementation-record.md)
-- 🎨 **macOS App Icon 規範與設計**：參見 [`docs/implementation-record.md#213-專屬-macos-原生應用程式圖示-appiconicns--assetsxcassets`](docs/implementation-record.md#213-專屬-macos-原生應用程式圖示-appiconicns--assetsxcassets)
+- ✂️ **裁切與旋轉校正規格書**：[`docs/crop-and-rotate-plan.md`](docs/crop-and-rotate-plan.md)
+- 🔄 **批次修圖同步規劃書**：[`docs/develop-sync-plan.md`](docs/develop-sync-plan.md)
 

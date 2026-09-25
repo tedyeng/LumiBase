@@ -50,6 +50,11 @@
 		A10000012C00000100000029 /* ProcessedROICache.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000029 /* ProcessedROICache.swift */; };
 		A10000012C0000010000002A /* AcceptedHighlightsKernel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C0000010000002A /* AcceptedHighlightsKernel.swift */; };
 		A10000012C0000010000002B /* NativeHighlightsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C0000010000002B /* NativeHighlightsService.swift */; };
+		A10000012C0000010000002C /* DevelopSyncOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C0000010000002C /* DevelopSyncOptions.swift */; };
+		A10000012C0000010000002D /* SyncSettingsDialogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C0000010000002D /* SyncSettingsDialogView.swift */; };
+		A10000012C0000010000002E /* CropSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C0000010000002E /* CropSettings.swift */; };
+		A10000012C0000010000002F /* CropControlPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C0000010000002F /* CropControlPanelView.swift */; };
+		A10000012C00000100000030 /* CropOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000030 /* CropOverlayView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -97,6 +102,11 @@
 		A10000022C00000100000029 /* ProcessedROICache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessedROICache.swift; sourceTree = "<group>"; };
 		A10000022C0000010000002A /* AcceptedHighlightsKernel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AcceptedHighlightsKernel.swift; sourceTree = "<group>"; };
 		A10000022C0000010000002B /* NativeHighlightsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeHighlightsService.swift; sourceTree = "<group>"; };
+		A10000022C0000010000002C /* DevelopSyncOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevelopSyncOptions.swift; sourceTree = "<group>"; };
+		A10000022C0000010000002D /* SyncSettingsDialogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncSettingsDialogView.swift; sourceTree = "<group>"; };
+		A10000022C0000010000002E /* CropSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropSettings.swift; sourceTree = "<group>"; };
+		A10000022C0000010000002F /* CropControlPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropControlPanelView.swift; sourceTree = "<group>"; };
+		A10000022C00000100000030 /* CropOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CropOverlayView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -159,6 +169,8 @@
 				A10000022C00000100000004 /* CameraMetadata.swift */,
 				A10000022C00000100000005 /* XMPMetadata.swift */,
 				A10000022C00000100000006 /* FilterCriteria.swift */,
+				A10000022C0000010000002C /* DevelopSyncOptions.swift */,
+				A10000022C0000010000002E /* CropSettings.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -258,6 +270,7 @@
 				A10000022C00000100000016 /* PhotoGridItemView.swift */,
 				A10000022C00000100000017 /* LoupeView.swift */,
 				A10000022C00000100000018 /* FilmstripView.swift */,
+				A10000022C00000100000030 /* CropOverlayView.swift */,
 			);
 			path = Center;
 			sourceTree = "<group>";
@@ -267,9 +280,11 @@
 			children = (
 				A10000022C00000100000019 /* RightInspectorView.swift */,
 				A10000022C00000100000024 /* DevelopBasicPanelView.swift */,
+				A10000022C0000010000002F /* CropControlPanelView.swift */,
 				A10000022C0000010000001A /* HistogramView.swift */,
 				A10000022C0000010000001B /* EXIFInfoView.swift */,
 				A10000022C0000010000001C /* XMPMetadataEditorView.swift */,
+				A10000022C0000010000002D /* SyncSettingsDialogView.swift */,
 			);
 			path = Inspector;
 			sourceTree = "<group>";
@@ -399,6 +414,11 @@
 				A10000012C00000100000029 /* ProcessedROICache.swift in Sources */,
 				A10000012C0000010000002A /* AcceptedHighlightsKernel.swift in Sources */,
 				A10000012C0000010000002B /* NativeHighlightsService.swift in Sources */,
+				A10000012C0000010000002C /* DevelopSyncOptions.swift in Sources */,
+				A10000012C0000010000002D /* SyncSettingsDialogView.swift in Sources */,
+				A10000012C0000010000002E /* CropSettings.swift in Sources */,
+				A10000012C0000010000002F /* CropControlPanelView.swift in Sources */,
+				A10000012C00000100000030 /* CropOverlayView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

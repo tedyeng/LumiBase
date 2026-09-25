@@ -443,6 +443,72 @@ LumiBase/
 3. **版本更新**：
    - 專案版本（`MARKETING_VERSION` 與 `CURRENT_PROJECT_VERSION`）更新至 `1.6.2`。
 
+---
 
+## 9. 2026-09-25 實作紀錄 (v1.7.0)
 
+### 9.1 Lightroom 等級 Develop Sync 批次修圖同步與設定管理
+1. **選擇性同步對話框 (`DevelopSyncOptions` & `SyncSettingsDialogView`)**：
+   - 多選照片時點擊右下角 `Sync` 按鈕或按快捷鍵 `⌘⇧S`，彈出深色專業對話框。
+   - 支援五大分類選擇性勾選：白平衡（色溫/色調）、基礎色調（曝光、對比、高光、陰影、白色、黑色）、細節質感（紋理、清晰度、去朦朧、鮮豔度、飽和度）、處理與描述檔（相機描述檔、黑白模式）及幾何裁切。
+   - 具備 `Check All`、`Check None` 與智慧 `Modified Only`（自動過濾並僅勾選來源照片非預設調整值）。
 
+2. **即時自動同步 (`Auto Sync`)**：
+   - 多選照片時切換右下角 Auto Sync 圓點開關或按下 `⌥⌘⇧S` / `⌥⌘S`。
+   - 啟用後按鈕顯示金色高亮 `Auto Sync` 狀態，拉動任何一個 Develop 滑桿、呼叫 Auto Tone 或復位時，所有選取照片記憶體參數即時連動，並在放開滑桿時批次 300ms Debounce 寫入 XMP。
+
+3. **複製與貼上修圖設定 (`Copy & Paste Settings`)**：
+   - `⌘⇧C`（或點擊 `Copy`）彈出選擇性複製對話框儲存至剪貼簿。
+   - `⌘⇧V` 或 `⌥⌘V`（或點擊 `Paste`）批次套用至目前選取的單張或多張照片。
+
+4. **系統選單整合與單元測試**：
+   - 新增 macOS 頂部 `Develop` 選單，標準化選單快捷鍵。
+   - 建立 `Tests/LumiBaseTests/DevelopSyncTests.swift` 涵蓋遮罩選擇性、批次同步、剪貼簿複製貼上與 Auto Sync 即時連動測試，116 項測試全數 Passed。
+
+---
+
+## 10. 2026-09-25 實作紀錄 (v1.8.0)
+
+### 10.1 Lightroom 等級裁切與旋轉 (`Crop & Straighten`) 完整實作
+1. **雙向工具切換器 (`DevelopToolMode`)**：
+   - 右側檢視器標頭（Inspector Header）新增工具切換 Icon 群組：
+     - **Edit (修圖模式)**：`slider.horizontal.3`，提供 Lightroom PV2012 基礎色調與色彩調整。
+     - **Crop (裁切與旋轉模式)**：`crop`，進入互動裁切與校正水平模式。
+   - 支援鍵盤快捷鍵 `R` 快速在 Edit 與 Crop 模式間雙向切換；在 Grid View 下按 `R` 會自動切換至 Loupe View 並啟動裁切工具。
+
+2. **互動式 8 控制點裁切遮罩 (`CropOverlayView`)**：
+   - 在大圖預覽（Loupe View）上方疊加 8 點拖曳控制器（4 角頂點 + 4 邊中心點）。
+   - 具備標準三分法則 3x3 輔助格線與暗色外圍遮罩。
+   - 支援拖曳裁切框內部進行平移（Pan/Reposition）。
+   - 支援比例鎖定/解鎖切換、預設比例選單（`Original`、`1:1`、`4:5 (8x10)`、`5:7`、`16:9`、`Custom`），以及按 `X` 鍵快速翻轉橫直構圖（Orientation Flip）。
+
+3. **水平校正角度滑桿 (`CropControlPanelView`)**：
+   - 提供 `-45.0°` 至 `+45.0°` 直覺角度滑桿，支援重設歸零按鈕。
+   - 具備 `Reset Crop` 復位全尺寸按鈕與金色 `Done` 提交按鈕（支援 `Return` / `Esc` 提交退出）。
+
+4. **Adobe XMP 標準與 GPU 色彩管線雙向同步**：
+   - XMP 欄位完全對齊 Adobe Lightroom 標準：`crs:HasCrop="true"`, `crs:CropTop`, `crs:CropLeft`, `crs:CropBottom`, `crs:CropRight`, `crs:CropAngle`。
+   - `AdobeColorPipeline` 於 Metal GPU 渲染管線中新增 Step 9 幾何轉換（旋轉中心軸校正與正規化邊界框裁切）。
+   - 完美相容 Develop Sync 與 Auto Sync 批次同步。
+   - 118 項單元測試全數 Passed。
+
+### 10.2 120 FPS GPU 直驅旋轉與視窗自適應多線輔助格線 (`Adaptive Alignment Grid`)
+1. **水平旋轉 120 FPS GPU 直驅流暢度優化**：
+   - **問題分析**：調整 Angle 角度滑桿時，若每幀均觸發非同步 Core Image 重構與磁碟寫入，會造成主執行緒卡頓與預覽延遲。
+   - **優化解法**：在裁切互動模式（`.crop`）下，大圖預覽直接透過 SwiftUI / Metal GPU `.rotationEffect(.degrees(-angle))` 進行硬體紋理旋轉，並在拖曳中僅以 200ms Debounce 同步至目錄，放開滑桿時才進行最終確認。實現滑動滑桿時 **120 FPS 零延遲即時預覽**。
+
+2. **自適應視窗大小多線水平/垂直輔助格線 (Alignment Grid)**：
+   - **動態密度演算法**：使用 SwiftUI `Canvas` 直接以 Metal 繪製細線（0.6pt），依據目前視窗尺寸與裁切框像素動態計算欄列數（間距密度約 32pt/格，$\text{numCols} = \max(4, \text{round}(\text{width} / 32))$）。
+   - **視窗縮放連動**：當使用者調整 App 視窗大小或最大化視窗時，格線數量自動增減（大螢幕下約顯示 25～35 條細緻對齊格線），完美重現 Lightroom Classic 地平線與建築校正體驗。
+   - **快速循環切換 (`O` 快捷鍵)**：支援隨時按 `O` 鍵或點擊面板按鈕，在多線對齊格線（`Grid`）與經典九宮格（`Thirds`）之間切換。
+   - **互動對比強化**：拖曳裁切錨點或調整角度滑桿時，格線自動強化對比（透明度自 35% 提升至 65%），放開時恢復清爽。
+
+### 10.3 搜尋欄輸入焦點隔離與全域快捷鍵防衝突架構 (`Focus Management`)
+1. **問題根因**：
+   - macOS AppKit 預設在視窗啟動或激活時，會自動將 `firstResponder` 賦予介面中唯一的常駐輸入框（`TopFilterBarView` 搜尋欄 `TextField`）。
+   - 導致使用者按下 `R`（裁切）、`1~5`（星等）、`O`（格線）、`X`（翻轉/拒絕）、`G`（格狀）等單鍵快捷鍵時，字元直接被輸入進搜尋框，快捷鍵無法被觸發。
+
+2. **解決架構**：
+   - **預設不搶佔焦點**：在 `TopFilterBarView` 中導入 `@FocusState` 與 `.onAppear { NSApp.keyWindow?.makeFirstResponder(nil) }`，確保視窗啟動與切換時搜尋框處於無焦點狀態。
+   - **標準快捷鍵啟用 (`⌘F`)**：支援系統標準 `⌘F`（Command-F）主動聚焦搜尋欄。
+   - **操作時主動釋放焦點**：當使用者在照片區域點擊選取照片（`selectAsset`）、進入裁切模式（`toggleCropMode`）或按 `Esc` 鍵時，系統自動將焦點自輸入框移除，無縫恢復所有單鍵快捷鍵功能。

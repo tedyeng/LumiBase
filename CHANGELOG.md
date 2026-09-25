@@ -5,6 +5,45 @@ All notable changes to **LumiBase** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-09-25
+
+### Added
+- **Lightroom-Style Crop & Straighten (`CropSettings`, `CropControlPanelView`, `CropOverlayView`)**:
+  - Added dedicated Develop tool switcher in Inspector header to toggle between **Edit** (`slider.horizontal.3`) and **Crop** (`crop`) modes.
+  - Added interactive 8-handle crop overlay over Loupe View with darkened outer mask, pan drag, and aspect ratio constraint enforcement.
+  - Added **Adaptive Alignment Grid**: dynamically calculates and renders fine multi-line alignment grid based on window / crop box size (~32pt grid spacing), matching Lightroom Classic's horizon and architecture alignment guide.
+  - Added **Tool Overlay Cycle**: support cycling between multi-line `Grid` and 3x3 `Thirds` via `O` shortcut and Inspector button.
+  - Added preset aspect ratio menu (`Original`, `1:1`, `4:5`, `5:7`, `16:9`, `Custom`) and aspect lock/unlock button.
+  - Added angle / straighten slider (`-45.0°` to `+45.0°`) with 1-click 0° reset.
+  - Added **120 FPS GPU Live Rotation**: direct GPU texture rotation in interactive crop mode for 120 FPS smooth live preview without frame drops.
+  - Added keyboard shortcuts: `R` (toggle crop tool), `O` (cycle overlay style), `X` (flip crop orientation), `Return` / `Esc` (commit and close).
+  - Added Step 9 geometric transform in `AdobeColorPipeline` to apply rotation and normalized cropping non-destructively in GPU pipeline.
+  - Full bidirectional Adobe XMP serialization (`crs:HasCrop`, `crs:CropTop`, `crs:CropLeft`, `crs:CropBottom`, `crs:CropRight`, `crs:CropAngle`).
+
+### Fixed
+- **Search Bar Focus Isolation & Shortcut Interception**:
+  - Resolved macOS AppKit issue where search text field automatically grabbed first responder focus on launch/view switch, inadvertently consuming single-key shortcuts (`R`, `1..5`, `O`, `X`, `G`, `E`).
+  - Added `@FocusState` and auto focus release on photo selection, mode toggle, and `Esc` key press.
+  - Standardized `Cmd+F` to explicitly focus search input.
+
+## [1.7.0] - 2026-09-25
+
+### Added
+- **Lightroom-Style Develop Sync Settings (`DevelopSyncOptions` & `SyncSettingsDialogView`)**:
+  - Added selective Develop adjustment synchronization modal (`Cmd+Shift+S` / `Sync` button in Inspector footer).
+  - Supported selective categories: White Balance (Temp, Tint), Basic Tone (Exposure, Contrast, Highlights, Shadows, Whites, Blacks), Presence (Texture, Clarity, Dehaze, Vibrance, Saturation), Treatment & Profile (Camera Profile, Monochrome), and Geometry (Crop).
+  - Added quick selection helpers: `Check All`, `Check None`, and smart `Modified Only` (detects and checks only source photo's modified fields).
+- **Auto Sync Real-Time Multi-Photo Editing**:
+  - Added instant multi-photo slider synchronization toggle (`Cmd+Option+Shift+S` / Auto Sync toggle in Inspector footer).
+  - When enabled, adjusting any Develop slider, invoking Auto Tone, or resetting adjustments instantly updates all selected photos in real time.
+- **Copy & Paste Develop Settings**:
+  - Added Copy Settings Dialog (`Cmd+Shift+C` / `Copy` button) with selective adjustment checkboxes.
+  - Added Paste Settings (`Cmd+Shift+V` / `Cmd+Option+V` / `Paste` button) to apply copied adjustments across single or batch selected photos.
+- **Develop Command Menu**:
+  - Added `Develop` menu in macOS menu bar with dedicated shortcuts for Copy Settings, Paste Settings, Sync Settings, and Toggle Auto Sync.
+- **Unit Test Suite**:
+  - Added comprehensive tests in `DevelopSyncTests.swift` covering selective masking, batch synchronization, copy/paste, and auto sync real-time propagation (116 total tests passing).
+
 ## [1.6.2] - 2026-09-25
 
 ### Fixed

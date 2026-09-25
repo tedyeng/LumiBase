@@ -179,6 +179,41 @@ public final class AdobeColorPipeline: Sendable {
             }
         }
         
+        // 9. Crop and Straighten (Rotation & Crop Box)
+        if xmp.hasCrop {
+            let extent = current.extent
+            if !extent.isEmpty && extent.width > 0 && extent.height > 0 {
+                // 9a. Angle / Straighten Rotation around image center
+                let angleDeg = xmp.cropAngle ?? 0.0
+                if abs(angleDeg) > 0.01 {
+                    let radians = CGFloat(-angleDeg * .pi / 180.0)
+                    let centerX = extent.midX
+                    let centerY = extent.midY
+                    
+                    var transform = CGAffineTransform(translationX: centerX, y: centerY)
+                    transform = transform.rotated(by: radians)
+                    transform = transform.translatedBy(x: -centerX, y: -centerY)
+                    
+                    current = current.transformed(by: transform)
+                }
+                
+                // 9b. Bounding Crop Box (normalized coordinates [0, 1])
+                let top = CGFloat(xmp.cropTop ?? 0.0)
+                let left = CGFloat(xmp.cropLeft ?? 0.0)
+                let bottom = CGFloat(xmp.cropBottom ?? 1.0)
+                let right = CGFloat(xmp.cropRight ?? 1.0)
+                
+                if top > 0.001 || left > 0.001 || bottom < 0.999 || right < 0.999 {
+                    let cropX = extent.origin.x + (left * extent.width)
+                    let cropY = extent.origin.y + ((1.0 - bottom) * extent.height)
+                    let cropW = max(1.0, (right - left) * extent.width)
+                    let cropH = max(1.0, (bottom - top) * extent.height)
+                    let cropRect = CGRect(x: cropX, y: cropY, width: cropW, height: cropH)
+                    current = current.cropped(to: cropRect)
+                }
+            }
+        }
+        
         return current
     }
 }

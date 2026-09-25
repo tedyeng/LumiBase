@@ -58,9 +58,35 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
     public var saturation: Int?
     public var clarity2012: Int?
     public var texture: Int?
-    public var hasCrop: Bool
+    public var cropTop: Double?
+    public var cropLeft: Double?
+    public var cropBottom: Double?
+    public var cropRight: Double?
+    public var cropAngle: Double?
     public var cameraProfile: String?
     public var convertToGrayscale: Bool?
+    private var _hasCrop: Bool = false
+    
+    public var hasCrop: Bool {
+        get {
+            let top = cropTop ?? 0.0
+            let left = cropLeft ?? 0.0
+            let bottom = cropBottom ?? 1.0
+            let right = cropRight ?? 1.0
+            let angle = cropAngle ?? 0.0
+            return _hasCrop || top > 0.0001 || left > 0.0001 || bottom < 0.9999 || right < 0.9999 || abs(angle) > 0.0001
+        }
+        set {
+            _hasCrop = newValue
+            if !newValue {
+                cropTop = nil
+                cropLeft = nil
+                cropBottom = nil
+                cropRight = nil
+                cropAngle = nil
+            }
+        }
+    }
     
     public init(
         isLoadedFromSidecar: Bool = false,
@@ -88,6 +114,11 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
         clarity2012: Int? = nil,
         texture: Int? = nil,
         hasCrop: Bool = false,
+        cropTop: Double? = nil,
+        cropLeft: Double? = nil,
+        cropBottom: Double? = nil,
+        cropRight: Double? = nil,
+        cropAngle: Double? = nil,
         cameraProfile: String? = nil,
         convertToGrayscale: Bool? = nil
     ) {
@@ -115,9 +146,52 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
         self.saturation = saturation
         self.clarity2012 = clarity2012
         self.texture = texture
-        self.hasCrop = hasCrop
+        self._hasCrop = hasCrop
+        self.cropTop = cropTop
+        self.cropLeft = cropLeft
+        self.cropBottom = cropBottom
+        self.cropRight = cropRight
+        self.cropAngle = cropAngle
         self.cameraProfile = cameraProfile
         self.convertToGrayscale = convertToGrayscale
+    }
+    
+    public var cropGeometry: CropGeometry {
+        get {
+            CropGeometry(
+                top: cropTop ?? 0.0,
+                left: cropLeft ?? 0.0,
+                bottom: cropBottom ?? 1.0,
+                right: cropRight ?? 1.0,
+                angle: cropAngle ?? 0.0
+            )
+        }
+        set {
+            if newValue.isDefault {
+                cropTop = nil
+                cropLeft = nil
+                cropBottom = nil
+                cropRight = nil
+                cropAngle = nil
+                _hasCrop = false
+            } else {
+                cropTop = newValue.top
+                cropLeft = newValue.left
+                cropBottom = newValue.bottom
+                cropRight = newValue.right
+                cropAngle = (newValue.angle != 0.0) ? newValue.angle : nil
+                _hasCrop = true
+            }
+        }
+    }
+    
+    public mutating func resetCrop() {
+        cropTop = nil
+        cropLeft = nil
+        cropBottom = nil
+        cropRight = nil
+        cropAngle = nil
+        _hasCrop = false
     }
     
     public var hasDevelopEdits: Bool {
@@ -157,7 +231,8 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
             "whites=\(integer(whites2012))", "blacks=\(integer(blacks2012))",
             "dehaze=\(integer(dehaze))", "vibrance=\(integer(vibrance))",
             "saturation=\(integer(saturation))", "clarity=\(integer(clarity2012))",
-            "texture=\(integer(texture))", "crop=\(hasCrop ? 1 : 0)",
+            "texture=\(integer(texture))",
+            "crop=\(hasCrop ? 1 : 0):\(decimal(cropTop)):\(decimal(cropLeft)):\(decimal(cropBottom)):\(decimal(cropRight)):\(decimal(cropAngle))",
             "profile=\(string(cameraProfile))", "grayscale=\(convertToGrayscale.map { $0 ? 1 : 0 } ?? -1)"
         ].joined(separator: "|")
     }
@@ -178,7 +253,7 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
         clarity2012 = nil
         texture = nil
         convertToGrayscale = nil
-        hasCrop = false
+        resetCrop()
     }
     
     public static let empty = XMPMetadata()

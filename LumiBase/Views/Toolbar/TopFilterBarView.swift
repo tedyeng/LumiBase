@@ -3,35 +3,68 @@ import SwiftUI
 /// Lightroom-style top filter bar for searching, rating filter, flag filter, and color labels
 public struct TopFilterBarView: View {
     @ObservedObject var appState: AppState
+    @FocusState private var isSearchFocused: Bool
     
     public var body: some View {
         HStack(spacing: 16) {
             // Search Input
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundColor(LightroomTheme.textMuted)
+                    .foregroundColor(isSearchFocused ? LightroomTheme.accentYellow : LightroomTheme.textMuted)
                     .font(.system(size: 11))
+                
                 TextField("Search (Filename, Camera, Keyword...)", text: $appState.filterCriteria.searchText)
                     .textFieldStyle(.plain)
                     .font(.system(size: 11))
                     .foregroundColor(LightroomTheme.textPrimary)
+                    .focused($isSearchFocused)
+                    .onSubmit {
+                        isSearchFocused = false
+                        DispatchQueue.main.async {
+                            NSApp.keyWindow?.makeFirstResponder(nil)
+                        }
+                    }
+                    .onExitCommand {
+                        isSearchFocused = false
+                        DispatchQueue.main.async {
+                            NSApp.keyWindow?.makeFirstResponder(nil)
+                        }
+                    }
                 
                 if !appState.filterCriteria.searchText.isEmpty {
                     Button {
                         appState.filterCriteria.searchText = ""
+                        isSearchFocused = false
+                        DispatchQueue.main.async {
+                            NSApp.keyWindow?.makeFirstResponder(nil)
+                        }
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundColor(LightroomTheme.textMuted)
                             .font(.system(size: 10))
                     }
                     .buttonStyle(.plain)
+                    .help("Clear Search (Esc)")
                 }
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(LightroomTheme.cardBackground)
             .cornerRadius(4)
-            .frame(width: 240)
+            .overlay(
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(isSearchFocused ? LightroomTheme.accentYellow.opacity(0.8) : LightroomTheme.cardBorder, lineWidth: 1)
+            )
+            .frame(width: 250)
+            .onAppear {
+                isSearchFocused = false
+                DispatchQueue.main.async {
+                    NSApp.keyWindow?.makeFirstResponder(nil)
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseFocusSearch"))) { _ in
+                isSearchFocused = true
+            }
             
             Divider()
                 .frame(height: 14)
