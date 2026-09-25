@@ -5,6 +5,32 @@ import ImageIO
 @testable import LumiBase
 
 final class PhotoExportServiceTests: XCTestCase {
+ func testExportNegativeOneContinuityAtEVOne() async throws {
+  try await Task.detached {
+   let root = inspectionTestScratchURL("export-continuity-\(UUID().uuidString)")
+   try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+   defer { try? FileManager.default.removeItem(at: root) }
+   let source = HighlightsIntegrationTests.source
+   guard FileManager.default.fileExists(atPath: source.path) else { throw XCTSkip("Acceptance DNG unavailable") }
+   let context=CIContext(options:[.useSoftwareRenderer:false,.workingFormat:CIFormat.RGBAf])
+   var arrays:[[Float]]=[]
+   for h in [0,-1] {
+    let xmp=XMPMetadata(exposure2012:1,temperature:3650,tint:8,highlights2012:h)
+    let asset=PhotoAsset(fileURL:source,xmp:xmp)
+    let output=root.appendingPathComponent("ev1-h\(h).jpg")
+    try PhotoExportService.shared.exportPhoto(asset:asset,to:output,quality:1)
+    let image=try XCTUnwrap(CIImage(contentsOf:output))
+    var p=[Float](repeating:0,count:64*64*4)
+    context.render(image,toBitmap:&p,rowBytes:64*16,bounds:CGRect(x:4400,y:2400,width:64,height:64),format:.RGBAf,colorSpace:CGColorSpace(name:CGColorSpace.linearSRGB)!)
+    arrays.append(p)
+   }
+   let differences=arrays[0].indices.filter{$0%4 != 3}.map{abs(arrays[0][$0]-arrays[1][$0])}
+   let mean=differences.reduce(0,+)/Float(differences.count)
+   let maxError=differences.max()!
+   print("ACTUAL_EXPORT_EV1_H0_TO_HMINUS1 meanLinearRGB=\(mean) maxLinearRGB=\(maxError)")
+   XCTAssertLessThan(mean,0.02,"A one-step negative highlight move must be continuous in actual exported JPEGs")
+  }.value
+ }
     
     func testExportBatchProgressFraction() {
         let p1 = ExportProgress(completed: 1, total: 4, currentFilename: "test1.arw", outputURL: nil)
@@ -73,6 +99,42 @@ final class PhotoExportServiceTests: XCTestCase {
         let height = properties[kCGImagePropertyPixelHeight] as? Int
         XCTAssertEqual(width, 200)
         XCTAssertEqual(height, 200)
+    }
+
+    func testRawExportExposureChangesRenderedPixels() throws {
+        let rawURL = HighlightsIntegrationTests.source
+        guard FileManager.default.fileExists(atPath: rawURL.path) else {
+            throw XCTSkip("Acceptance DNG is not mounted")
+        }
+
+        let tempDir = inspectionTestScratchURL("LumiBaseRawExposureRegression_\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        let camera = MetadataReader.readMetadata(from: rawURL).camera
+        var zeroXMP = XMPMetadata.empty
+        zeroXMP.exposure2012 = 0
+        var plusOneXMP = XMPMetadata.empty
+        plusOneXMP.exposure2012 = 1
+        let zeroAsset = PhotoAsset(fileURL: rawURL, xmp: zeroXMP, cameraMetadata: camera)
+        let plusOneAsset = PhotoAsset(fileURL: rawURL, xmp: plusOneXMP, cameraMetadata: camera)
+        let zeroURL = tempDir.appendingPathComponent("ev0.jpg")
+        let plusOneURL = tempDir.appendingPathComponent("ev1.jpg")
+
+        try PhotoExportService.shared.exportPhoto(asset: zeroAsset, to: zeroURL, quality: 1)
+        try PhotoExportService.shared.exportPhoto(asset: plusOneAsset, to: plusOneURL, quality: 1)
+
+        let decode: (URL) throws -> Data = { url in
+            guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+                  let image = CGImageSourceCreateImageAtIndex(source, 0, nil),
+                  let data = image.dataProvider?.data else {
+                throw ExportError.failedToRenderImage("Could not decode regression JPEG")
+            }
+            return data as Data
+        }
+        let zeroPixels = try decode(zeroURL)
+        let plusOnePixels = try decode(plusOneURL)
+        XCTAssertFalse(zeroPixels == plusOnePixels, "RAW EV +1 must affect exported pixels")
     }
     
     func testExportRealSonyA7C2RAWPhoto() throws {

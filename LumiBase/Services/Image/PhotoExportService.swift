@@ -68,6 +68,7 @@ public final class PhotoExportService: @unchecked Sendable {
         quality: Float = 0.95
     ) throws -> URL {
         // 1. Decode full resolution image
+        let sourceRecipe = asset.isRaw ? HighlightsSourceRecipe(url: asset.fileURL) : nil
         var baseCI: CIImage?
         var exportBaseHolder: BaseImageHolder? = nil
         if asset.isRaw {
@@ -75,6 +76,10 @@ public final class PhotoExportService: @unchecked Sendable {
                 let defaultTemp = rawFilter.neutralTemperature
                 let defaultTint = rawFilter.neutralTint
                 let ev = Float(asset.xmp.exposure2012 ?? 0.0)
+                // Bake the RAW exposure into this render endpoint. The holder's
+                // baseExposure must describe the pixels it owns so the downstream
+                // EV-delta stage does not apply the same adjustment twice.
+                rawFilter.exposure = ev
                 let decodedTemp: Float
                 if let temp = asset.xmp.temperature, temp > 0 {
                     rawFilter.neutralTemperature = Float(temp)
@@ -139,12 +144,16 @@ public final class PhotoExportService: @unchecked Sendable {
         }
         
         // 2. Apply Adobe PV2012 Color Pipeline (Exposure, WB, Highlights, Shadows, Contrast, Saturation, Clarity)
-        let processedCI = AdobeColorPipeline.shared.process(
-            image: sourceCI,
-            cameraModel: asset.cameraMetadata.model,
-            xmp: asset.xmp,
-            baseHolder: exportBaseHolder
-        )
+        let processedCI: CIImage
+        if exportBaseHolder != nil, (asset.xmp.highlights2012 ?? 0) < 0 {
+            guard let recipe = sourceRecipe,
+                  let native = NativeHighlightsService.shared.image(source: recipe, xmp: asset.xmp, cameraModel: asset.cameraMetadata.model, neutralDomain: .nativeRAWExport) else {
+                throw ExportError.failedToRenderImage("Highlights require a current source and off-main render; preparation was cancelled or failed")
+            }
+            processedCI = native
+        } else {
+            processedCI = AdobeColorPipeline.shared.process(image: sourceCI, cameraModel: asset.cameraMetadata.model, xmp: asset.xmp, baseHolder: exportBaseHolder)
+        }
         
         // Determine valid non-infinite render extent
         let renderExtent = processedCI.extent.isInfinite ? sourceCI.extent : processedCI.extent
@@ -153,7 +162,9 @@ public final class PhotoExportService: @unchecked Sendable {
         }
         
         // 3. Render to high-fidelity CGImage in sRGB color space
-        guard let cgImage = ciContext.createCGImage(
+        guard !Task.isCancelled else { throw ExportError.cancelled }
+        let renderContext = exportBaseHolder != nil && (asset.xmp.highlights2012 ?? 0) < 0 ? NativeHighlightsService.shared.renderContext : ciContext
+        guard let cgImage = renderContext.createCGImage(
             processedCI,
             from: renderExtent,
             format: .RGBA8,
@@ -163,6 +174,8 @@ public final class PhotoExportService: @unchecked Sendable {
         }
         
         // 4. Create destination JPEG
+        guard !Task.isCancelled else { throw ExportError.cancelled }
+        guard sourceRecipe?.isCurrent != false else { throw ExportError.failedToDecodeSource(asset.fileURL) }
         guard let destination = CGImageDestinationCreateWithURL(
             destinationURL as CFURL,
             UTType.jpeg.identifier as CFString,
@@ -233,7 +246,8 @@ public final class PhotoExportService: @unchecked Sendable {
             let baseName = asset.fileURL.deletingPathExtension().lastPathComponent
             let destURL = outputDirectory.appendingPathComponent("\(baseName).jpg")
             
-            let resultURL = try exportPhoto(asset: asset, to: destURL, quality: quality)
+            let work = Task.detached { try self.exportPhoto(asset: asset, to: destURL, quality: quality) }
+            let resultURL = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
             exportedURLs.append(resultURL)
             
             progressHandler?(ExportProgress(
