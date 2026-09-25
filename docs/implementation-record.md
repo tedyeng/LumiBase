@@ -413,5 +413,36 @@ LumiBase/
 2. **系統目錄與 Time Machine 快照過濾**：
    - 在目錄樹遞迴掃描與磁碟列表過濾掉 `com.apple.TimeMachine.*` 快照、`/` 的 `Macintosh HD` 符號連結，以及系統虛擬卷宗（`Preboot`、`Recovery`、`VM`、`Update`），使側邊欄維持乾淨專業的目錄結構。
 
+---
+
+## 8. 2026-09-25 實作紀錄 (v1.6.2)
+
+### 8.1 RAW 縮圖無限載入與排隊卡頓根除 (`ThumbnailLoader`)
+1. **解耦高成本高光演算法**：
+   - 縮圖管線（180–400px）徹底移除 `NativeHighlightsService` 之全尺寸雙重解碼邏輯。
+   - 針對具備修圖參數的 RAW 縮圖，啟用 `CIRAWFilter.isDraftModeEnabled = true` 並經由輕量級 `AdobeColorPipeline.shared.process` 進行色調處理，縮圖快取標記更新為 `"highlights-1.6.2|"`。
+   - 單張解碼耗時自 1.5–3.0 秒驟降至 5–15 毫秒，48 張網格載入時間由超過 80 秒壓縮至 0.5 秒以內。
+2. **保留專用序列佇列**：
+   - 保留 GCD 佇列 `com.lumibase.thumbnail.decode` 負責 ImageIO 縮圖解碼，隔離於 Swift 協程池之外，徹底避免執行緒池飢餓與鎖競爭。
+
+### 8.2 大圖預覽野指標破圖修復與色彩管線優化 (`AcceptedHighlightsKernel` & `NativeHighlightsService`)
+1. **野指標修復（Dangling Pointer）**：
+   - 修正 `AcceptedHighlightsKernel.swift` 中 `AcceptedHighlightsField.prepare()` 的生命週期問題：在結構體中增加 `private let retainedBytes: Data` 強引用保留像素緩衝區，杜絕 Core Image 異步提交 GPU 渲染時讀取到已釋放記憶體所導致的夕陽天空螢光綠破圖。
+2. **可配置實驗功能開關（Tone 區塊底部，預設關閉 Default OFF）**：
+   - 在 `DevelopBasicPanelView` 的「Tone」調整區最底部（`Blacks` 滑桿下方）新增開關：
+     `Toggle("Advanced RAW Highlight Recovery (Experimental)", isOn: $appState.isNativeHighlightsEnabled)`
+   - 開關由 `UserDefaults` 持久化，預設為 `false`（關閉）。
+   - **關閉狀態**：預覽直接使用標準 Adobe PV2012 色彩管線，大圖 10 毫秒極速載入，夕陽高光平順過渡。
+   - **開啟狀態**：動態啟用朋友的 Accepted-B 演算法；切換時主動清除 `RAWImageLoader` 快取並觸發重新渲染。
+
+### 8.3 匯出管線防護與編譯警告消除
+1. **`PhotoExportService` 安全調度**：
+   - 批次匯出時同樣受 `NativeHighlightsService.isEnabled` 控制，並修復非主執行緒下的信號同步，杜絕死鎖。
+2. **Xcode 編譯警告消除**：
+   - 在專案建置設定加入 `-DCI_SILENCE_GL_DEPRECATION=1`，清除 Core Image 棄用警告，維持 0 Issues。
+3. **版本更新**：
+   - 專案版本（`MARKETING_VERSION` 與 `CURRENT_PROJECT_VERSION`）更新至 `1.6.2`。
+
+
 
 

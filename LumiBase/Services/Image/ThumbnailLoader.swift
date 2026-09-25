@@ -16,6 +16,7 @@ public actor ThumbnailLoader {
     // callers suspend at a continuation rather than occupying cooperative workers.
     private nonisolated static let decodeQueue = DispatchQueue(
         label: "com.lumibase.thumbnail.decode", qos: .userInitiated)
+    private nonisolated static let renderContext = CIContext(options: [.useSoftwareRenderer: false])
 
     /// Returns only an already resident thumbnail; safe for the synchronous selection handoff.
     public nonisolated static func cachedMemoryThumbnail(for asset: PhotoAsset, maxPixelSize: Int = 1600) -> NSImage? {
@@ -26,7 +27,7 @@ public actor ThumbnailLoader {
     /// The single key path used by insertion/loading and synchronous handoff.
     static func cacheKey(for asset: PhotoAsset, maxPixelSize: Int) -> String {
         ThumbnailCacheManager.shared.cacheKey(for: asset.fileURL, maxPixelSize: maxPixelSize,
-            dateModified: asset.dateModified, developTag: "highlights-1.6.0|" + asset.xmp.thumbnailDevelopCacheIdentity)
+            dateModified: asset.dateModified, developTag: "highlights-1.6.2|" + asset.xmp.thumbnailDevelopCacheIdentity)
     }
     
     /// Loads a thumbnail asynchronously with memory/disk caching and request deduplication
@@ -68,20 +69,10 @@ public actor ThumbnailLoader {
     
     /// Synchronously creates a thumbnail from disk using CIRAWFilter draft mode (for exact preview match) or ImageIO
     private nonisolated static func createThumbnail(for asset: PhotoAsset, maxPixelSize: Int) -> NSImage? {
-        if asset.isRaw, (asset.xmp.highlights2012 ?? 0) < 0 {
-            guard let recipe = HighlightsSourceRecipe(url: asset.fileURL),
-                  let native = NativeHighlightsService.shared.image(source: recipe, xmp: asset.xmp, cameraModel: asset.cameraMetadata.model),
-                  !Task.isCancelled else { return nil }
-            let scale = min(1, CGFloat(maxPixelSize) / max(native.extent.width, native.extent.height))
-            let scaled = native.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-            let context = NativeHighlightsService.shared.renderContext
-            guard let rendered = context.createCGImage(scaled, from: scaled.extent, format: .RGBA8,
-                colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!, deferred: false) else { return nil }
-            return NSImage(cgImage: rendered, size: NSSize(width: rendered.width, height: rendered.height))
-        }
-        // 1. For RAW assets with develop edits, use CIRAWFilter to get identical color science as Loupe View
+        // 1. For RAW assets with develop edits, use CIRAWFilter draft mode to get identical color science as Loupe View
         if asset.isRaw && asset.xmp.hasDevelopEdits {
             if let rawFilter = CIRAWFilter(imageURL: asset.fileURL) {
+                rawFilter.isDraftModeEnabled = true
                 if let baseCI = rawFilter.outputImage {
                     let processed = AdobeColorPipeline.shared.process(
                         image: baseCI,
@@ -93,8 +84,7 @@ public actor ThumbnailLoader {
                     let scale = maxDim > CGFloat(maxPixelSize) ? CGFloat(maxPixelSize) / maxDim : 1.0
                     let scaledCI = scale < 1.0 ? processed.transformed(by: CGAffineTransform(scaleX: scale, y: scale)) : processed
                     
-                    let ciContext = CIContext(options: [.useSoftwareRenderer: false])
-                    if let renderedCG = ciContext.createCGImage(scaledCI, from: scaledCI.extent) {
+                    if let renderedCG = Self.renderContext.createCGImage(scaledCI, from: scaledCI.extent) {
                         let size = NSSize(width: renderedCG.width, height: renderedCG.height)
                         return NSImage(cgImage: renderedCG, size: size)
                     }

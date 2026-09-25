@@ -35,6 +35,18 @@ public final class AppState: ObservableObject {
     @Published public var isRightInspectorVisible: Bool = true
     @Published public var isFilmstripVisible: Bool = true
     
+    // Native Highlights (Accepted-B) toggle - default false
+    @Published public var isNativeHighlightsEnabled: Bool = UserDefaults.standard.bool(forKey: "isNativeHighlightsEnabled") {
+        didSet {
+            UserDefaults.standard.set(isNativeHighlightsEnabled, forKey: "isNativeHighlightsEnabled")
+            NativeHighlightsService.isEnabled = isNativeHighlightsEnabled
+            RAWImageLoader.shared.clearCache()
+            if let primaryID = primarySelectedAssetID {
+                updateDevelopSettings(for: primaryID, isDragging: false) { _ in }
+            }
+        }
+    }
+    
     // Export State
     @Published public var isExporting: Bool = false
     @Published public var exportProgressFraction: Double = 0.0

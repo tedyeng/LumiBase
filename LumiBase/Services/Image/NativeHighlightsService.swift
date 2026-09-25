@@ -21,6 +21,7 @@ public struct HighlightsSourceRecipe: Sendable, Equatable {
 /// serial, and never holds the short state lock used by folder/cache invalidation.
 final class NativeHighlightsService: @unchecked Sendable {
     static let shared = NativeHighlightsService()
+    public static var isEnabled: Bool = UserDefaults.standard.bool(forKey: "isNativeHighlightsEnabled")
     enum NeutralDomain: Equatable { case preview, nativeRAWExport }
     struct Key: Equatable {
         let source: HighlightsSourceRecipe
@@ -56,7 +57,7 @@ final class NativeHighlightsService: @unchecked Sendable {
 
     static func strength(_ highlights: Int) -> Float { Float(-max(-100, min(0, highlights))) / 80 }
     static func applies(holder: BaseImageHolder, xmp: XMPMetadata?) -> Bool {
-        holder.isRaw && holder.supportsNativeInspection && holder.highlightsSource != nil && (xmp?.highlights2012 ?? 0) < 0
+        isEnabled && holder.isRaw && holder.supportsNativeInspection && holder.highlightsSource != nil && (xmp?.highlights2012 ?? 0) < 0
     }
     func clear() {
         stateLock.lock()

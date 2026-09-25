@@ -427,6 +427,14 @@ public struct DevelopBasicPanelView: View {
                         }
                     }
                 )
+                
+                // Advanced Highlight Recovery (Experimental) Toggle
+                Toggle("Advanced RAW Highlight Recovery (Experimental)", isOn: $appState.isNativeHighlightsEnabled)
+                    .toggleStyle(.checkbox)
+                    .font(.system(size: 11))
+                    .foregroundColor(appState.isNativeHighlightsEnabled ? LightroomTheme.accentYellow : LightroomTheme.textSecondary)
+                    .padding(.top, 4)
+                    .padding(.bottom, 2)
             }
             .padding(.horizontal, 10)
             

@@ -8,6 +8,15 @@ struct AcceptedHighlightsField {
     let extent: CGRect
     let quarterWidth: Int
     let quarterHeight: Int
+    let data: Data?
+
+    init(correctionImage: CIImage, extent: CGRect, quarterWidth: Int, quarterHeight: Int, data: Data? = nil) {
+        self.correctionImage = correctionImage
+        self.extent = extent
+        self.quarterWidth = quarterWidth
+        self.quarterHeight = quarterHeight
+        self.data = data
+    }
 }
 
 /// Native accepted-B transform. `prepare` is intentionally synchronous: callers must run it
@@ -97,7 +106,7 @@ enum AcceptedHighlightsKernel {
                                        tx: extent.minX, ty: extent.minY)
         let fullCorrection = lowImage.transformed(by: resize).cropped(to: extent)
         return AcceptedHighlightsField(correctionImage: fullCorrection, extent: extent,
-                                       quarterWidth: lowWidth, quarterHeight: lowHeight)
+                                       quarterWidth: lowWidth, quarterHeight: lowHeight, data: bytes)
     }
 
     /// Applies the exact accepted pixel stages as a Core Image color kernel (Metal-backed on GPU).

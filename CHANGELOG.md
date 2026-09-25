@@ -5,6 +5,40 @@ All notable changes to **LumiBase** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.2] - 2026-09-25
+
+### Fixed
+- **RAW Thumbnail Infinite Loading & Cooperative Pool Contention**:
+  - Decoupled `NativeHighlightsService` from thumbnail generation pipeline; thumbnails now use draft-mode decoding (`CIRAWFilter.isDraftModeEnabled = true`) and shared static `CIContext`, dropping decode time per thumbnail from 1.5–3.0s to 5–15ms.
+  - Retained dedicated GCD serial queue (`com.lumibase.thumbnail.decode`) for safe ImageIO decoding without blocking the Swift concurrency cooperative pool.
+  - Bumped thumbnail cache develop key to `"highlights-1.6.2|"`.
+- **Preview Freeze & Color Distortion (Dangling Pointer Fix)**:
+  - Resolved memory corruption in `AcceptedHighlightsKernel` where backing buffer `bytes` was released prematurely while `CIImage(bitmapData:)` was in flight, eliminating neon green artifacts and false color banding in sunset sky regions.
+  - Restored lightweight 10ms Adobe PV2012 pipeline (`AdobeColorPipeline`) as standard preview renderer.
+- **Export Concurrency Safety (`PhotoExportService`)**:
+  - Guarded highlight processing against experimental toggle state.
+  - Synchronized off-main thread export dispatches via semaphore signaling, eliminating potential deadlock hazards.
+- **Compiler Deprecation Warnings**:
+  - Added `-DCI_SILENCE_GL_DEPRECATION=1` to Xcode project build configurations to silence Core Image OpenGL-based kernel deprecation warnings.
+
+### Added
+- **Experimental Feature Toggle**:
+  - Added user-controllable toggle `Advanced RAW Highlight Recovery (Experimental)` at the bottom of the "Tone" adjustment section in `DevelopBasicPanelView` (below Blacks).
+  - Configured default state to **OFF**, backed by `UserDefaults.standard.bool(forKey: "isNativeHighlightsEnabled")`.
+  - Dynamically clears `RAWImageLoader` cache and triggers live re-rendering upon toggle changes.
+
+## [1.6.1] - 2026-09-25
+
+### Fixed
+- **RAW Thumbnail Cooperative-Pool Starvation**:
+  - Isolated synchronous thumbnail decoding from Swift cooperative workers onto dedicated serial GCD queue (`com.lumibase.thumbnail.decode`).
+
+## [1.6.0] - 2026-09-25
+
+### Added
+- **Native Accepted-B Highlights Recovery**:
+  - Dual-exposure RAW demosaicing (0 EV / -2 EV) and Core Image highlight blending for assets with negative highlight adjustments (`highlights2012 < 0`).
+
 ## [1.5.5] — Inspection ROI delivery
 
 ### Fixed / Changed (1.5.1–1.5.5)

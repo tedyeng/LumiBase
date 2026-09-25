@@ -145,9 +145,24 @@ public final class PhotoExportService: @unchecked Sendable {
         
         // 2. Apply Adobe PV2012 Color Pipeline (Exposure, WB, Highlights, Shadows, Contrast, Saturation, Clarity)
         let processedCI: CIImage
-        if exportBaseHolder != nil, (asset.xmp.highlights2012 ?? 0) < 0 {
-            guard let recipe = sourceRecipe,
-                  let native = NativeHighlightsService.shared.image(source: recipe, xmp: asset.xmp, cameraModel: asset.cameraMetadata.model, neutralDomain: .nativeRAWExport) else {
+        if NativeHighlightsService.isEnabled, exportBaseHolder != nil, (asset.xmp.highlights2012 ?? 0) < 0 {
+            guard let recipe = sourceRecipe else {
+                throw ExportError.failedToRenderImage("Highlights require a current source and off-main render; preparation was cancelled or failed")
+            }
+            let nativeImage: CIImage?
+            if Thread.isMainThread {
+                let sema = DispatchSemaphore(value: 0)
+                var result: CIImage?
+                DispatchQueue.global(qos: .userInitiated).async {
+                    result = NativeHighlightsService.shared.image(source: recipe, xmp: asset.xmp, cameraModel: asset.cameraMetadata.model, neutralDomain: .nativeRAWExport)
+                    sema.signal()
+                }
+                sema.wait()
+                nativeImage = result
+            } else {
+                nativeImage = NativeHighlightsService.shared.image(source: recipe, xmp: asset.xmp, cameraModel: asset.cameraMetadata.model, neutralDomain: .nativeRAWExport)
+            }
+            guard let native = nativeImage else {
                 throw ExportError.failedToRenderImage("Highlights require a current source and off-main render; preparation was cancelled or failed")
             }
             processedCI = native
@@ -163,7 +178,7 @@ public final class PhotoExportService: @unchecked Sendable {
         
         // 3. Render to high-fidelity CGImage in sRGB color space
         guard !Task.isCancelled else { throw ExportError.cancelled }
-        let renderContext = exportBaseHolder != nil && (asset.xmp.highlights2012 ?? 0) < 0 ? NativeHighlightsService.shared.renderContext : ciContext
+        let renderContext = NativeHighlightsService.isEnabled && exportBaseHolder != nil && (asset.xmp.highlights2012 ?? 0) < 0 ? NativeHighlightsService.shared.renderContext : ciContext
         guard let cgImage = renderContext.createCGImage(
             processedCI,
             from: renderExtent,
