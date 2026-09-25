@@ -10,6 +10,13 @@ public actor ThumbnailLoader {
     private let cache = ThumbnailCacheManager.shared
     private var inFlightTasks: [String: Task<NSImage?, Never>] = [:]
 
+    // ImageIO may synchronously wait for RawCamera's own dispatch work. Running
+    // many such calls on Swift's cooperative pool can starve that work and every
+    // pending foreground load. A serial GCD queue bounds blocking decodes to one;
+    // callers suspend at a continuation rather than occupying cooperative workers.
+    private nonisolated static let decodeQueue = DispatchQueue(
+        label: "com.lumibase.thumbnail.decode", qos: .userInitiated)
+
     /// Returns only an already resident thumbnail; safe for the synchronous selection handoff.
     public nonisolated static func cachedMemoryThumbnail(for asset: PhotoAsset, maxPixelSize: Int = 1600) -> NSImage? {
         let cache = ThumbnailCacheManager.shared
@@ -38,7 +45,14 @@ public actor ThumbnailLoader {
         
         let targetAsset = asset
         let task = Task<NSImage?, Never>.detached(priority: .userInitiated) {
-            return Self.createThumbnail(for: targetAsset, maxPixelSize: maxPixelSize)
+            await withCheckedContinuation { continuation in
+                Self.decodeQueue.async {
+                    let image = autoreleasepool {
+                        Self.createThumbnail(for: targetAsset, maxPixelSize: maxPixelSize)
+                    }
+                    continuation.resume(returning: image)
+                }
+            }
         }
         
         inFlightTasks[key] = task
