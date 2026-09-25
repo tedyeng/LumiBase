@@ -1,0 +1,722 @@
+{
+  "crop_copy_cost_ms" : {
+    "count" : 24,
+    "median" : 1.470583,
+    "p95" : 1.9965409999999999
+  },
+  "decode_and_graph_construction_ms" : "one decode + pipeline graph construction per source; values are in source_metadata and repeated raster timings",
+  "expected_measured_render_count" : 96,
+  "max_channel_diff_across_cases" : 1,
+  "measured_render_count" : 96,
+  "memory_measurement" : "unavailable: no condition-isolated \/usr\/bin\/time -l run",
+  "metrics" : [
+    {
+      "condition" : "full",
+      "count" : 48,
+      "median_ms" : 59.553333000000002,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 191.33083400000001
+    },
+    {
+      "condition" : "full",
+      "count" : 48,
+      "median_ms" : 60.954250000000002,
+      "metric" : "total_ms",
+      "p95_ms" : 194.952292
+    },
+    {
+      "condition" : "roi",
+      "count" : 48,
+      "median_ms" : 9.0527920000000002,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 10.151083
+    },
+    {
+      "condition" : "roi",
+      "count" : 48,
+      "median_ms" : 9.0527920000000002,
+      "metric" : "total_ms",
+      "p95_ms" : 10.151083
+    }
+  ],
+  "os_cache" : "warmup performed; no cold OS-cache claim",
+  "parity_case_count" : 24,
+  "parity_exact_count" : 0,
+  "per_source_roi_metrics" : [
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|bottom-left|full",
+      "median_ms" : 54.640084000000002,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 59.553333000000002
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|bottom-left|full",
+      "median_ms" : 56.041001000000001,
+      "metric" : "total_ms",
+      "p95_ms" : 60.954250000000002
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|bottom-left|roi",
+      "median_ms" : 9.2587080000000004,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 10.427625000000001
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|bottom-left|roi",
+      "median_ms" : 9.2587080000000004,
+      "metric" : "total_ms",
+      "p95_ms" : 10.427625000000001
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|bottom-right|full",
+      "median_ms" : 52.410083,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 55.372875000000001
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|bottom-right|full",
+      "median_ms" : 53.828916999999997,
+      "metric" : "total_ms",
+      "p95_ms" : 56.791708999999997
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|bottom-right|roi",
+      "median_ms" : 9.2824159999999996,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 10.252458000000001
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|bottom-right|roi",
+      "median_ms" : 9.2824159999999996,
+      "metric" : "total_ms",
+      "p95_ms" : 10.252458000000001
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|center|full",
+      "median_ms" : 49.985999999999997,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 58.319000000000003
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|center|full",
+      "median_ms" : 51.388374999999996,
+      "metric" : "total_ms",
+      "p95_ms" : 59.721375000000002
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|center|roi",
+      "median_ms" : 8.3778749999999995,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 9.3394580000000005
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|center|roi",
+      "median_ms" : 8.3778749999999995,
+      "metric" : "total_ms",
+      "p95_ms" : 9.3394580000000005
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|top-edge-mid|full",
+      "median_ms" : 52.005375000000001,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 55.370708
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|top-edge-mid|full",
+      "median_ms" : 53.431750000000001,
+      "metric" : "total_ms",
+      "p95_ms" : 56.797083000000001
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|top-edge-mid|roi",
+      "median_ms" : 8.9761249999999997,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 9.7351659999999995
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|top-edge-mid|roi",
+      "median_ms" : 8.9761249999999997,
+      "metric" : "total_ms",
+      "p95_ms" : 9.7351659999999995
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|top-left|full",
+      "median_ms" : 50.304124999999999,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 51.659792000000003
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|top-left|full",
+      "median_ms" : 51.717917,
+      "metric" : "total_ms",
+      "p95_ms" : 53.073584000000004
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|top-left|roi",
+      "median_ms" : 8.85975,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 9.3832090000000008
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|top-left|roi",
+      "median_ms" : 8.85975,
+      "metric" : "total_ms",
+      "p95_ms" : 9.3832090000000008
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|top-right|full",
+      "median_ms" : 50.850375,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 54.944167
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|top-right|full",
+      "median_ms" : 52.320957999999997,
+      "metric" : "total_ms",
+      "p95_ms" : 56.414749999999998
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|top-right|roi",
+      "median_ms" : 8.877167,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 9.5377080000000003
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07818-DXO6.dng|top-right|roi",
+      "median_ms" : 8.877167,
+      "metric" : "total_ms",
+      "p95_ms" : 9.5377080000000003
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|bottom-left|full",
+      "median_ms" : 81.824540999999996,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 90.877332999999993
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|bottom-left|full",
+      "median_ms" : 83.331040999999999,
+      "metric" : "total_ms",
+      "p95_ms" : 92.383832999999996
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|bottom-left|roi",
+      "median_ms" : 7.7373750000000001,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 8.5041250000000002
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|bottom-left|roi",
+      "median_ms" : 7.7373750000000001,
+      "metric" : "total_ms",
+      "p95_ms" : 8.5041250000000002
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|bottom-right|full",
+      "median_ms" : 80.742417000000003,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 93.055042
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|bottom-right|full",
+      "median_ms" : 82.279959000000005,
+      "metric" : "total_ms",
+      "p95_ms" : 94.592584000000002
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|bottom-right|roi",
+      "median_ms" : 8.4682499999999994,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 9.3023340000000001
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|bottom-right|roi",
+      "median_ms" : 8.4682499999999994,
+      "metric" : "total_ms",
+      "p95_ms" : 9.3023340000000001
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|center|full",
+      "median_ms" : 81.255959000000004,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 91.456125
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|center|full",
+      "median_ms" : 82.789417999999998,
+      "metric" : "total_ms",
+      "p95_ms" : 92.989583999999994
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|center|roi",
+      "median_ms" : 7.8529580000000001,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 8.7479169999999993
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|center|roi",
+      "median_ms" : 7.8529580000000001,
+      "metric" : "total_ms",
+      "p95_ms" : 8.7479169999999993
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|top-edge-mid|full",
+      "median_ms" : 85.521291000000005,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 92.788167000000001
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|top-edge-mid|full",
+      "median_ms" : 87.011250000000004,
+      "metric" : "total_ms",
+      "p95_ms" : 94.278126
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|top-edge-mid|roi",
+      "median_ms" : 9.6245829999999994,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 9.8642500000000002
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|top-edge-mid|roi",
+      "median_ms" : 9.6245829999999994,
+      "metric" : "total_ms",
+      "p95_ms" : 9.8642500000000002
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|top-left|full",
+      "median_ms" : 80.654792,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 89.655957999999998
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|top-left|full",
+      "median_ms" : 82.154167000000001,
+      "metric" : "total_ms",
+      "p95_ms" : 91.155332999999999
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|top-left|roi",
+      "median_ms" : 8.5225829999999991,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 9.4878750000000007
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|top-left|roi",
+      "median_ms" : 8.5225829999999991,
+      "metric" : "total_ms",
+      "p95_ms" : 9.4878750000000007
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|top-right|full",
+      "median_ms" : 84.617417000000003,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 96.769291999999993
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|top-right|full",
+      "median_ms" : 86.123584000000008,
+      "metric" : "total_ms",
+      "p95_ms" : 98.275458999999998
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|top-right|roi",
+      "median_ms" : 8.7804169999999999,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 9.5955410000000008
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.03.07-08 Dallas\/DXO\/DSC07821-DXO6.dng|top-right|roi",
+      "median_ms" : 8.7804169999999999,
+      "metric" : "total_ms",
+      "p95_ms" : 9.5955410000000008
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|bottom-left|full",
+      "median_ms" : 25.312000000000001,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 26.157708
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|bottom-left|full",
+      "median_ms" : 26.309667000000001,
+      "metric" : "total_ms",
+      "p95_ms" : 27.155374999999999
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|bottom-left|roi",
+      "median_ms" : 8.9433340000000001,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 9.6389580000000006
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|bottom-left|roi",
+      "median_ms" : 8.9433340000000001,
+      "metric" : "total_ms",
+      "p95_ms" : 9.6389580000000006
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|bottom-right|full",
+      "median_ms" : 24.392208,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 29.373166000000001
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|bottom-right|full",
+      "median_ms" : 25.428750000000001,
+      "metric" : "total_ms",
+      "p95_ms" : 30.409708000000002
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|bottom-right|roi",
+      "median_ms" : 9.0215829999999997,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 9.8397089999999992
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|bottom-right|roi",
+      "median_ms" : 9.0215829999999997,
+      "metric" : "total_ms",
+      "p95_ms" : 9.8397089999999992
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|center|full",
+      "median_ms" : 25.052958,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 26.691541999999998
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|center|full",
+      "median_ms" : 26.072417000000002,
+      "metric" : "total_ms",
+      "p95_ms" : 27.711001
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|center|roi",
+      "median_ms" : 8.8839170000000003,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 9.4403330000000008
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|center|roi",
+      "median_ms" : 8.8839170000000003,
+      "metric" : "total_ms",
+      "p95_ms" : 9.4403330000000008
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|top-edge-mid|full",
+      "median_ms" : 24.921500000000002,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 26.134374999999999
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|top-edge-mid|full",
+      "median_ms" : 25.962292000000001,
+      "metric" : "total_ms",
+      "p95_ms" : 27.175166999999998
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|top-edge-mid|roi",
+      "median_ms" : 8.3038749999999997,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 9.0124580000000005
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|top-edge-mid|roi",
+      "median_ms" : 8.3038749999999997,
+      "metric" : "total_ms",
+      "p95_ms" : 9.0124580000000005
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|top-left|full",
+      "median_ms" : 24.626334,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 26.439291999999998
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|top-left|full",
+      "median_ms" : 25.633125,
+      "metric" : "total_ms",
+      "p95_ms" : 27.446082999999998
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|top-left|roi",
+      "median_ms" : 7.9642499999999998,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 8.7756670000000003
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|top-left|roi",
+      "median_ms" : 7.9642499999999998,
+      "metric" : "total_ms",
+      "p95_ms" : 8.7756670000000003
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|top-right|full",
+      "median_ms" : 24.878958000000001,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 25.802834000000001
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|top-right|full",
+      "median_ms" : 25.945625,
+      "metric" : "total_ms",
+      "p95_ms" : 26.869501
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|top-right|roi",
+      "median_ms" : 9.1308330000000009,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 9.8413749999999993
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DJI_0653-DXO6.dng|top-right|roi",
+      "median_ms" : 9.1308330000000009,
+      "metric" : "total_ms",
+      "p95_ms" : 9.8413749999999993
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|bottom-left|full",
+      "median_ms" : 182.77462499999999,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 186.20358300000001
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|bottom-left|full",
+      "median_ms" : 184.61470799999998,
+      "metric" : "total_ms",
+      "p95_ms" : 188.043666
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|bottom-left|roi",
+      "median_ms" : 9.0847920000000002,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 10.151083
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|bottom-left|roi",
+      "median_ms" : 9.0847920000000002,
+      "metric" : "total_ms",
+      "p95_ms" : 10.151083
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|bottom-right|full",
+      "median_ms" : 177.38012499999999,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 189.69762499999999
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|bottom-right|full",
+      "median_ms" : 179.19137499999999,
+      "metric" : "total_ms",
+      "p95_ms" : 191.50887499999999
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|bottom-right|roi",
+      "median_ms" : 8.4277920000000002,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 9.517042
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|bottom-right|roi",
+      "median_ms" : 8.4277920000000002,
+      "metric" : "total_ms",
+      "p95_ms" : 9.517042
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|center|full",
+      "median_ms" : 174.09575000000001,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 191.33083400000001
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|center|full",
+      "median_ms" : 177.717208,
+      "metric" : "total_ms",
+      "p95_ms" : 194.952292
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|center|roi",
+      "median_ms" : 7.2534999999999998,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 8.4925409999999992
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|center|roi",
+      "median_ms" : 7.2534999999999998,
+      "metric" : "total_ms",
+      "p95_ms" : 8.4925409999999992
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|top-edge-mid|full",
+      "median_ms" : 170.04816700000001,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 187.59325000000001
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|top-edge-mid|full",
+      "median_ms" : 172.04470800000001,
+      "metric" : "total_ms",
+      "p95_ms" : 189.58979100000002
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|top-edge-mid|roi",
+      "median_ms" : 8.8769159999999996,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 9.5393340000000002
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|top-edge-mid|roi",
+      "median_ms" : 8.8769159999999996,
+      "metric" : "total_ms",
+      "p95_ms" : 9.5393340000000002
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|top-left|full",
+      "median_ms" : 183.05520799999999,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 194.903042
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|top-left|full",
+      "median_ms" : 184.904416,
+      "metric" : "total_ms",
+      "p95_ms" : 196.75225
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|top-left|roi",
+      "median_ms" : 9.0527920000000002,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 9.7129159999999999
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|top-left|roi",
+      "median_ms" : 9.0527920000000002,
+      "metric" : "total_ms",
+      "p95_ms" : 9.7129159999999999
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|top-right|full",
+      "median_ms" : 170.13362499999999,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 195.55083400000001
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|top-right|full",
+      "median_ms" : 171.98358400000001,
+      "metric" : "total_ms",
+      "p95_ms" : 197.40079300000002
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|top-right|roi",
+      "median_ms" : 8.4398330000000001,
+      "metric" : "forced_render_and_materialization_ms",
+      "p95_ms" : 9.5058749999999996
+    },
+    {
+      "count" : 2,
+      "group" : "\/Volumes\/Extreme SSD\/Working\/2026.05.23-25 Memphis\/DXO\/DSC09202-DXO6.dng|top-right|roi",
+      "median_ms" : 8.4398330000000001,
+      "metric" : "total_ms",
+      "p95_ms" : 9.5058749999999996
+    }
+  ],
+  "rois_per_source" : 6,
+  "source_count" : 4,
+  "warmup_render_count" : 48
+}

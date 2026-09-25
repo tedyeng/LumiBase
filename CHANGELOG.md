@@ -5,6 +5,20 @@ All notable changes to **LumiBase** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.5] — Inspection ROI delivery
+
+### Fixed / Changed (1.5.1–1.5.5)
+- Share preloaded previews, completed Fit frames and processed ROIs through a bounded 128 MiB ready-frame LRU; preserve foreground priority, preview ±3 and native ROI neighbor ±1 scheduling.
+- Reject stale async develop/cache publications and isolate frame ownership; retain the same photo's last valid frame while updated settings render.
+- Keep proxy previews aligned with original oriented geometry at held 100%, and validate cached ROI extent against the warmed holder.
+- Move quick folder scans off the main actor, bound metadata concurrency and reject cancelled or obsolete folder/refresh completions.
+- Keep version/build 1.5.5 and the dedicated `com.lumibase.LumiBase.Inspection.ROI` bundle ID. No highlight experiment is included.
+
+### Verification / Limits
+- User reports ROI 1.5.5 now works normally. Delivery rerun: 96 tests, 3 opt-in benchmark skips, 0 failures.
+- The original folder-switch force-quit incident is **not proven resolved**; the available sample did not capture a confirmed hang.
+- See the [consolidated release and review notes](docs/inspection-1.5.5-release.md) for version history, scope, reproducible verification and remaining limits. Older entries below describe historical checkpoints rather than the final cache architecture.
+
 ## [1.4.4] - 2026-09-23
 
 ### Added & Improved
@@ -31,6 +45,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - AppKit event routing (`NSEvent.addLocalMonitorForEvents`) ensuring flawless mouse capture and clean window teardown.
 
 ---
+
+## [1.5.0] - 2026-09-22
+
+### Changed
+- Clear the previous asset's displayed frame and Fit fallback as soon as a new stable asset ID owns the Loupe. Render-time and asynchronous publication checks reject mismatched owners, including rapid A/B/A navigation with duplicate filenames.
+- Enable native ROI rendering by default while retaining the in-memory ROI OFF switch; no preference values are read or written.
+- Set the isolated ROI product bundle identifier to `com.lumibase.LumiBase.Inspection.ROI`.
+
+### Checkpoint
+- The neighboring processed ROI bitmap cache and ROI preload worker were not added. The existing speculative worker handles only embedded previews; safe processed ROI speculation needs a dedicated renderer/scheduler and complete cache identity.
+- See [inspection 1.5.0 ROI cache checkpoint](docs/inspection-1.5.0-roi-cache.md) for RED/GREEN logs, verification, limitations, and review targets.
+
+## [1.4.4] - 2026-09-22
+
+### Added
+- Bounded speculative Loupe preview preloading across up to three neighbors on each side of the current filtered and sorted list, prioritizing travel direction.
+- Separate utility-priority preloader with one running job, cancellation and stale-result rejection, and a strict 128 MiB accounted speculative bitmap cache with LRU eviction and in-flight reservation.
+- Complete preview identity including canonical asset path, file modification time and size, full XMP revision, output dimensions, and pipeline version. Selecting an already cached preview reuses it in Loupe.
+- Published list changes are coalesced and read after mutation; cached keys are removed from speculative dispatch without re-decoding.
+- Speculation waits for the matching selected Loupe foreground render, suspends until memory pressure returns to normal, and skips RAW files without embedded thumbnails instead of triggering full RAW decode.
+- Memory-pressure clearing and conservative exclusion of develop-edited RAW assets from speculative decoding.
+
+### Limits
+- The 128 MiB value covers accounted speculative bitmap bytes and reserved speculative bitmap cost. It does not bound total process, Core Image, decoder, GPU, visible-frame, or framework memory.
+- Speculation uses ImageIO embedded/downsampled previews only. It does not perform speculative full native RAW decode or edited-RAW develop rendering.
+- Full Swift tests pass (58 tests), including AppState and actor/consumer integration with synthetic image fixtures. Xcode Debug build passes. No GUI acceptance, supported-camera RAW coverage, latency comparison, or performance gain is claimed.
 
 ## [1.3.1] - 2026-09-22
 

@@ -46,6 +46,8 @@ public struct PhotoAsset: Identifiable, Hashable, Sendable {
     public let fileSize: Int64
     public let dateModified: Date
     public let dateCreated: Date
+    /// EXIF/TIFF orientation captured during metadata scanning; nil means it is not verified.
+    public let sourceOrientation: Int?
     
     public var isRaw: Bool {
         SupportedFileType(rawValue: fileExtension.lowercased())?.isRaw ?? false
@@ -121,6 +123,7 @@ public struct PhotoAsset: Identifiable, Hashable, Sendable {
         fileSize: Int64 = 0,
         dateModified: Date = Date(),
         dateCreated: Date = Date(),
+        sourceOrientation: Int? = nil,
         companionURLs: [URL] = [],
         xmp: XMPMetadata = .empty,
         cameraMetadata: CameraMetadata = .empty
@@ -131,6 +134,7 @@ public struct PhotoAsset: Identifiable, Hashable, Sendable {
         self.fileSize = fileSize
         self.dateModified = dateModified
         self.dateCreated = dateCreated
+        self.sourceOrientation = sourceOrientation
         self.companionURLs = companionURLs
         self.xmp = xmp
         self.cameraMetadata = cameraMetadata
@@ -139,9 +143,10 @@ public struct PhotoAsset: Identifiable, Hashable, Sendable {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
         hasher.combine(companionURLs)
+        hasher.combine(sourceOrientation)
     }
     
     public static func == (lhs: PhotoAsset, rhs: PhotoAsset) -> Bool {
-        lhs.id == rhs.id && lhs.companionURLs == rhs.companionURLs && lhs.xmp == rhs.xmp && lhs.cameraMetadata == rhs.cameraMetadata
+        lhs.id == rhs.id && lhs.companionURLs == rhs.companionURLs && lhs.xmp == rhs.xmp && lhs.cameraMetadata == rhs.cameraMetadata && lhs.sourceOrientation == rhs.sourceOrientation
     }
 }

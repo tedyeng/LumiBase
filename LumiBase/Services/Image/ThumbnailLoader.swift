@@ -9,11 +9,22 @@ public actor ThumbnailLoader {
     
     private let cache = ThumbnailCacheManager.shared
     private var inFlightTasks: [String: Task<NSImage?, Never>] = [:]
+
+    /// Returns only an already resident thumbnail; safe for the synchronous selection handoff.
+    public nonisolated static func cachedMemoryThumbnail(for asset: PhotoAsset, maxPixelSize: Int = 1600) -> NSImage? {
+        let cache = ThumbnailCacheManager.shared
+        return cache.memoryImage(forKey: cacheKey(for: asset, maxPixelSize: maxPixelSize))
+    }
+
+    /// The single key path used by insertion/loading and synchronous handoff.
+    static func cacheKey(for asset: PhotoAsset, maxPixelSize: Int) -> String {
+        ThumbnailCacheManager.shared.cacheKey(for: asset.fileURL, maxPixelSize: maxPixelSize,
+            dateModified: asset.dateModified, developTag: asset.xmp.thumbnailDevelopCacheIdentity)
+    }
     
     /// Loads a thumbnail asynchronously with memory/disk caching and request deduplication
     public func loadThumbnail(for asset: PhotoAsset, maxPixelSize: Int = 400) async -> NSImage? {
-        let developTag = asset.xmp.hasDevelopEdits ? "\(asset.xmp.exposure2012 ?? 0)_\(asset.xmp.temperature ?? 0)_\(asset.xmp.highlights2012 ?? 0)" : ""
-        let key = cache.cacheKey(for: asset.fileURL, maxPixelSize: maxPixelSize, dateModified: asset.dateModified, developTag: developTag)
+        let key = Self.cacheKey(for: asset, maxPixelSize: maxPixelSize)
         
         // Check cache first
         if let cached = cache.image(forKey: key) {
@@ -64,6 +75,9 @@ public actor ThumbnailLoader {
                     }
                 }
             }
+            // An edited RAW may display only a completed processed render. Never relabel its
+            // embedded, unedited JPEG as though it reflected the active develop settings.
+            return nil
         }
         
         // 2. Standard fast path using ImageIO embedded preview

@@ -50,9 +50,33 @@ public final class AppState: ObservableObject {
     
     // Watcher & Keyboard Monitor
     private let directoryWatcher = DirectoryWatcher()
+    private var folderScanTask: Task<Void, Never>?
+    private var folderScanGeneration: UInt64 = 0
+    private var scopedFolderURL: URL?
+    private var ownsScopedFolderAccess = false
     private var keyMonitor: Any?
-    
-    public init() {
+    private var previewSubscriptions = Set<AnyCancellable>()
+    private var priorPreviewAssetIDs: [String] = []
+    private var priorPreviewSelectionID: String?
+    private var priorPreviewViewMode: ViewMode = .grid
+    private var previewRefreshGeneration: UInt64 = 0
+    private var previewRefreshTask: Task<Void, Never>?
+    private let previewPreloader: PreviewPreloader
+    private let quickFolderScan: @Sendable (URL) -> [PhotoAsset]
+    private let fullFolderScan: @Sendable (URL) async -> [PhotoAsset]
+    struct PreviewSnapshotForTesting { let assetIDs: [String]; let selectedID: String? }
+    var previewSnapshotForTesting = PreviewSnapshotForTesting(assetIDs: [], selectedID: nil)
+
+    public init(preloader: PreviewPreloader = .shared,
+                quickFolderScan: @escaping @Sendable (URL) -> [PhotoAsset] = { url in
+                    FolderScanner.quickScan(url: url)
+                },
+                fullFolderScan: @escaping @Sendable (URL) async -> [PhotoAsset] = { url in
+                    await FolderScanner.scanDirectory(url: url)
+                }) {
+        self.previewPreloader = preloader
+        self.quickFolderScan = quickFolderScan
+        self.fullFolderScan = fullFolderScan
         directoryWatcher.onChange = { [weak self] in
             Task { @MainActor in
                 self?.refreshCurrentFolder()
@@ -60,6 +84,55 @@ public final class AppState: ObservableObject {
         }
         
         setupKeyMonitor()
+        Publishers.MergeMany(
+            $allAssets.map { _ in () }.eraseToAnyPublisher(),
+            $primarySelectedAssetID.map { _ in () }.eraseToAnyPublisher(),
+            $filterCriteria.map { _ in () }.eraseToAnyPublisher(),
+            $sortOrder.map { _ in () }.eraseToAnyPublisher(),
+            $currentFolderURL.map { _ in () }.eraseToAnyPublisher(),
+            $liveDevelopXMP.map { _ in () }.eraseToAnyPublisher(),
+            $viewMode.map { _ in () }.eraseToAnyPublisher()
+        )
+        .sink { [weak self] in self?.schedulePreviewRefresh() }
+        .store(in: &previewSubscriptions)
+    }
+
+    deinit {
+        let preloader = previewPreloader
+        Task { await preloader.cancelAndClear() }
+        folderScanTask?.cancel()
+        if ownsScopedFolderAccess, let scopedFolderURL {
+            scopedFolderURL.stopAccessingSecurityScopedResource()
+        }
+    }
+
+    private func schedulePreviewRefresh() {
+        previewRefreshGeneration &+= 1
+        let generation = previewRefreshGeneration
+        previewRefreshTask?.cancel()
+        previewRefreshTask = Task { @MainActor [weak self] in
+            await Task.yield()
+            guard let self, !Task.isCancelled, self.previewRefreshGeneration == generation else { return }
+            let assets = self.displayedAssets
+            let selectedID = self.primarySelectedAssetID
+            let ids = assets.map(\.id)
+            let oldIndex = self.priorPreviewSelectionID.flatMap { self.priorPreviewAssetIDs.firstIndex(of: $0) }
+            let newIndex = selectedID.flatMap { id in ids.firstIndex(of: id) }
+            let direction: PreviewTravelDirection = self.priorPreviewAssetIDs == ids && oldIndex != nil && newIndex != nil && oldIndex != newIndex
+                ? (newIndex! > oldIndex! ? .forward : .backward) : .stationary
+            self.priorPreviewAssetIDs = ids
+            let shouldArmForeground = self.viewMode == .loupe &&
+                (selectedID != self.priorPreviewSelectionID || self.priorPreviewViewMode != .loupe)
+            self.priorPreviewSelectionID = selectedID
+            self.priorPreviewViewMode = self.viewMode
+            self.previewSnapshotForTesting = PreviewSnapshotForTesting(assetIDs: ids, selectedID: selectedID)
+            if shouldArmForeground, let selectedID {
+                await self.previewPreloader.armForegroundSelection(selectedID)
+            } else if self.viewMode != .loupe || selectedID == nil {
+                await self.previewPreloader.foregroundSelectionEnded()
+            }
+            await self.previewPreloader.update(assets: assets, selectedID: selectedID, direction: direction)
+        }
     }
     
     private func setupKeyMonitor() {
@@ -231,63 +304,88 @@ public final class AppState: ObservableObject {
     // MARK: - Folder Actions
     
     public func openFolder(url: URL) {
-        _ = url.startAccessingSecurityScopedResource()
+        folderScanGeneration &+= 1
+        let generation = folderScanGeneration
+        folderScanTask?.cancel()
+        retainCurrentFolderAccess(for: url)
         currentFolderURL = url
+        allAssets = []
         selectedAssetIDs.removeAll()
         primarySelectedAssetID = nil
         selectionAnchorAssetID = nil
+        isScanning = true
+        scanProgressMessage = "Scanning \(url.lastPathComponent)..."
         
         directoryWatcher.startWatching(url: url)
         
-        // 1. Instant shallow list of assets
-        let quickAssets = FolderScanner.quickScan(url: url)
-        if !quickAssets.isEmpty {
-            self.allAssets = quickAssets
-            if let first = self.displayedAssets.first {
-                self.primarySelectedAssetID = first.id
-                self.selectionAnchorAssetID = first.id
-                self.selectedAssetIDs = [first.id]
+        let quickFolderScan = self.quickFolderScan
+        let fullFolderScan = self.fullFolderScan
+        folderScanTask = Task { @MainActor [weak self] in
+            let scanHasScope = url.startAccessingSecurityScopedResource()
+            defer {
+                if scanHasScope { url.stopAccessingSecurityScopedResource() }
             }
-        }
-        
-        Task {
-            isScanning = true
-            scanProgressMessage = "Scanning \(url.lastPathComponent)..."
-            
-            let assets = await FolderScanner.scanDirectory(url: url)
-            self.allAssets = assets
-            
-            let sorted = self.displayedAssets
-            if self.primarySelectedAssetID == nil || !assets.contains(where: { $0.id == self.primarySelectedAssetID }) {
-                if let first = sorted.first {
-                    self.primarySelectedAssetID = first.id
-                    self.selectionAnchorAssetID = first.id
-                    self.selectedAssetIDs = [first.id]
-                }
+            let quickTask = Task.detached(priority: .userInitiated) { quickFolderScan(url) }
+            let quickAssets = await withTaskCancellationHandler {
+                await quickTask.value
+            } onCancel: {
+                quickTask.cancel()
             }
-            
+            guard let self, !Task.isCancelled, self.folderScanGeneration == generation else { return }
+            if !quickAssets.isEmpty {
+                self.publishFolderAssets(quickAssets)
+            }
+
+            let assets = await fullFolderScan(url)
+            guard !Task.isCancelled, self.folderScanGeneration == generation else { return }
+            self.publishFolderAssets(assets)
             self.isScanning = false
+            self.folderScanTask = nil
+        }
+    }
+
+    private func retainCurrentFolderAccess(for url: URL) {
+        guard scopedFolderURL?.standardizedFileURL != url.standardizedFileURL else { return }
+        if ownsScopedFolderAccess, let scopedFolderURL {
+            scopedFolderURL.stopAccessingSecurityScopedResource()
+        }
+        ownsScopedFolderAccess = url.startAccessingSecurityScopedResource()
+        scopedFolderURL = url
+    }
+
+    private func publishFolderAssets(_ assets: [PhotoAsset]) {
+        allAssets = assets
+        let sorted = displayedAssets
+        if primarySelectedAssetID == nil || !assets.contains(where: { $0.id == primarySelectedAssetID }) {
+            if let first = sorted.first {
+                primarySelectedAssetID = first.id
+                selectionAnchorAssetID = first.id
+                selectedAssetIDs = [first.id]
+            } else {
+                primarySelectedAssetID = nil
+                selectionAnchorAssetID = nil
+                selectedAssetIDs.removeAll()
+            }
         }
     }
     
     public func refreshCurrentFolder() {
         guard let url = currentFolderURL, !isScanning else { return }
-        
-        Task {
-            let assets = await FolderScanner.scanDirectory(url: url)
-            self.allAssets = assets
-            
-            // Maintain primary selection if still exists
-            if let primaryID = primarySelectedAssetID, !assets.contains(where: { $0.id == primaryID }) {
-                let sorted = self.displayedAssets
-                self.primarySelectedAssetID = sorted.first?.id
-                self.selectionAnchorAssetID = sorted.first?.id
-                if let first = sorted.first {
-                    self.selectedAssetIDs = [first.id]
-                } else {
-                    self.selectedAssetIDs.removeAll()
-                }
+
+        folderScanGeneration &+= 1
+        let generation = folderScanGeneration
+        folderScanTask?.cancel()
+        let fullFolderScan = self.fullFolderScan
+        folderScanTask = Task { @MainActor [weak self] in
+            let scanHasScope = url.startAccessingSecurityScopedResource()
+            defer {
+                if scanHasScope { url.stopAccessingSecurityScopedResource() }
             }
+            let assets = await fullFolderScan(url)
+            guard let self, !Task.isCancelled, self.folderScanGeneration == generation,
+                  self.currentFolderURL?.standardizedFileURL == url.standardizedFileURL else { return }
+            self.publishFolderAssets(assets)
+            self.folderScanTask = nil
         }
     }
     
@@ -772,4 +870,3 @@ public final class AppState: ObservableObject {
         self.showDeleteConfirmation = false
     }
 }
-

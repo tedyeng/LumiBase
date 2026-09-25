@@ -2,6 +2,29 @@ import Foundation
 import AppKit
 import CoreImage
 import ImageIO
+import Dispatch
+
+/// Serializes synchronous ImageIO/CIRAWFilter decodes across foreground and speculative loaders.
+final class RAWDecodeConcurrencyGate: @unchecked Sendable {
+    static let shared = RAWDecodeConcurrencyGate()
+    private let semaphore = DispatchSemaphore(value: 1)
+    private let lock = NSLock()
+    private var active = 0
+    private(set) var maximumConcurrent = 0
+
+    func withPermit<T>(_ operation: () -> T) -> T {
+        semaphore.wait()
+        lock.lock()
+        active += 1
+        maximumConcurrent = max(maximumConcurrent, active)
+        lock.unlock()
+        defer {
+            lock.lock(); active -= 1; lock.unlock()
+            semaphore.signal()
+        }
+        return operation()
+    }
+}
 
 struct RAWDecodeSettings: Equatable {
     let temperature: Int?
@@ -33,7 +56,7 @@ public final class RAWImageLoader: @unchecked Sendable {
     
     private let ciContext: CIContext
     
-    private init() {
+    init() {
         // High performance Metal-backed CoreImage Context
         self.ciContext = CIContext(options: [
             .useSoftwareRenderer: false,
@@ -69,12 +92,14 @@ public final class RAWImageLoader: @unchecked Sendable {
     }
     
     /// Asynchronously decodes and retrieves the base neutral CIImage holder (with full, display, and interactive proxies)
-    public func loadBaseHolder(from url: URL, xmp: XMPMetadata? = nil) async -> BaseImageHolder? {
+    public func loadBaseHolder(from url: URL, xmp: XMPMetadata? = nil, useSharedCache: Bool = true,
+                               priority: TaskPriority = .userInitiated) async -> BaseImageHolder? {
         let settings = RAWDecodeSettings(xmp)
-        if let cached = getCached(for: url, settings: settings) { return cached }
+        if useSharedCache, let cached = getCached(for: url, settings: settings) { return cached }
         guard !Task.isCancelled else { return nil }
         
-        let work = Task.detached(priority: .userInitiated) { [weak self] () -> BaseImageHolder? in
+        let work = Task.detached(priority: priority) { [weak self] () -> BaseImageHolder? in
+            return RAWDecodeConcurrencyGate.shared.withPermit {
             guard !Task.isCancelled else { return nil }
             let pathExtension = url.pathExtension.lowercased()
             let isRaw = SupportedFileType(rawValue: pathExtension)?.isRaw ?? false
@@ -196,9 +221,10 @@ public final class RAWImageLoader: @unchecked Sendable {
             )
             
             guard !Task.isCancelled else { return nil }
-            self?.setCached(url: url, holder: holder, settings: settings)
+            if useSharedCache { self?.setCached(url: url, holder: holder, settings: settings) }
             
             return holder
+            }
         }
         return await withTaskCancellationHandler { await work.value } onCancel: { work.cancel() }
     }
@@ -210,7 +236,8 @@ public final class RAWImageLoader: @unchecked Sendable {
         cameraModel: String?,
         xmp: XMPMetadata?,
         interactive: Bool = false,
-        fullResolution: Bool = false
+        fullResolution: Bool = false,
+        sourceRect: CGRect? = nil
     ) -> NSImage? {
         guard !fullResolution || baseHolder.supportsNativeInspection else { return nil }
         let targetBase = fullResolution ? baseHolder.full : (interactive ? baseHolder.interactive : baseHolder.display)
@@ -224,7 +251,14 @@ public final class RAWImageLoader: @unchecked Sendable {
         )
         
         let srgb = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
-        if let cgImage = ciContext.createCGImage(processed, from: targetExtent, format: .RGBA8, colorSpace: srgb, deferred: false) {
+        let outputExtent: CGRect
+        if let sourceRect {
+            outputExtent = sourceRect.intersection(targetExtent)
+            guard !outputExtent.isEmpty else { return nil }
+        } else {
+            outputExtent = targetExtent
+        }
+        if let cgImage = ciContext.createCGImage(processed, from: outputExtent, format: .RGBA8, colorSpace: srgb, deferred: false) {
             return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
         }
         return nil
