@@ -44,11 +44,12 @@ enum AcceptedHighlightsKernel {
         guard width > 0, height > 0, extent.width == baseline.extent.width,
               extent.height == baseline.extent.height else { throw KernelError.invalidExtent }
         let lowWidth = (width + 3) / 4, lowHeight = (height + 3) / 4
-        // Read full-width bands and select exact top-left `[::4, ::4]` samples. CI's
+        // Read only exact top-left `[::4, ::4]` samples. CI's
         // bottom-left origin means the first selected storage row is (height-1) mod 4.
         let lowBaseline = try renderQuarterRGBA(baseline, extent: extent, context: context,
                                                 fullWidth: width, fullHeight: height,
                                                 lowWidth: lowWidth, lowHeight: lowHeight)
+
         let lowTarget = try renderQuarterRGBA(target, extent: extent, context: context,
                                               fullWidth: width, fullHeight: height,
                                               lowWidth: lowWidth, lowHeight: lowHeight)
@@ -75,16 +76,16 @@ enum AcceptedHighlightsKernel {
             detail[i] = Float(log2(fusedY) - log2(targetY))
         }
 
-        let meanGuide = boxMean(guide, width: lowWidth, height: lowHeight)
-        let meanDetail = boxMean(detail, width: lowWidth, height: lowHeight)
+        let meanGuide = boxMeanParallel(guide, width: lowWidth, height: lowHeight)
+        let meanDetail = boxMeanParallel(detail, width: lowWidth, height: lowHeight)
         var guideDetail = [Float](repeating: 0, count: count)
         var guideSquared = [Float](repeating: 0, count: count)
         for i in 0..<count {
             guideDetail[i] = guide[i] * detail[i]
             guideSquared[i] = guide[i] * guide[i]
         }
-        let meanGuideDetail = boxMean(guideDetail, width: lowWidth, height: lowHeight)
-        let meanGuideSquared = boxMean(guideSquared, width: lowWidth, height: lowHeight)
+        let meanGuideDetail = boxMeanParallel(guideDetail, width: lowWidth, height: lowHeight)
+        let meanGuideSquared = boxMeanParallel(guideSquared, width: lowWidth, height: lowHeight)
         var a = [Float](repeating: 0, count: count)
         var b = [Float](repeating: 0, count: count)
         for i in 0..<count {
@@ -92,8 +93,8 @@ enum AcceptedHighlightsKernel {
             a[i] = (meanGuideDetail[i] - meanGuide[i] * meanDetail[i]) / (variance + 0.25 * 0.25)
             b[i] = meanDetail[i] - a[i] * meanGuide[i]
         }
-        let meanA = boxMean(a, width: lowWidth, height: lowHeight)
-        let meanB = boxMean(b, width: lowWidth, height: lowHeight)
+        let meanA = boxMeanParallel(a, width: lowWidth, height: lowHeight)
+        let meanB = boxMeanParallel(b, width: lowWidth, height: lowHeight)
         var correction = [Float](repeating: 0, count: count)
         for i in 0..<count { correction[i] = meanA[i] * guide[i] + meanB[i] }
 
@@ -121,37 +122,33 @@ enum AcceptedHighlightsKernel {
     private static func renderQuarterRGBA(_ image: CIImage, extent: CGRect, context: CIContext,
                                           fullWidth: Int, fullHeight: Int,
                                           lowWidth: Int, lowHeight: Int) throws -> [Float] {
-        let bandHeight = 96
-        let phase = (fullHeight - 1) % 4
-        var low = [Float](repeating: 0, count: lowWidth * lowHeight * 4)
-        for y0 in stride(from: 0, to: fullHeight, by: bandHeight) {
-            try Task.checkCancellation()
-            let rows = min(bandHeight, fullHeight - y0)
-            var band = [Float](repeating: 0, count: fullWidth * rows * 4)
-            band.withUnsafeMutableBytes { bytes in
-                context.render(image, toBitmap: bytes.baseAddress!, rowBytes: fullWidth * 16,
-                               bounds: CGRect(x: extent.minX, y: extent.minY + CGFloat(y0),
-                                              width: CGFloat(fullWidth), height: CGFloat(rows)),
-                               format: .RGBAf, colorSpace: linearSRGB)
-            }
-            for localY in 0..<rows {
-                // CI bitmap buffers are ordered top-to-bottom within each requested band.
-                let globalY = y0 + rows - 1 - localY
-                guard globalY >= phase, (globalY - phase) % 4 == 0 else { continue }
-                let lowY = (fullHeight - 1 - globalY) / 4
-                for lowX in 0..<lowWidth {
-                    let source = (localY * fullWidth + lowX * 4) * 4
-                    let destination = (lowY * lowWidth + lowX) * 4
-                    low[destination] = band[source]
-                    low[destination + 1] = band[source + 1]
-                    low[destination + 2] = band[source + 2]
-                    low[destination + 3] = band[source + 3]
-                }
-            }
+        try Task.checkCancellation()
+        guard let sampler = quarterSampler else { throw KernelError.kernelUnavailable }
+        let phase = CGFloat((fullHeight - 1) % 4)
+        let bounds = CGRect(x: 0, y: 0, width: lowWidth, height: lowHeight)
+        // Exact pixel-center decimation, NOT an affine resize/downsample. Keep the
+        // accepted top-left [::4, ::4] lattice and full-resolution upstream graph.
+        guard let sampled = sampler.apply(extent: bounds, roiCallback: { _, rect in
+            CGRect(x: extent.minX + rect.minX * 4, y: extent.minY + phase + rect.minY * 4,
+                   width: rect.width * 4, height: rect.height * 4).intersection(extent)
+        }, image: image, arguments: [CIVector(x: extent.minX, y: extent.minY + phase)]) else {
+            throw KernelError.renderFailed
         }
+        var low = [Float](repeating: 0, count: lowWidth * lowHeight * 4)
+        low.withUnsafeMutableBytes { bytes in
+            context.render(sampled, toBitmap: bytes.baseAddress!, rowBytes: lowWidth * 16,
+                           bounds: bounds, format: .RGBAf, colorSpace: linearSRGB)
+        }
+        try Task.checkCancellation()
         guard low.allSatisfy({ $0.isFinite }) else { throw KernelError.renderFailed }
         return low
     }
+
+    private static let quarterSampler = CIWarpKernel(source: """
+        kernel vec2 exactQuarter(vec2 origin) {
+            return origin + floor(destCoord()) * 4.0 + vec2(0.5);
+        }
+        """)
 
     private static func quantizeSRGBLinear(_ linear: Float) -> Double {
         let encoded = min(max(encodeSRGB(Double(linear)), 0), 1)
@@ -195,6 +192,59 @@ enum AcceptedHighlightsKernel {
                 output[y * width + x] = sum / divisor
                 sum += horizontal[reflect(y + radius + 1, count: height) * width + x]
                 sum -= horizontal[reflect(y - radius, count: height) * width + x]
+            }
+        }
+        return output
+    }
+
+    /// Partition independent rows/columns; preserve every column's sequential Float
+    /// addition/subtraction order, including reflect padding and output rounding.
+    static func boxMeanParallel(_ input: [Float], width: Int, height: Int) -> [Float] {
+        guard input.count == width * height, width > 0, height > 0 else { return [] }
+        let workers = min(8, ProcessInfo.processInfo.activeProcessorCount)
+        guard workers > 1, input.count >= 100_000 else { return boxMean(input, width: width, height: height) }
+        let radius = 48, divisor: Float = 97
+        var horizontal = [Float](repeating: 0, count: input.count)
+        horizontal.withUnsafeMutableBufferPointer { destination in
+            input.withUnsafeBufferPointer { source in
+                let outputAddress = Int(bitPattern: destination.baseAddress!)
+                let sourceAddress = Int(bitPattern: source.baseAddress!)
+                DispatchQueue.concurrentPerform(iterations: workers) { worker in
+                    let dest = UnsafeMutablePointer<Float>(bitPattern: outputAddress)!
+                    let src = UnsafePointer<Float>(bitPattern: sourceAddress)!
+                    for y in stride(from: worker, to: height, by: workers) {
+                        let row = y * width
+                        var sum: Float = 0
+                        for offset in -radius...radius { sum += src[row + reflect(offset, count: width)] }
+                        for x in 0..<width {
+                            dest[row + x] = sum / divisor
+                            sum += src[row + reflect(x + radius + 1, count: width)]
+                            sum -= src[row + reflect(x - radius, count: width)]
+                        }
+                    }
+                }
+            }
+        }
+        var output = [Float](repeating: 0, count: input.count)
+        output.withUnsafeMutableBufferPointer { destination in
+            horizontal.withUnsafeBufferPointer { source in
+                let outputAddress = Int(bitPattern: destination.baseAddress!)
+                let sourceAddress = Int(bitPattern: source.baseAddress!)
+                DispatchQueue.concurrentPerform(iterations: workers) { worker in
+                    let dest = UnsafeMutablePointer<Float>(bitPattern: outputAddress)!
+                    let src = UnsafePointer<Float>(bitPattern: sourceAddress)!
+                    let first = worker * width / workers
+                    let last = (worker + 1) * width / workers
+                    for x in first..<last {
+                        var sum: Float = 0
+                        for offset in -radius...radius { sum += src[reflect(offset, count: height) * width + x] }
+                        for y in 0..<height {
+                            dest[y * width + x] = sum / divisor
+                            sum += src[reflect(y + radius + 1, count: height) * width + x]
+                            sum -= src[reflect(y - radius, count: height) * width + x]
+                        }
+                    }
+                }
             }
         }
         return output

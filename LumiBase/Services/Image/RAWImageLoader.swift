@@ -242,16 +242,17 @@ public final class RAWImageLoader: @unchecked Sendable {
         xmp: XMPMetadata?,
         interactive: Bool = false,
         fullResolution: Bool = false,
-        sourceRect: CGRect? = nil
+        sourceRect: CGRect? = nil,
+        isCurrent: () -> Bool = { true }
     ) -> NSImage? {
-        guard !fullResolution || baseHolder.supportsNativeInspection else { return nil }
+        guard isCurrent(), !fullResolution || baseHolder.supportsNativeInspection else { return nil }
         let targetBase = fullResolution ? baseHolder.full : (interactive ? baseHolder.interactive : baseHolder.display)
         let targetExtent = fullResolution ? baseHolder.fullExtent : (interactive ? baseHolder.interactiveExtent : baseHolder.displayExtent)
         
         let processed: CIImage
         if NativeHighlightsService.applies(holder: baseHolder, xmp: xmp),
            let source = baseHolder.highlightsSource, let xmp {
-            guard let native = NativeHighlightsService.shared.image(source: source, xmp: xmp, cameraModel: cameraModel) else { return nil }
+            guard let native = NativeHighlightsService.shared.image(source: source, xmp: xmp, cameraModel: cameraModel, isCurrent: isCurrent) else { return nil }
             let scale = targetExtent.width / baseHolder.fullExtent.width
             processed = fullResolution ? native : native.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
         } else {
@@ -268,8 +269,9 @@ public final class RAWImageLoader: @unchecked Sendable {
             outputExtent = (pExtent.isInfinite || pExtent.isEmpty) ? targetExtent : pExtent
         }
         let renderContext = NativeHighlightsService.applies(holder: baseHolder, xmp: xmp) ? NativeHighlightsService.shared.renderContext : ciContext
+        guard isCurrent() else { return nil }
         if let cgImage = renderContext.createCGImage(processed, from: outputExtent, format: .RGBA8, colorSpace: srgb, deferred: false) {
-            guard !Task.isCancelled, baseHolder.highlightsSource?.isCurrent != false else { return nil }
+            guard isCurrent(), !Task.isCancelled, baseHolder.highlightsSource?.isCurrent != false else { return nil }
             return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
         }
         return nil

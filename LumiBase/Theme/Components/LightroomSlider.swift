@@ -1,5 +1,37 @@
 import SwiftUI
 
+/// Native tracking resolves the second click before a zero-distance drag can
+/// consume it. No global monitor; AppKit retains ordinary mouse drag ownership.
+struct SliderTrackInput: NSViewRepresentable {
+    let changed: (Double) -> Void
+    let ended: () -> Void
+    let reset: () -> Void
+    func makeNSView(context: Context) -> SliderTrackView { SliderTrackView() }
+    func updateNSView(_ view: SliderTrackView, context: Context) {
+        view.changed = changed; view.ended = ended; view.reset = reset
+    }
+}
+final class SliderTrackView: NSView {
+    var changed: ((Double) -> Void)?
+    var ended: (() -> Void)?
+    var reset: (() -> Void)?
+    private var dragging = false
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func mouseDown(with event: NSEvent) {
+        if event.clickCount == 2 { dragging = false; reset?(); return }
+        dragging = true
+        apply(event)
+    }
+    override func mouseDragged(with event: NSEvent) { if dragging { apply(event) } }
+    override func mouseUp(with event: NSEvent) {
+        if dragging { dragging = false; ended?() }
+    }
+    private func apply(_ event: NSEvent) {
+        guard bounds.width > 0 else { return }
+        changed?(Double(min(1, max(0, convert(event.locationInWindow, from: nil).x / bounds.width))))
+    }
+}
+
 /// Identifiers for all editable Basic panel adjustment sliders
 public enum BasicSliderField: String, CaseIterable, Hashable {
     case temp
@@ -15,6 +47,30 @@ public enum BasicSliderField: String, CaseIterable, Hashable {
     case dehaze
     case vibrance
     case saturation
+
+    /// nil restores each photo's as-shot WB, not an arbitrary Kelvin/tint value.
+    func reset(in xmp: inout XMPMetadata) {
+        switch self {
+        case .temp: xmp.temperature = nil
+        case .tint: xmp.tint = nil
+        case .exposure: xmp.exposure2012 = nil
+        case .contrast: xmp.contrast2012 = nil
+        case .highlights: xmp.highlights2012 = nil
+        case .shadows: xmp.shadows2012 = nil
+        case .whites: xmp.whites2012 = nil
+        case .blacks: xmp.blacks2012 = nil
+        case .texture: xmp.texture = nil
+        case .clarity: xmp.clarity2012 = nil
+        case .dehaze: xmp.dehaze = nil
+        case .vibrance: xmp.vibrance = nil
+        case .saturation: xmp.saturation = nil
+        }
+    }
+    func isDefault(in xmp: XMPMetadata) -> Bool {
+        var reset = xmp
+        self.reset(in: &reset)
+        return reset == xmp
+    }
 }
 
 /// Custom track background styles matching Lightroom Classic's Develop panel
@@ -35,6 +91,7 @@ public struct LightroomSlider: View {
     public let trackStyle: LightroomSliderTrackStyle
     public let valueFormatter: (Double) -> String
     public var onEditingChanged: ((Bool) -> Void)? = nil
+    public var onReset: (() -> Void)? = nil
     
     public var field: BasicSliderField? = nil
     public var focusedField: FocusState<BasicSliderField?>.Binding? = nil
@@ -70,7 +127,8 @@ public struct LightroomSlider: View {
         focusedField: FocusState<BasicSliderField?>.Binding? = nil,
         onNextField: (() -> Void)? = nil,
         onPreviousField: (() -> Void)? = nil,
-        onEditingChanged: ((Bool) -> Void)? = nil
+        onEditingChanged: ((Bool) -> Void)? = nil,
+        onReset: (() -> Void)? = nil
     ) {
         self.title = title
         self._value = value
@@ -84,6 +142,7 @@ public struct LightroomSlider: View {
         self.onNextField = onNextField
         self.onPreviousField = onPreviousField
         self.onEditingChanged = onEditingChanged
+        self.onReset = onReset
     }
     
     public var body: some View {
@@ -133,26 +192,18 @@ public struct LightroomSlider: View {
                         .position(x: max(5.5, min(width - 5.5, thumbX)), y: geo.size.height / 2)
                 }
                 .contentShape(Rectangle())
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { gesture in
+                .overlay(SliderTrackInput(changed: { fraction in
                             onEditingChanged?(true)
-                            let newFraction = max(0.0, min(1.0, gesture.location.x / width))
-                            let rawVal = range.lowerBound + Double(newFraction) * (range.upperBound - range.lowerBound)
+                            let rawVal = range.lowerBound + fraction * (range.upperBound - range.lowerBound)
                             let stepped = min(max((rawVal / step).rounded() * step, range.lowerBound), range.upperBound)
                             localDragValue = stepped
                             if value != stepped {
                                 value = stepped
                             }
-                        }
-                        .onEnded { _ in
-                            localDragValue = nil
-                            onEditingChanged?(false)
-                        }
-                )
-                .onTapGesture(count: 2) {
-                    resetToDefault()
-                }
+                    }, ended: {
+                        localDragValue = nil
+                        onEditingChanged?(false)
+                    }, reset: { resetToDefault() }))
             }
             .frame(height: 18)
             
@@ -179,10 +230,9 @@ public struct LightroomSlider: View {
                         .onHover { hovering in
                             isHoveringValue = hovering
                         }
-                        .onTapGesture {
-                            startEditing()
-                        }
-                        .help("Click to edit value (Press Tab for next, Return to apply)")
+                        .gesture(TapGesture(count: 2).onEnded { resetToDefault() }
+                            .exclusively(before: TapGesture().onEnded { startEditing() }))
+                        .help("Double-click to reset; click to edit (Tab for next, Return to apply)")
                 }
             }
             .frame(width: 48, height: 18, alignment: .trailing)
@@ -268,10 +318,13 @@ public struct LightroomSlider: View {
     }
     
     private func resetToDefault() {
-        withAnimation(.easeOut(duration: 0.15)) {
-            value = defaultValue
-        }
-        onEditingChanged?(false)
+        localDragValue = nil
+        if let onReset { onReset() }
+        else { value = defaultValue; onEditingChanged?(false) }
+        // Discard an active draft before resigning focus. In particular, a WB
+        // reset must not be overwritten by the numeric fallback on focus loss.
+        textInput = ""
+        exitFocus()
     }
     
     private func syncTextInput() {

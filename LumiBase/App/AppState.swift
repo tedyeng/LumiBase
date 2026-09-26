@@ -50,14 +50,18 @@ public final class AppState: ObservableObject {
     @Published public var isFilmstripVisible: Bool = true
     
     // Native Highlights (Accepted-B) toggle - default false
+    @Published public private(set) var highlightsRenderRevision: UInt64 = 0
     @Published public var isNativeHighlightsEnabled: Bool = UserDefaults.standard.bool(forKey: "isNativeHighlightsEnabled") {
         didSet {
+            guard oldValue != isNativeHighlightsEnabled else { return }
             UserDefaults.standard.set(isNativeHighlightsEnabled, forKey: "isNativeHighlightsEnabled")
             NativeHighlightsService.isEnabled = isNativeHighlightsEnabled
             RAWImageLoader.shared.clearCache()
-            if let primaryID = primarySelectedAssetID {
-                updateDevelopSettings(for: primaryID, isDragging: false) { _ in }
-            }
+            InspectionReadyFrameStore.shared.clearAll()
+            Task { await ProcessedROICacheService.shared.invalidateForRenderingPolicyChange() }
+            // This is a rendering policy, not a photo edit. Trigger the Loupe
+            // without modifying live XMP, batch Auto Sync, or XMP sidecars.
+            highlightsRenderRevision &+= 1
         }
     }
     

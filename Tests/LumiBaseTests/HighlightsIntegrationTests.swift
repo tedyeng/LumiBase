@@ -123,6 +123,11 @@ final class HighlightsIntegrationTests: XCTestCase {
 
     func testNativeFaceAndHandsMatchAcceptedB() async throws {
         guard FileManager.default.fileExists(atPath: Self.source.path) else { throw XCTSkip("Acceptance DNG unavailable") }
+        // Upstream defaults the experimental branch OFF; the accepted-B fixture
+        // explicitly opts in without touching the user's persisted preference.
+        let previous = NativeHighlightsService.isEnabled
+        NativeHighlightsService.isEnabled = true
+        defer { NativeHighlightsService.isEnabled = previous }
         let xmp = XMPMetadata(exposure2012: 0, temperature: 3650, tint: 8, contrast2012: 0, highlights2012: -80, shadows2012: 0, whites2012: 0, blacks2012: 0, dehaze: 0, vibrance: 0, saturation: 0, clarity2012: 0, texture: 0, cameraProfile: "Adobe Standard")
         let loaded = await RAWImageLoader.shared.loadBaseHolder(from: Self.source, xmp: xmp, useSharedCache: false)
         let holder = try XCTUnwrap(loaded)

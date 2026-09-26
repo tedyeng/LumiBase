@@ -57,6 +57,7 @@ public struct FilmstripView: View {
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
+                .background(FilmstripWheelBridge())
             }
             .frame(height: 85)
             .background(LightroomTheme.headerBackground)
@@ -68,6 +69,49 @@ public struct FilmstripView: View {
                 }
             }
         }
+    }
+}
+
+/// A non-hit-testing bridge inside the document, scoped to its enclosing scroll
+/// view's visible viewport. It never observes keys or consumes a held image drag.
+struct FilmstripWheelBridge: NSViewRepresentable {
+    func makeNSView(context: Context) -> FilmstripWheelView { FilmstripWheelView() }
+    func updateNSView(_ view: FilmstripWheelView, context: Context) {}
+    static func dismantleNSView(_ view: FilmstripWheelView, coordinator: ()) { view.stopMonitoring() }
+}
+
+final class FilmstripWheelView: NSView {
+    private var monitor: Any?
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        stopMonitoring()
+        if window != nil {
+            monitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
+                guard let self else { return event }
+                return self.route(event, pressedButtons: NSEvent.pressedMouseButtons)
+            }
+        }
+    }
+    func stopMonitoring() {
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        monitor = nil
+    }
+    deinit { if let monitor { NSEvent.removeMonitor(monitor) } }
+    func route(_ event: NSEvent, pressedButtons: Int) -> NSEvent? {
+        guard event.type == .scrollWheel, pressedButtons == 0,
+              let window, event.window === window, !isHiddenOrHasHiddenAncestor,
+              let scroll = enclosingScrollView,
+              scroll.contentView.bounds.contains(scroll.contentView.convert(event.locationInWindow, from: nil)),
+              abs(event.scrollingDeltaY) > abs(event.scrollingDeltaX) else { return event }
+        let clip = scroll.contentView
+        let maximum = max(0, (scroll.documentView?.bounds.width ?? 0) - clip.bounds.width)
+        let delta = event.scrollingDeltaY * (event.hasPreciseScrollingDeltas ? 1 : 24)
+        var origin = clip.bounds.origin
+        origin.x = min(maximum, max(0, origin.x - delta))
+        clip.scroll(to: origin)
+        scroll.reflectScrolledClipView(clip)
+        return nil
     }
 }
 
