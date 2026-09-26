@@ -24,7 +24,6 @@ CONFIGURATION="Release"
 BUILD_DIR="${SCRIPT_DIR}/build"
 DERIVED_DATA_DIR="${BUILD_DIR}/DerivedData"
 APP_BUNDLE_PATH="${DERIVED_DATA_DIR}/Build/Products/${CONFIGURATION}/${APP_NAME}.app"
-OUTPUT_DMG="${SCRIPT_DIR}/${APP_NAME}-Installer.dmg"
 STAGING_DIR="${BUILD_DIR}/dmg_staging"
 
 echo "=================================================="
@@ -34,7 +33,7 @@ echo "=================================================="
 # 1. Clean previous build & staging directories
 echo "🧹 Cleaning previous build artifacts..."
 rm -rf "$BUILD_DIR"
-rm -f "$OUTPUT_DMG"
+rm -f "${SCRIPT_DIR}/${APP_NAME}"*Installer*.dmg "${SCRIPT_DIR}/${APP_NAME}"*.dmg
 
 # 2. Build the Application using xcodebuild
 echo "⚙️ Compiling ${APP_NAME} (${CONFIGURATION})..."
@@ -50,7 +49,11 @@ if [ ! -d "$APP_BUNDLE_PATH" ]; then
     exit 1
 fi
 
-echo "✅ Successfully built ${APP_NAME}.app"
+# Extract Version from Info.plist
+APP_VERSION=$(plutil -extract CFBundleShortVersionString raw -o - "${APP_BUNDLE_PATH}/Contents/Info.plist" 2>/dev/null || echo "1.0.0")
+OUTPUT_DMG="${SCRIPT_DIR}/${APP_NAME}-${APP_VERSION}-Installer.dmg"
+
+echo "✅ Successfully built ${APP_NAME}.app (v${APP_VERSION})"
 
 # 3. Setup DMG Staging Directory
 echo "📂 Preparing DMG staging directory..."
@@ -59,9 +62,9 @@ cp -R "$APP_BUNDLE_PATH" "$STAGING_DIR/"
 ln -s /Applications "${STAGING_DIR}/Applications"
 
 # 4. Create DMG using hdiutil
-echo "🗜️ Creating compressed DMG disk image..."
+echo "🗜️ Creating compressed DMG disk image (${OUTPUT_DMG})..."
 hdiutil create \
-  -volname "${APP_NAME}" \
+  -volname "${APP_NAME} ${APP_VERSION}" \
   -srcfolder "$STAGING_DIR" \
   -ov \
   -format UDZO \
