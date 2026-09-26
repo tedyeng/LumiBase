@@ -52,11 +52,11 @@ public struct DevelopBasicPanelView: View {
             
             // 1. Top Quick Action Bar: Auto, Treatment (Color / B&W), Reset
             HStack(spacing: 8) {
-                actionButton(title: "Auto", icon: "wand.and.stars") {
+                actionButton(title: "Auto", icon: "wand.and.stars", helpText: "Auto Tone: Automatically balance exposure, contrast, and highlights") {
                     appState.autoTone(for: asset.id)
                 }
                 
-                actionButton(title: isBW ? "Color" : "B&W", icon: "circle.righthalf.filled", isActive: isBW) {
+                actionButton(title: isBW ? "Color" : "B&W", icon: "circle.righthalf.filled", isActive: isBW, helpText: "Toggle Treatment Mode (Color / Black & White)") {
                     appState.toggleMonochrome(for: asset.id)
                 }
                 
@@ -79,7 +79,7 @@ public struct DevelopBasicPanelView: View {
                         .cornerRadius(3)
                     }
                     .buttonStyle(.plain)
-                    .help("Reset all basic adjustments")
+                    .help("Reset All Basic Adjustments")
                 }
             }
             .padding(.horizontal, 10)
@@ -132,12 +132,14 @@ public struct DevelopBasicPanelView: View {
                     .cornerRadius(3)
                 }
                 .menuStyle(.borderlessButton)
+                .help("Select Camera Profile")
                 
                 Spacer()
                 
                 Image(systemName: "square.grid.2x2")
                     .font(.system(size: 10))
                     .foregroundColor(LightroomTheme.textMuted)
+                    .help("Browse Profiles")
             }
             .padding(.horizontal, 10)
             
@@ -149,6 +151,7 @@ public struct DevelopBasicPanelView: View {
                     Image(systemName: "eyedropper")
                         .font(.system(size: 10))
                         .foregroundColor(LightroomTheme.textMuted)
+                        .help("White Balance Eyedropper / Selector")
                     
                     Text("WB :")
                         .font(.system(size: 10, weight: .bold))
@@ -214,6 +217,7 @@ public struct DevelopBasicPanelView: View {
                         }
                     }
                     .menuStyle(.borderlessButton)
+                    .help("Select White Balance Preset")
                     
                     Spacer()
                 }
@@ -433,6 +437,7 @@ public struct DevelopBasicPanelView: View {
                     .toggleStyle(.checkbox)
                     .font(.system(size: 11))
                     .foregroundColor(appState.isNativeHighlightsEnabled ? LightroomTheme.accentYellow : LightroomTheme.textSecondary)
+                    .help("Toggle Advanced RAW Highlight Recovery")
                     .padding(.top, 4)
                     .padding(.bottom, 2)
             }
@@ -604,7 +609,7 @@ public struct DevelopBasicPanelView: View {
         return "Custom"
     }
     
-    private func actionButton(title: String, icon: String, isActive: Bool = false, action: @escaping () -> Void) -> some View {
+    private func actionButton(title: String, icon: String, isActive: Bool = false, helpText: String? = nil, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 4) {
                 Image(systemName: icon)
@@ -623,5 +628,6 @@ public struct DevelopBasicPanelView: View {
             )
         }
         .buttonStyle(.plain)
+        .help(helpText ?? title)
     }
 }

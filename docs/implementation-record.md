@@ -512,3 +512,35 @@ LumiBase/
    - **預設不搶佔焦點**：在 `TopFilterBarView` 中導入 `@FocusState` 與 `.onAppear { NSApp.keyWindow?.makeFirstResponder(nil) }`，確保視窗啟動與切換時搜尋框處於無焦點狀態。
    - **標準快捷鍵啟用 (`⌘F`)**：支援系統標準 `⌘F`（Command-F）主動聚焦搜尋欄。
    - **操作時主動釋放焦點**：當使用者在照片區域點擊選取照片（`selectAsset`）、進入裁切模式（`toggleCropMode`）或按 `Esc` 鍵時，系統自動將焦點自輸入框移除，無縫恢復所有單鍵快捷鍵功能。
+
+---
+
+## 11. 2026-09-26 實作紀錄 (v1.8.1)
+
+### 11.1 全介面按鈕與圖示 Tooltip 與快捷鍵提示體系
+1. **設計目標**：
+   - 全面為 LumiBase 介面上所有按鈕、選單、可點擊 Icon、滑桿標頭及狀態標籤加上原生 Tooltip（`.help(...)`），並於提示文字中包含對應之鍵盤快速鍵。
+2. **涵蓋範疇**：
+   - **頂部工具列 (Toolbar)**：`Open Folder (⌘O)`、`Export Selected Photos (⇧⌘E)`、`Toggle Left Sidebar (F7)`、`Toggle Right Inspector (F8)`、`Cancel Export`。
+   - **快速過濾列 (TopFilterBarView)**：搜尋欄 `(⌘F)`、清除搜尋 `(Esc)`、星等篩選 `(≥ 1★ ~ 5★)`、旗標篩選 `(P, X, U)`、重設篩選。
+   - **底部控制列 (BottomControlsBarView)**：`Grid View (G)`、`Loupe View (E)`、排序選單、縮圖大小縮放滑桿。
+   - **左側目錄總管 (LeftSidebarView)**：新增資料夾 `(⌘O)`、清除最近清單、智慧篩選群組、資料夾展開與選取。
+   - **右側檢查器與修圖面板 (DevelopBasicPanelView)**：`Auto Tone`、`Treatment (Color/B&W)`、`Reset All Basic Adjustments`、相機設定檔選單、描述檔瀏覽圖示 (`square.grid.2x2`)、白平衡滴管圖示 (`eyedropper`)、白平衡選單、高光還原開關。
+   - **裁切與旋轉面板 (CropControlPanelView)**：比例鎖定/解鎖、比例選單、直橫向翻轉 `(X)`、格線切換 `(O)`、重設裁切、套用並完成 `(Return / R)`。
+   - **大圖預覽 (LoupeView)**：1:1 縮放切換 `(Z / Double-Click)`、ROI 對焦框開關、EXIF 照片資訊 HUD `(I)`、返回圖庫 `(G / Esc)`。
+   - **評選與中繼資料 (Badges & XMP Editor)**：評分星等 `(0~5)`、留用旗標 `(P)`、剔除旗標 `(X)`、關鍵字新增/刪除。
+
+### 11.2 AppKit 原生 Hover Tracking Area 修復
+1. **問題根因**：
+   - 原先部分 Badge 元件（如 `RatingStarsView`、`FlagBadgeView`）使用 `Image(...).onTapGesture` 實作點擊互動。
+   - 在 macOS AppKit 中，單純的 SwiftUI Gesture 視圖不會自動建立標準 `NSTrackingArea` 游標追蹤區域，導致滑鼠懸停時無法觸發 `.help(...)` 系統浮動提示。
+2. **解決方案**：
+   - 將所有手勢型互動圖示重構為原生 SwiftUI `Button` 並套用 `.buttonStyle(.plain)`。
+   - AppKit 原生按鈕結構會自動註冊 `NSTrackingArea`，確保滑鼠懸停 1 秒後精準穩定彈出 Tooltip。
+
+### 11.3 全域 F7 / F8 側欄切換與 macOS 原生 Develop 選單
+1. **F7 與 F8 全域鍵盤監聽**：
+   - 於 `AppState.handleGlobalKeyEvent` 中新增 `keyCode 98` (F7) 與 `keyCode 100` (F8) 監聽，支援單鍵獨立切換左側導覽欄與右側檢查器。
+2. **macOS 原生 Develop 選單 (`LumiBaseApp.swift`)**：
+   - 建立完整 `CommandMenu("Develop")`，為修圖模式、裁切工具、自動色調、黑白模式、翻轉裁切、循環格線、複製/貼上/同步設定註冊標準快捷鍵與 `NotificationCenter` 事件分發機制。
+

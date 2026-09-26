@@ -757,7 +757,7 @@ public struct LoupeView: View {
                             .cornerRadius(4)
                         }
                         .buttonStyle(.plain)
-                        .help("Toggle Zoom 100% / Fit (Z or Double-Click)")
+                        .help("Toggle Zoom 100% / Fit (Z / Double-Click)")
 
                         Button {
                             roiPrototypeToggle.toggle()
@@ -772,7 +772,7 @@ public struct LoupeView: View {
                                 .cornerRadius(4)
                         }
                         .buttonStyle(.plain)
-                        .help("Native 100% visible-region rendering. In-memory only.")
+                        .help("Toggle Region-Of-Interest 100% Native Rendering")
                         
                         // Info Overlay Toggle Button
                         Button {

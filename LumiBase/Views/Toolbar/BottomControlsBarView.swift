@@ -54,6 +54,7 @@ public struct BottomControlsBarView: View {
                 .pickerStyle(.menu)
                 .frame(width: 190)
                 .labelsHidden()
+                .help("Change Photo Sort Order")
             }
             
             Spacer()
@@ -101,6 +102,7 @@ public struct BottomControlsBarView: View {
                 Slider(value: $appState.thumbnailSize, in: 120...420, step: 10)
                     .frame(width: 100)
                     .accentColor(LightroomTheme.accentYellow)
+                    .help("Adjust Grid Thumbnail Size")
                 
                 Image(systemName: "photo")
                     .font(.system(size: 14))

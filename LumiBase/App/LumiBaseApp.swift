@@ -100,6 +100,44 @@ struct LumiBaseApp: App {
                 Button("Unflag") { NotificationCenter.default.post(name: NSNotification.Name("LumiBaseFlag"), object: FlagStatus.unflagged) }.keyboardShortcut("u", modifiers: [])
             }
             CommandMenu("Develop") {
+                Button("Edit Adjustments") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseEditTool"), object: nil)
+                }
+                .keyboardShortcut("e", modifiers: [])
+                
+                Button("Crop & Straighten") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseCropTool"), object: nil)
+                }
+                .keyboardShortcut("r", modifiers: [])
+                
+                Divider()
+                
+                Button("Auto Tone") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseAutoTone"), object: nil)
+                }
+                
+                Button("Toggle Treatment (Color / B&W)") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseToggleBW"), object: nil)
+                }
+                
+                Divider()
+                
+                Button("Flip Crop Orientation") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseFlipCrop"), object: nil)
+                }
+                .keyboardShortcut("x", modifiers: [])
+                
+                Button("Cycle Crop Overlay Guide") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseCycleOverlay"), object: nil)
+                }
+                .keyboardShortcut("o", modifiers: [])
+                
+                Button("Reset Crop") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseResetCrop"), object: nil)
+                }
+                
+                Divider()
+                
                 Button("Copy Settings...") {
                     NotificationCenter.default.post(name: NSNotification.Name("LumiBaseCopySettings"), object: nil)
                 }
@@ -121,6 +159,12 @@ struct LumiBaseApp: App {
                     NotificationCenter.default.post(name: NSNotification.Name("LumiBaseToggleAutoSync"), object: nil)
                 }
                 .keyboardShortcut("s", modifiers: [.command, .shift, .option])
+                
+                Divider()
+                
+                Button("Reset All Adjustments") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseResetDevelop"), object: nil)
+                }
             }
         }
     }

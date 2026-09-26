@@ -47,7 +47,7 @@ public struct CropControlPanelView: View {
                         .cornerRadius(3)
                     }
                     .buttonStyle(.plain)
-                    .help("Lock or unlock crop aspect ratio")
+                    .help("Lock or Unlock Crop Aspect Ratio")
                 }
                 
                 HStack(spacing: 8) {
@@ -79,6 +79,7 @@ public struct CropControlPanelView: View {
                         )
                     }
                     .menuStyle(.borderlessButton)
+                    .help("Select Crop Aspect Ratio Preset")
                     
                     // Flip Orientation Button (X shortcut)
                     Button {
@@ -96,7 +97,7 @@ public struct CropControlPanelView: View {
                             )
                     }
                     .buttonStyle(.plain)
-                    .help("Flip crop orientation between landscape and portrait (X)")
+                    .help("Flip Crop Orientation between Landscape and Portrait (X)")
                 }
             }
             .padding(.horizontal, 10)
@@ -157,7 +158,7 @@ public struct CropControlPanelView: View {
                     )
                 }
                 .buttonStyle(.plain)
-                .help("Cycle tool overlay guide style (O)")
+                .help("Cycle Tool Overlay Guide Style: Grid / Rule of Thirds (O)")
             }
             .padding(.horizontal, 10)
             
@@ -182,7 +183,7 @@ public struct CropControlPanelView: View {
                         .cornerRadius(3)
                     }
                     .buttonStyle(.plain)
-                    .help("Reset crop to full frame")
+                    .help("Reset Crop to Full Frame")
                 }
                 
                 Spacer()
@@ -204,7 +205,7 @@ public struct CropControlPanelView: View {
                 }
                 .buttonStyle(.plain)
                 .keyboardShortcut(.defaultAction)
-                .help("Commit and close crop tool (Enter / R)")
+                .help("Commit and Close Crop Tool (Return / R)")
             }
             .padding(.horizontal, 10)
         }

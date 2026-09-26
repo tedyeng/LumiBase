@@ -18,6 +18,7 @@ public struct TopFilterBarView: View {
                     .font(.system(size: 11))
                     .foregroundColor(LightroomTheme.textPrimary)
                     .focused($isSearchFocused)
+                    .help("Search Photos by Filename, Camera, or Keyword (⌘F)")
                     .onSubmit {
                         isSearchFocused = false
                         DispatchQueue.main.async {
@@ -90,6 +91,7 @@ public struct TopFilterBarView: View {
                             .foregroundColor(star <= appState.filterCriteria.minimumRating ? LightroomTheme.accentYellow : LightroomTheme.textMuted)
                     }
                     .buttonStyle(.plain)
+                    .help("Filter Rating ≥ \(star)★")
                 }
                 
                 if appState.filterCriteria.minimumRating > 0 {
@@ -109,9 +111,9 @@ public struct TopFilterBarView: View {
                     .font(.system(size: 11))
                     .foregroundColor(LightroomTheme.textSecondary)
                 
-                flagFilterButton(flag: .pick, icon: "flag.fill", color: .white)
-                flagFilterButton(flag: .reject, icon: "xmark", color: .red)
-                flagFilterButton(flag: .unflagged, icon: "circle.dashed", color: LightroomTheme.textMuted)
+                flagFilterButton(flag: .pick, icon: "flag.fill", color: .white, title: "Filter Flagged / Picked (P)")
+                flagFilterButton(flag: .reject, icon: "xmark", color: .red, title: "Filter Rejected (X)")
+                flagFilterButton(flag: .unflagged, icon: "circle.dashed", color: LightroomTheme.textMuted, title: "Filter Unflagged (U)")
             }
             
             Spacer()
@@ -129,6 +131,7 @@ public struct TopFilterBarView: View {
                     .foregroundColor(LightroomTheme.accentYellow)
                 }
                 .buttonStyle(.plain)
+                .help("Reset All Filters")
             }
         }
         .padding(.horizontal, 14)
@@ -136,7 +139,7 @@ public struct TopFilterBarView: View {
         .background(LightroomTheme.headerBackground)
     }
     
-    private func flagFilterButton(flag: FlagStatus, icon: String, color: Color) -> some View {
+    private func flagFilterButton(flag: FlagStatus, icon: String, color: Color, title: String) -> some View {
         let isSelected = appState.filterCriteria.selectedFlag == flag
         return Button {
             if isSelected {
@@ -153,5 +156,6 @@ public struct TopFilterBarView: View {
                 .cornerRadius(3)
         }
         .buttonStyle(.plain)
+        .help(title)
     }
 }

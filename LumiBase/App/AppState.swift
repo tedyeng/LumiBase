@@ -368,6 +368,16 @@ public final class AppState: ObservableObject {
             }
             self.deselectAll()
             return true
+        case 98: // F7 (Toggle Left Sidebar)
+            withAnimation(.easeInOut(duration: 0.2)) {
+                self.isLeftSidebarVisible.toggle()
+            }
+            return true
+        case 100: // F8 (Toggle Right Inspector)
+            withAnimation(.easeInOut(duration: 0.2)) {
+                self.isRightInspectorVisible.toggle()
+            }
+            return true
         default:
             break
         }

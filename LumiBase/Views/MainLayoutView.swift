@@ -43,7 +43,7 @@ public struct MainLayoutView: View {
                 } label: {
                     Label("Open Folder", systemImage: "folder.badge.plus")
                 }
-                .help("Open Photo Folder (Cmd+O)")
+                .help("Open Photo Folder (⌘O)")
                 
                 // Export Button
                 Button {
@@ -54,7 +54,7 @@ public struct MainLayoutView: View {
                     let labelText = (count > 1) ? ((count == total) ? "Export All (\(count))" : "Export (\(count))") : "Export"
                     Label(labelText, systemImage: "square.and.arrow.up")
                 }
-                .help("Export Selected Photos to High-Quality JPEG (Shift+Cmd+E)")
+                .help("Export Selected Photos to High-Quality JPEG (⇧⌘E)")
                 .disabled(appState.displayedAssets.isEmpty || appState.isExporting)
                 
                 // Toggle Left Sidebar
@@ -66,7 +66,7 @@ public struct MainLayoutView: View {
                     Image(systemName: "sidebar.left")
                         .foregroundColor(appState.isLeftSidebarVisible ? LightroomTheme.accentYellow : LightroomTheme.textMuted)
                 }
-                .help("Toggle Left Panel (F7)")
+                .help("Toggle Left Sidebar Panel (F7)")
                 
                 // Toggle Right Inspector
                 Button {
@@ -77,7 +77,7 @@ public struct MainLayoutView: View {
                     Image(systemName: "sidebar.right")
                         .foregroundColor(appState.isRightInspectorVisible ? LightroomTheme.accentYellow : LightroomTheme.textMuted)
                 }
-                .help("Toggle Right Panel (F8)")
+                .help("Toggle Right Inspector Panel (F8)")
             }
         }
         .onAppear {
@@ -142,6 +142,36 @@ public struct MainLayoutView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseToggleAutoSync"))) { _ in
             appState.toggleAutoSync()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseEditTool"))) { _ in
+            appState.activeDevelopTool = .edit
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseCropTool"))) { _ in
+            appState.toggleCropMode()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseAutoTone"))) { _ in
+            if let id = appState.primarySelectedAssetID {
+                appState.autoTone(for: id)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseToggleBW"))) { _ in
+            if let id = appState.primarySelectedAssetID {
+                appState.toggleMonochrome(for: id)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseFlipCrop"))) { _ in
+            appState.flipCropOrientation()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseCycleOverlay"))) { _ in
+            appState.cycleCropOverlayStyle()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseResetCrop"))) { _ in
+            if let id = appState.primarySelectedAssetID {
+                appState.resetCrop(for: id)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseResetDevelop"))) { _ in
+            appState.resetDevelopSettings()
         }
         .sheet(isPresented: $appState.showSyncDialog) {
             SyncSettingsDialogView(
@@ -241,6 +271,7 @@ public struct MainLayoutView: View {
                 .buttonStyle(.plain)
                 .font(.system(size: 11))
                 .foregroundColor(LightroomTheme.textMuted)
+                .help("Cancel Export")
             }
             
             ProgressView(value: appState.exportProgressFraction)

@@ -167,17 +167,20 @@ public struct SyncSettingsDialogView: View {
                     options.checkAll(includeCrop: false)
                 }
                 .buttonStyle(ThemeSecondaryButtonStyle())
+                .help("Check All Settings")
                 
                 Button("Check None") {
                     options.checkNone()
                 }
                 .buttonStyle(ThemeSecondaryButtonStyle())
+                .help("Uncheck All Settings")
                 
                 if let source = sourceAsset, source.xmp.hasDevelopEdits {
                     Button("Modified Only") {
                         options.checkModified(from: source.xmp)
                     }
                     .buttonStyle(ThemeSecondaryButtonStyle())
+                    .help("Check Only Modified Settings from Source Photo")
                 }
                 
                 Spacer()
@@ -187,6 +190,7 @@ public struct SyncSettingsDialogView: View {
                 }
                 .keyboardShortcut(.cancelAction)
                 .buttonStyle(ThemeSecondaryButtonStyle())
+                .help("Cancel (Esc)")
                 
                 Button(mode.actionButtonTitle) {
                     executeAction()
@@ -194,6 +198,7 @@ public struct SyncSettingsDialogView: View {
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(ThemePrimaryButtonStyle())
                 .disabled(!options.hasAnySelected)
+                .help("\(mode.actionButtonTitle) Settings (Return)")
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
@@ -250,6 +255,7 @@ public struct SyncSettingsDialogView: View {
                 .foregroundColor(LightroomTheme.accentYellow)
         }
         .buttonStyle(.plain)
+        .help(isOn ? "Deselect All in This Group" : "Select All in This Group")
     }
     
     private func checkboxRow(title: String, isOn: Binding<Bool>) -> some View {
@@ -270,6 +276,7 @@ public struct SyncSettingsDialogView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .help("Toggle \(title)")
     }
 }
 

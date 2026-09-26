@@ -138,7 +138,7 @@ public struct RightInspectorView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(appState.primarySelectedAsset == nil)
-                .help("Copy Develop Settings (Cmd+Shift+C)")
+                .help("Copy Develop Settings (⇧⌘C)")
                 
                 Button {
                     appState.pasteDevelopSettings()
@@ -157,7 +157,7 @@ public struct RightInspectorView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(appState.copiedDevelopSettings == nil)
-                .help("Paste Develop Settings (Cmd+Shift+V)")
+                .help("Paste Develop Settings (⇧⌘V)")
             }
             
             Spacer()
@@ -186,7 +186,7 @@ public struct RightInspectorView: View {
                         )
                     }
                     .buttonStyle(.plain)
-                    .help("Toggle Auto Sync (Cmd+Option+Shift+S)")
+                    .help("Toggle Auto Sync (⌥⇧⌘S)")
                     
                     if appState.isAutoSyncEnabled {
                         // Auto Sync Active Button
@@ -206,7 +206,7 @@ public struct RightInspectorView: View {
                             .cornerRadius(3)
                         }
                         .buttonStyle(.plain)
-                        .help("Auto Sync is active: adjustments apply instantly to all selected photos. Click to configure Sync Settings (Cmd+Shift+S)")
+                        .help("Auto Sync Active: Adjustments apply to all selected photos. Click to configure Sync Settings (⇧⌘S)")
                     } else {
                         // Standard Sync Button
                         Button {
@@ -229,7 +229,7 @@ public struct RightInspectorView: View {
                             )
                         }
                         .buttonStyle(.plain)
-                        .help("Synchronize Develop Settings to all selected photos (Cmd+Shift+S)")
+                        .help("Synchronize Develop Settings to all selected photos (⇧⌘S)")
                     }
                 }
             } else {
@@ -255,7 +255,7 @@ public struct RightInspectorView: View {
                         )
                     }
                     .buttonStyle(.plain)
-                    .help("Reset all Develop adjustments to default")
+                    .help("Reset All Develop Adjustments")
                 }
             }
         }
@@ -301,6 +301,7 @@ public struct RightInspectorView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .help("Toggle \(title) Section")
             
             if isExpanded.wrappedValue {
                 content()

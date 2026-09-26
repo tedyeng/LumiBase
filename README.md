@@ -69,6 +69,7 @@ LumiBase 是一套專為 macOS (特別是 Apple Silicon M 系列晶片) 打造�
 
 | 動作 | 快捷鍵 |
 | :--- | :--- |
+| **開啟資料夾 (Open Folder)** | `⌘O` (Command + O) |
 | **全選所有照片 (Select All)** | `⌘A` (Command + A) |
 | **取消全選 (Deselect All)** | `⌘D` (Command + D) |
 | **連續多選照片 (Multi-Select)** | 按住 `Control` 或 `⌘` 點選照片 |
@@ -78,11 +79,25 @@ LumiBase 是一套專為 macOS (特別是 Apple Silicon M 系列晶片) 打造�
 | **進入大圖預覽 (Loupe View)** | `Enter` / `Return`、`E`、雙擊滑鼠 |
 | **返回圖庫網格 (Grid View)** | `Esc`、`G` |
 | **切換 網格 / 預覽** | `Space` (空白鍵) |
+| **100% 畫素放大 (Zoom 1:1)** | `Z` / 雙擊滑鼠 |
+| **切換照片 EXIF 資訊 HUD** | `I` |
 | **網格上下行移動** | `↑` (上鍵) / `↓` (下鍵) |
 | **上一張 / 下一張** | `←` (左鍵) / `→` (右鍵) |
-| **設定評分 (Rating)** | `0` (無)、`1` ~ `5` 星 |
+| **設定評分 (Rating)** | `0` (無)、`1` ~ `5` 星、`[` (降星)、`]` (升星) |
 | **標記旗標 (Flag)** | `P` (Pick 留用)、`X` (Reject 剔除)、`U` (Unflag 取消) |
-| **收合/展開左右面板** | `Tab` |
+| **聚焦搜尋欄 (Search)** | `⌘F` (Command + F) |
+| **收合/展開兩側面板** | `Tab` |
+| **切換左側導覽列 (Left Sidebar)** | `F7` |
+| **切換右側檢查器 (Right Inspector)** | `F8` |
+| **裁切與旋轉校正 (Crop Tool)** | `R` (開啟/套用關閉) |
+| **循環切換裁切輔助格線 (Overlay)** | `O` (裁切模式下) |
+| **翻轉裁切方向 (Flip Orientation)** | `X` (裁切模式下) |
+| **複製修圖設定 (Copy Settings)** | `⇧⌘C` (Shift + Command + C) |
+| **貼上修圖設定 (Paste Settings)** | `⇧⌘V` (Shift + Command + V) / `⌥⌘V` |
+| **同步修圖設定 (Sync Settings)** | `⇧⌘S` (Shift + Command + S) |
+| **開關自動同步 (Toggle Auto Sync)** | `⌥⇧⌘S` (Option + Shift + Command + S) |
+
+> 💡 **全介面 Tooltip 提示**：滑鼠游標停留在介面上的任意按鈕、圖示、選單或評分旗標上約 1 秒，即可看見原生 Tooltip 提示與對應的鍵盤快捷鍵。
 
 ---
 

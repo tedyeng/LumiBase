@@ -90,6 +90,7 @@ public struct XMPMetadataEditorView: View {
                     .font(.system(size: 10))
                     .foregroundColor(LightroomTheme.textMuted)
                     .buttonStyle(.plain)
+                    .help("Clear Rating (0)")
                 }
             }
             .padding(.horizontal, 10)
@@ -121,6 +122,7 @@ public struct XMPMetadataEditorView: View {
                     .font(.system(size: 12, weight: .bold))
                     .foregroundColor(LightroomTheme.accentYellow)
                     .buttonStyle(.plain)
+                    .help("Add Keyword (Return)")
                 }
                 
                 // Keyword Tag Cloud
@@ -139,6 +141,7 @@ public struct XMPMetadataEditorView: View {
                                         .foregroundColor(LightroomTheme.textMuted)
                                 }
                                 .buttonStyle(.plain)
+                                .help("Remove Keyword: \(kw)")
                             }
                             .padding(.horizontal, 6)
                             .padding(.vertical, 3)
@@ -278,6 +281,7 @@ public struct XMPMetadataEditorView: View {
                 )
         }
         .buttonStyle(.plain)
+        .help(flag == .pick ? "Flag as Pick (P)" : "Flag as Reject (X)")
     }
     
     private func addKeyword() {

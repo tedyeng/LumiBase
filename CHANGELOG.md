@@ -5,6 +5,26 @@ All notable changes to **LumiBase** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.1] - 2026-09-26
+
+### Added
+- **Comprehensive UI Tooltips with Keyboard Shortcut Annotations (`.help(...)`)**:
+  - Added native AppKit/SwiftUI tooltips across all clickable buttons, icon toggles, menu pickers, sliders, and badges.
+  - Included descriptive action titles and keyboard shortcut badges (e.g. `⌘O`, `⇧⌘E`, `F7`, `F8`, `⌘F`, `E`, `R`, `O`, `X`, `Z`, `I`, `P`, `X`, `U`, `0..5`, `⇧⌘C`, `⇧⌘V`, `⇧⌘S`, `⌥⇧⌘S`).
+  - Added tooltips in **Develop Basic Panel**: Auto Tone, Treatment Mode toggle, Reset All Basic Adjustments, Camera Profile menu, Profile Browser icon (`square.grid.2x2`), White Balance eyedropper icon (`eyedropper`), WB preset menu, and Experimental Highlight Recovery toggle.
+  - Added tooltips in **Crop & Rotate Panel**: Aspect ratio lock/unlock, Aspect ratio preset picker, Flip orientation (`X`), Tool overlay cycle (`O`), Reset Crop, and Done (`Return` / `R`).
+  - Added tooltips in **Sync Settings Dialog & XMP Metadata Editor**: Category select/unselect checkboxes, Check All, Check None, Modified Only, Star ratings, Flag toggles, and Keyword tags.
+- **Global `F7` & `F8` View Toggle Shortcuts**:
+  - Implemented global `F7` key listener to toggle Left Sidebar (`isLeftSidebarVisible`).
+  - Implemented global `F8` key listener to toggle Right Inspector (`isRightInspectorVisible`).
+- **macOS Native `Develop` Menu Commands (`LumiBaseApp.swift`)**:
+  - Added dedicated `Develop` menu in macOS menu bar with native key equivalents for `Edit Adjustments (E)`, `Crop & Straighten (R)`, `Auto Tone`, `Toggle Treatment (Color/B&W)`, `Flip Crop Orientation (X)`, `Cycle Crop Overlay (O)`, `Reset Crop`, `Copy Settings (⇧⌘C)`, `Paste Settings (⇧⌘V)`, `Sync Settings (⇧⌘S)`, `Toggle Auto Sync (⌥⇧⌘S)`, and `Reset All Adjustments`.
+  - Wired menu commands through `NotificationCenter` broadcasts to `MainLayoutView` and `AppState`.
+
+### Fixed
+- **AppKit Hover Tracking Area for Rating & Flag Badges**:
+  - Replaced gesture-based `.onTapGesture` on image views with native SwiftUI `Button` (`.buttonStyle(.plain)`) in `RatingStarsView` and `FlagBadgeView`, ensuring AppKit properly generates `NSTrackingArea` tooltips on hover.
+
 ## [1.8.0] - 2026-09-25
 
 ### Added

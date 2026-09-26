@@ -25,19 +25,27 @@ public struct RatingStarsView: View {
     public var body: some View {
         HStack(spacing: 2) {
             ForEach(1...maxRating, id: \.self) { starIndex in
-                Image(systemName: starIndex <= rating ? "star.fill" : "star")
-                    .font(.system(size: starSize))
-                    .foregroundColor(starIndex <= rating ? LightroomTheme.accentYellow : LightroomTheme.textMuted.opacity(0.5))
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        if isInteractive {
-                            if rating == starIndex {
-                                onRatingChanged?(0) // Toggle off
-                            } else {
-                                onRatingChanged?(starIndex)
-                            }
+                if isInteractive {
+                    Button {
+                        if rating == starIndex {
+                            onRatingChanged?(0) // Toggle off
+                        } else {
+                            onRatingChanged?(starIndex)
                         }
+                    } label: {
+                        Image(systemName: starIndex <= rating ? "star.fill" : "star")
+                            .font(.system(size: starSize))
+                            .foregroundColor(starIndex <= rating ? LightroomTheme.accentYellow : LightroomTheme.textMuted.opacity(0.5))
+                            .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
+                    .help("Set \(starIndex) Star\(starIndex > 1 ? "s" : "") (\(starIndex))")
+                } else {
+                    Image(systemName: starIndex <= rating ? "star.fill" : "star")
+                        .font(.system(size: starSize))
+                        .foregroundColor(starIndex <= rating ? LightroomTheme.accentYellow : LightroomTheme.textMuted.opacity(0.5))
+                        .help("\(rating) Stars")
+                }
             }
         }
     }
@@ -65,6 +73,7 @@ public struct ColorBadgeView: View {
                 .overlay(
                     Circle().stroke(Color.white.opacity(0.3), lineWidth: 0.5)
                 )
+                .help("Color Label: \(label.rawValue)")
         }
     }
 }
@@ -84,6 +93,30 @@ public struct FlagBadgeView: View {
     }
     
     public var body: some View {
+        if isInteractive {
+            Button {
+                onToggle?()
+            } label: {
+                flagImage
+            }
+            .buttonStyle(.plain)
+            .help(flagHelpText)
+        } else {
+            flagImage
+                .help(flagHelpText)
+        }
+    }
+    
+    private var flagHelpText: String {
+        switch flag {
+        case .pick: return isInteractive ? "Flag as Pick (P)" : "Picked"
+        case .reject: return isInteractive ? "Flag as Reject (X)" : "Rejected"
+        case .unflagged: return "Toggle Flag (P / X / U)"
+        }
+    }
+    
+    @ViewBuilder
+    private var flagImage: some View {
         Group {
             switch flag {
             case .pick:
@@ -94,19 +127,10 @@ public struct FlagBadgeView: View {
                     .foregroundColor(Color.red)
                     .fontWeight(.bold)
             case .unflagged:
-                if isInteractive {
-                    Image(systemName: "flag")
-                        .foregroundColor(LightroomTheme.textMuted.opacity(0.4))
-                } else {
-                    EmptyView()
-                }
+                Image(systemName: "flag")
+                    .foregroundColor(LightroomTheme.textMuted.opacity(0.4))
             }
         }
         .font(.system(size: size))
-        .onTapGesture {
-            if isInteractive {
-                onToggle?()
-            }
-        }
     }
 }

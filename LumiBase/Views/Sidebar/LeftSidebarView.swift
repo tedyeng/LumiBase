@@ -97,7 +97,7 @@ public struct LeftSidebarView: View {
                     .foregroundColor(LightroomTheme.accentYellow)
                 }
                 .buttonStyle(.plain)
-                .help("Choose and Open Any Folder...")
+                .help("Choose and Open Folder (⌘O)")
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -125,6 +125,7 @@ public struct LeftSidebarView: View {
                                 .font(.system(size: 9))
                                 .foregroundColor(LightroomTheme.textMuted.opacity(0.8))
                                 .buttonStyle(.plain)
+                                .help("Clear Recent Folders List")
                             }
                             .padding(.horizontal, 12)
                             .padding(.top, 4)
@@ -164,7 +165,7 @@ public struct LeftSidebarView: View {
                                     .foregroundColor(LightroomTheme.textSecondary)
                             }
                             .buttonStyle(.plain)
-                            .help("Open Any Folder...")
+                            .help("Choose and Open Folder (⌘O)")
                         }
                         .padding(.horizontal, 12)
                         
@@ -194,7 +195,8 @@ public struct LeftSidebarView: View {
                             title: "All Photos",
                             icon: "photo.on.rectangle",
                             count: appState.allAssets.count,
-                            isSelected: !appState.filterCriteria.isActive
+                            isSelected: !appState.filterCriteria.isActive,
+                            helpText: "Show All Photos"
                         ) {
                             appState.filterCriteria.reset()
                         }
@@ -204,7 +206,8 @@ public struct LeftSidebarView: View {
                             icon: "flag.fill",
                             iconColor: .white,
                             count: appState.allAssets.filter { $0.xmp.flag == .pick }.count,
-                            isSelected: appState.filterCriteria.selectedFlag == .pick
+                            isSelected: appState.filterCriteria.selectedFlag == .pick,
+                            helpText: "Show Picked / Flagged Photos (P)"
                         ) {
                             appState.filterCriteria.reset()
                             appState.filterCriteria.selectedFlag = .pick
@@ -215,7 +218,8 @@ public struct LeftSidebarView: View {
                             icon: "star.fill",
                             iconColor: LightroomTheme.accentYellow,
                             count: appState.allAssets.filter { $0.xmp.rating == 5 }.count,
-                            isSelected: appState.filterCriteria.minimumRating == 5 && appState.filterCriteria.ratingExact
+                            isSelected: appState.filterCriteria.minimumRating == 5 && appState.filterCriteria.ratingExact,
+                            helpText: "Show 5-Star Photos (5)"
                         ) {
                             appState.filterCriteria.reset()
                             appState.filterCriteria.minimumRating = 5
@@ -227,7 +231,8 @@ public struct LeftSidebarView: View {
                             icon: "star.leadinghalf.filled",
                             iconColor: LightroomTheme.accentYellow,
                             count: appState.allAssets.filter { $0.xmp.rating >= 1 }.count,
-                            isSelected: appState.filterCriteria.minimumRating == 1 && !appState.filterCriteria.ratingExact
+                            isSelected: appState.filterCriteria.minimumRating == 1 && !appState.filterCriteria.ratingExact,
+                            helpText: "Show Rated Photos (≥ 1 Star)"
                         ) {
                             appState.filterCriteria.reset()
                             appState.filterCriteria.minimumRating = 1
@@ -238,7 +243,8 @@ public struct LeftSidebarView: View {
                             title: "RAW Files Only",
                             icon: "camera.metering.matrix",
                             count: appState.allAssets.filter { $0.isRaw }.count,
-                            isSelected: appState.filterCriteria.showRawOnly
+                            isSelected: appState.filterCriteria.showRawOnly,
+                            helpText: "Show RAW Sensor Files Only"
                         ) {
                             appState.filterCriteria.reset()
                             appState.filterCriteria.showRawOnly = true
@@ -304,6 +310,7 @@ public struct LeftSidebarView: View {
         iconColor: Color = LightroomTheme.textSecondary,
         count: Int,
         isSelected: Bool,
+        helpText: String? = nil,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
@@ -327,6 +334,7 @@ public struct LeftSidebarView: View {
             .padding(.horizontal, 6)
         }
         .buttonStyle(.plain)
+        .help(helpText ?? title)
     }
     
     private func chooseFolder() {
@@ -427,7 +435,7 @@ private struct FolderTreeRow: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help(url.path)
+                .help("Open Folder: \(url.path)")
                 .simultaneousGesture(
                     TapGesture(count: 2).onEnded {
                         toggleExpand()
