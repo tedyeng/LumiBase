@@ -235,7 +235,7 @@ public struct DevelopBasicPanelView: View {
                     step: 50,
                     defaultValue: 5500,
                     trackStyle: .temperature,
-                    valueFormatter: { String(format: "%d K", Int($0)) },
+                    valueFormatter: { currentXMP.temperature == nil ? "Shot" : String(format: "%d K", Int($0)) },
                     field: .temp,
                     focusedField: $focusedSlider,
                     onNextField: { focusedSlider = nextSlider(after: .temp, isBW: isBW) },
@@ -244,7 +244,8 @@ public struct DevelopBasicPanelView: View {
                         if !isEditing {
                             appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
                         }
-                    }
+                    },
+                    onReset: { appState.updateDevelopSettings(for: asset.id, isDragging: false) { BasicSliderField.temp.reset(in: &$0) } }
                 )
                 
                 // Tint Slider
@@ -260,7 +261,7 @@ public struct DevelopBasicPanelView: View {
                     step: 1,
                     defaultValue: 0,
                     trackStyle: .tint,
-                    valueFormatter: { String(format: "%+d", Int($0)) },
+                    valueFormatter: { currentXMP.tint == nil ? "Shot" : String(format: "%+d", Int($0)) },
                     field: .tint,
                     focusedField: $focusedSlider,
                     onNextField: { focusedSlider = nextSlider(after: .tint, isBW: isBW) },
@@ -269,7 +270,8 @@ public struct DevelopBasicPanelView: View {
                         if !isEditing {
                             appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
                         }
-                    }
+                    },
+                    onReset: { appState.updateDevelopSettings(for: asset.id, isDragging: false) { BasicSliderField.tint.reset(in: &$0) } }
                 )
             }
             .padding(.horizontal, 10)
@@ -304,7 +306,8 @@ public struct DevelopBasicPanelView: View {
                         if !isEditing {
                             appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
                         }
-                    }
+                    },
+                    onReset: { appState.updateDevelopSettings(for: asset.id, isDragging: false) { BasicSliderField.exposure.reset(in: &$0) } }
                 )
                 
                 // Contrast
@@ -329,7 +332,8 @@ public struct DevelopBasicPanelView: View {
                         if !isEditing {
                             appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
                         }
-                    }
+                    },
+                    onReset: { appState.updateDevelopSettings(for: asset.id, isDragging: false) { BasicSliderField.contrast.reset(in: &$0) } }
                 )
                 
                 // Highlights
@@ -354,7 +358,8 @@ public struct DevelopBasicPanelView: View {
                         if !isEditing {
                             appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
                         }
-                    }
+                    },
+                    onReset: { appState.updateDevelopSettings(for: asset.id, isDragging: false) { BasicSliderField.highlights.reset(in: &$0) } }
                 )
                 
                 // Shadows
@@ -379,7 +384,8 @@ public struct DevelopBasicPanelView: View {
                         if !isEditing {
                             appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
                         }
-                    }
+                    },
+                    onReset: { appState.updateDevelopSettings(for: asset.id, isDragging: false) { BasicSliderField.shadows.reset(in: &$0) } }
                 )
                 
                 // Whites
@@ -404,7 +410,8 @@ public struct DevelopBasicPanelView: View {
                         if !isEditing {
                             appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
                         }
-                    }
+                    },
+                    onReset: { appState.updateDevelopSettings(for: asset.id, isDragging: false) { BasicSliderField.whites.reset(in: &$0) } }
                 )
                 
                 // Blacks
@@ -429,7 +436,8 @@ public struct DevelopBasicPanelView: View {
                         if !isEditing {
                             appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
                         }
-                    }
+                    },
+                    onReset: { appState.updateDevelopSettings(for: asset.id, isDragging: false) { BasicSliderField.blacks.reset(in: &$0) } }
                 )
                 
                 // Advanced Highlight Recovery (Experimental) Toggle
@@ -473,7 +481,8 @@ public struct DevelopBasicPanelView: View {
                         if !isEditing {
                             appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
                         }
-                    }
+                    },
+                    onReset: { appState.updateDevelopSettings(for: asset.id, isDragging: false) { BasicSliderField.texture.reset(in: &$0) } }
                 )
                 
                 // Clarity
@@ -498,7 +507,8 @@ public struct DevelopBasicPanelView: View {
                         if !isEditing {
                             appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
                         }
-                    }
+                    },
+                    onReset: { appState.updateDevelopSettings(for: asset.id, isDragging: false) { BasicSliderField.clarity.reset(in: &$0) } }
                 )
                 
                 // Dehaze
@@ -523,7 +533,8 @@ public struct DevelopBasicPanelView: View {
                         if !isEditing {
                             appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
                         }
-                    }
+                    },
+                    onReset: { appState.updateDevelopSettings(for: asset.id, isDragging: false) { BasicSliderField.dehaze.reset(in: &$0) } }
                 )
                 
                 // Vibrance & Saturation (Hidden in Black & White mode, matching Lightroom Classic)
@@ -550,7 +561,8 @@ public struct DevelopBasicPanelView: View {
                             if !isEditing {
                                 appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
                             }
-                        }
+                        },
+                        onReset: { appState.updateDevelopSettings(for: asset.id, isDragging: false) { BasicSliderField.vibrance.reset(in: &$0) } }
                     )
                     
                     // Saturation
@@ -575,7 +587,8 @@ public struct DevelopBasicPanelView: View {
                             if !isEditing {
                                 appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }
                             }
-                        }
+                        },
+                        onReset: { appState.updateDevelopSettings(for: asset.id, isDragging: false) { BasicSliderField.saturation.reset(in: &$0) } }
                     )
                 } else {
                     HStack(spacing: 4) {

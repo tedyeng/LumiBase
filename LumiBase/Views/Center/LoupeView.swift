@@ -606,9 +606,7 @@ public struct LoupeView: View {
                             drag: { delta in
                                 guard inspection.held, !showingHandoffProxy else { return }
                                 inspection.applyDrag(delta: delta, displayed: clampSize, viewport: viewportSize)
-                                if roiPrototypeEnabled, inspection.zoomed, let asset = appState.primarySelectedAsset {
-                                    updateProcessedImage(with: activeXMP(for: asset))
-                                }
+                                // Geometry observer handles drag and double-click ROI invalidation.
                             },
                             up: { inspection.end(); InspectionTrace.event("state.held_after_release_callback", state: inspection) },
                             navigate: { step in
@@ -948,7 +946,7 @@ public struct LoupeView: View {
         .task(id: appState.primarySelectedAssetID) {
             await loadSelectedImage()
         }
-        .onChange(of: is100PercentZoom) { _, _ in
+        .onChange(of: is100PercentZoom ? inspection.center : nil) { _, _ in
             if InspectionFrameLayout.canReuseNativeFrame(isNative: display.native, isROI: display.sourceRect != nil, zoomed: is100PercentZoom) && display.owns(assetID: appState.primarySelectedAssetID) && !isLoading && imageError == nil { return }
             if !is100PercentZoom && display.owns(assetID: appState.primarySelectedAssetID) { InspectionFrameLayout.leaveNative(display: &display) }
             InspectionTrace.event(is100PercentZoom ? "state.zoom_onchange_zoomed" : "state.zoom_onchange_fit_render", state: inspection)
@@ -958,6 +956,7 @@ public struct LoupeView: View {
             inspection.end()
             _ = loadRevision.next()
             _ = renderRevision.next()
+            LiveDevelopPreviewEngine.shared.cancelPending()
             idleFullRenderTask?.cancel()
             finishCurrentROIForeground()
             Task { await PreviewPreloader.shared.cancelForegroundSelection() }
@@ -985,6 +984,14 @@ public struct LoupeView: View {
                 if let asset = appState.primarySelectedAsset {
                     updateProcessedImage(with: activeXMP(for: asset))
                 }
+            }
+        }
+        .onChange(of: appState.highlightsRenderRevision) { _, _ in
+            cachedROISelectedPreview = nil
+            cachedROISelectedPreviewSettings = nil
+            if let asset = appState.primarySelectedAsset {
+                if currentBaseHolder == nil { Task { await loadSelectedImage() } }
+                else { updateProcessedImage(with: activeXMP(for: asset)) }
             }
         }
     }
@@ -1023,6 +1030,7 @@ public struct LoupeView: View {
     private func loadSelectedImage() async {
         let ticket = loadRevision.next()
         _ = renderRevision.next()
+        LiveDevelopPreviewEngine.shared.cancelPending()
         idleFullRenderTask?.cancel()
         cachedROITransition = InspectionCachedROITransition()
         cachedROISelectedPreview = nil
@@ -1193,6 +1201,7 @@ public struct LoupeView: View {
 
     private func updateProcessedImage(with xmp: XMPMetadata?) {
         let ticket = renderRevision.next()
+        LiveDevelopPreviewEngine.shared.cancelPending()
         InspectionTrace.event("render.revision_issued", state: inspection, requestID: ticket, highFrequency: true)
         if idleFullRenderTask != nil { InspectionTrace.event("render.debounce_cancelled", state: inspection, requestID: ticket, highFrequency: true) }
         idleFullRenderTask?.cancel()

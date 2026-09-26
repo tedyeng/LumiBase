@@ -6,6 +6,9 @@ import AppKit
 final class HighlightsNativeBenchmarkTests: XCTestCase {
     func testIntegratedParityContinuityAndSerialBenchmarks() async throws {
         guard ProcessInfo.processInfo.environment["LUMIBASE_HIGHLIGHTS_BENCHMARK"] == "1" else { throw XCTSkip("Opt-in real DNG native highlights benchmark") }
+        let previous = NativeHighlightsService.isEnabled
+        NativeHighlightsService.isEnabled = true
+        defer { NativeHighlightsService.isEnabled = previous }
         let output = inspectionTestScratchURL("highlights-integrated-results")
         try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
         let source = HighlightsIntegrationTests.source

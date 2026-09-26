@@ -33,7 +33,7 @@ echo "=================================================="
 # 1. Clean previous build & staging directories
 echo "🧹 Cleaning previous build artifacts..."
 rm -rf "$BUILD_DIR"
-rm -f "${SCRIPT_DIR}/${APP_NAME}"*Installer*.dmg "${SCRIPT_DIR}/${APP_NAME}"*.dmg
+# Keep older installers; hdiutil -ov replaces only this version's output.
 
 # 2. Build the Application using xcodebuild
 echo "⚙️ Compiling ${APP_NAME} (${CONFIGURATION})..."

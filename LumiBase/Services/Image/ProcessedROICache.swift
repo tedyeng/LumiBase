@@ -154,9 +154,7 @@ struct ProcessedROIRequest: @unchecked Sendable {
     static func make(asset: PhotoAsset, xmp: XMPMetadata, cameraModel: String?, center: CGPoint,
                      viewport: CGSize, backing: CGFloat, orientation: Int, extent: CGRect,
                      sourceRect: CGRect) -> ProcessedROIRequest {
-        let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-        let settingsData = (try? encoder.encode(xmp)) ?? Data("encoding-failed".utf8)
-        let settings = SHA256.hash(data: settingsData).map { String(format: "%02x", $0) }.joined()
+        let settings = settingsIdentity(xmp)
         let version = fileVersion(for: asset)
         let identity = ProcessedROIIdentity(assetID: asset.id, fileVersion: version, developSettings: settings,
             cameraModel: cameraModel ?? "", fullExtent: extent, sourceRect: sourceRect,
@@ -172,7 +170,8 @@ struct ProcessedROIRequest: @unchecked Sendable {
     static func settingsIdentity(_ xmp: XMPMetadata) -> String {
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         let data = (try? encoder.encode(xmp)) ?? Data("encoding-failed".utf8)
-        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        let policy = (xmp.highlights2012 ?? 0) < 0 && NativeHighlightsService.isEnabled ? "advanced" : "standard"
+        return SHA256.hash(data: data + Data(policy.utf8)).map { String(format: "%02x", $0) }.joined()
     }
     static func orientedExtent(for asset: PhotoAsset) -> (CGRect, Int)? {
         guard let src = CGImageSourceCreateWithURL(asset.fileURL as CFURL, nil),
@@ -234,6 +233,12 @@ actor ProcessedROICacheService {
         scheduler.prioritize(uncached.map(\.identity)); pump()
     }
     func memoryPressure() { scheduler.setMemorySuspended(true); worker?.cancel(); InspectionReadyFrameStore.shared.clearAll(); requests.removeAll(); pump() }
+    func invalidateForRenderingPolicyChange() {
+        worker?.cancel()
+        requests.removeAll()
+        scheduler.prioritize([]) // invalidates an in-flight worker's generation
+        InspectionReadyFrameStore.shared.clearAll()
+    }
     func memoryRestored() { scheduler.setMemorySuspended(false); pump() }
     var cachedEntryCount: Int { InspectionReadyFrameStore.shared.roiEntryCount }
     var accountedBitmapBytes: Int { InspectionReadyFrameStore.shared.accountedBytes }
