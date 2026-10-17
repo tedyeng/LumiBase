@@ -270,13 +270,13 @@ public struct RightInspectorView: View {
                     Button {
                         appState.resetDevelopSettings()
                     } label: {
-                        HStack(spacing: 3) {
+                        HStack(spacing: 4) {
                             Image(systemName: "arrow.counterclockwise")
                                 .font(.system(size: 9))
                             Text("Reset")
                                 .font(.system(size: 11, weight: .medium))
                         }
-                        .foregroundColor(LightroomTheme.textMuted)
+                        .foregroundColor(LightroomTheme.textPrimary)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(LightroomTheme.cardBackground)

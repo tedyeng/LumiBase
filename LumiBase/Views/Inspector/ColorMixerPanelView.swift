@@ -62,17 +62,21 @@ public struct ColorMixerPanelView: View {
                             $0.hsl = .zero
                         }
                     } label: {
-                        HStack(spacing: 3) {
+                        HStack(spacing: 4) {
                             Image(systemName: "arrow.counterclockwise")
                                 .font(.system(size: 9))
                             Text("Reset")
-                                .font(.system(size: 10, weight: .semibold))
+                                .font(.system(size: 10, weight: .medium))
                         }
-                        .foregroundColor(LightroomTheme.textMuted)
-                        .padding(.horizontal, 6)
+                        .foregroundColor(LightroomTheme.textPrimary)
+                        .padding(.horizontal, 8)
                         .padding(.vertical, 3)
                         .background(LightroomTheme.cardBackground)
                         .cornerRadius(3)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 3)
+                                .stroke(LightroomTheme.cardBorder, lineWidth: 1)
+                        )
                     }
                     .buttonStyle(.plain)
                     .help("Reset Color Mixer adjustments")

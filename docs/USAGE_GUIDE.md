@@ -239,9 +239,11 @@ LumiBase 具備媲美 Adobe Lightroom Classic 的專業修圖前後對比系統�
 
 ---
 
-### 🖼️ 瀏覽與導覽 (Navigation & Selection)
+### 🖼️ 工作區與檢視導覽 (Workspace & Views)
 | 功能 | 快捷鍵 | 說明 |
 | :--- | :---: | :--- |
+| **圖庫工作區 (Library)** | `G` | 切換至圖庫工作區並返回網格總覽 (Grid View) |
+| **顯影工作區 (Develop)** | `D` | 切換至顯影修圖工作區並自動開啟大圖預覽 |
 | **搜尋照片 (Find Photos)** | `⌘F` | 聚焦頂部搜尋欄（按 `Enter` / `Esc` 退出並恢復快捷鍵） |
 | **大圖預覽 (Loupe View)** | `Enter` / `Return` / `E` / `Space` | 進入大圖檢視 |
 | **圖庫網格 (Grid View)** | `Esc` / `G` / `Space` | 返回網格檢視 |

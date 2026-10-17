@@ -523,7 +523,21 @@ public final class AppState: ObservableObject {
         case "p", "P": self.setFlag(.pick); return true
         case "x", "X": self.setFlag(.reject); return true
         case "u", "U": self.setFlag(.unflagged); return true
-        case "g", "G": self.viewMode = .grid; return true
+        case "g", "G":
+            self.workspaceMode = .library
+            self.viewMode = .grid
+            return true
+        case "d", "D":
+            self.workspaceMode = .develop
+            if self.viewMode == .grid {
+                if self.primarySelectedAsset != nil {
+                    self.viewMode = .loupe
+                } else if let first = self.displayedAssets.first {
+                    self.selectAsset(first)
+                    self.viewMode = .loupe
+                }
+            }
+            return true
         case "e", "E": self.viewMode = .loupe; return true
         case "z", "Z":
             NotificationCenter.default.post(name: NSNotification.Name("LumiBaseToggleZoom"), object: nil)

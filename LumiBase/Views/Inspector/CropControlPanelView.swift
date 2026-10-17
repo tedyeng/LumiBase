@@ -170,17 +170,21 @@ public struct CropControlPanelView: View {
                     Button {
                         appState.resetCrop(for: asset.id)
                     } label: {
-                        HStack(spacing: 3) {
+                        HStack(spacing: 4) {
                             Image(systemName: "arrow.counterclockwise")
                                 .font(.system(size: 9))
                             Text("Reset Crop")
-                                .font(.system(size: 10, weight: .semibold))
+                                .font(.system(size: 10, weight: .medium))
                         }
-                        .foregroundColor(LightroomTheme.textMuted)
+                        .foregroundColor(LightroomTheme.textPrimary)
                         .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
+                        .padding(.vertical, 3)
                         .background(LightroomTheme.cardBackground)
                         .cornerRadius(3)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 3)
+                                .stroke(LightroomTheme.cardBorder, lineWidth: 1)
+                        )
                     }
                     .buttonStyle(.plain)
                     .help("Reset Crop to Full Frame")

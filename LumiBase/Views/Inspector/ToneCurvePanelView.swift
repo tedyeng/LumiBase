@@ -97,17 +97,21 @@ public struct ToneCurvePanelView: View {
                         }
                     }
                 } label: {
-                    HStack(spacing: 3) {
+                    HStack(spacing: 4) {
                         Image(systemName: "slider.vertical.3")
                             .font(.system(size: 9))
                         Text("Presets")
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(.system(size: 10, weight: .medium))
                     }
-                    .foregroundColor(LightroomTheme.textMuted)
-                    .padding(.horizontal, 6)
+                    .foregroundColor(LightroomTheme.textPrimary)
+                    .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(LightroomTheme.cardBackground)
                     .cornerRadius(3)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 3)
+                            .stroke(LightroomTheme.cardBorder, lineWidth: 1)
+                    )
                 }
                 .menuStyle(.borderlessButton)
             }

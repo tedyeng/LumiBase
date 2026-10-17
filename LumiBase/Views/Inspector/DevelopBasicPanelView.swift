@@ -63,23 +63,9 @@ public struct DevelopBasicPanelView: View {
                 Spacer()
                 
                 if currentXMP.hasDevelopEdits {
-                    Button {
+                    actionButton(title: "Reset", icon: "arrow.counterclockwise", helpText: "Reset All Basic Adjustments") {
                         appState.resetDevelopSettings(for: asset.id)
-                    } label: {
-                        HStack(spacing: 3) {
-                            Image(systemName: "arrow.counterclockwise")
-                                .font(.system(size: 9))
-                            Text("Reset")
-                                .font(.system(size: 10, weight: .semibold))
-                        }
-                        .foregroundColor(LightroomTheme.textMuted)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(LightroomTheme.cardBackground)
-                        .cornerRadius(3)
                     }
-                    .buttonStyle(.plain)
-                    .help("Reset All Basic Adjustments")
                 }
             }
             .padding(.horizontal, 10)

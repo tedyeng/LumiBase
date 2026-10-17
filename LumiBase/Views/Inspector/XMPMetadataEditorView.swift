@@ -127,11 +127,25 @@ public struct XMPMetadataEditorView: View {
                 Spacer()
                 
                 if asset.xmp.rating > 0 {
-                    Button("Clear") {
+                    Button {
                         appState.setRating(0)
+                    } label: {
+                        HStack(spacing: 3) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 8))
+                            Text("Clear")
+                                .font(.system(size: 10, weight: .medium))
+                        }
+                        .foregroundColor(LightroomTheme.textPrimary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2.5)
+                        .background(LightroomTheme.cardBackground)
+                        .cornerRadius(3)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 3)
+                                .stroke(LightroomTheme.cardBorder, lineWidth: 1)
+                        )
                     }
-                    .font(.system(size: 10))
-                    .foregroundColor(LightroomTheme.textMuted)
                     .buttonStyle(.plain)
                     .help("Clear Rating (0)")
                 }

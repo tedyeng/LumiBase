@@ -633,8 +633,11 @@ public struct LoupeView: View {
     
     public var body: some View {
         VStack(spacing: 0) {
-            // Main Viewer Area
-            GeometryReader { geo in
+            if appState.primarySelectedAsset == nil {
+                emptyLoupeView
+            } else {
+                // Main Viewer Area
+                GeometryReader { geo in
                 let viewportSize = geo.size
                 let visibleDisplay = displayForSelectedAsset
                 let visibleSettingsIdentity = appState.primarySelectedAsset.map { ProcessedROIRequest.settingsIdentity(activeXMP(for: $0)) }
@@ -1241,9 +1244,10 @@ public struct LoupeView: View {
                     }
                 }
             }
+            }
             
             // Bottom Filmstrip
-            if appState.isFilmstripVisible {
+            if appState.isFilmstripVisible && !appState.allAssets.isEmpty {
                 Divider().background(LightroomTheme.dividerColor)
                 FilmstripView(appState: appState)
             }
@@ -1996,5 +2000,130 @@ public struct LoupeView: View {
             parts.append(String(format: "Contrast: %+d", c))
         }
         return parts.joined(separator: " • ")
+    }
+    
+    // MARK: - Empty State View
+    
+    @ViewBuilder
+    private var emptyLoupeView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "photo.on.rectangle.angled")
+                .font(.system(size: 48))
+                .foregroundColor(LightroomTheme.textMuted.opacity(0.6))
+            
+            if appState.currentFolderURL == nil {
+                Text("No Folder Opened")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(LightroomTheme.textPrimary)
+                
+                Text("Select a folder containing RAW or image files to view and develop photos.")
+                    .font(.system(size: 12))
+                    .foregroundColor(LightroomTheme.textSecondary)
+                
+                Button {
+                    chooseFolder()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "folder.badge.plus")
+                        Text("Open Folder (⌘O)")
+                    }
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.black)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(LightroomTheme.accentYellow)
+                    .cornerRadius(4)
+                }
+                .buttonStyle(.plain)
+            } else if appState.allAssets.isEmpty {
+                Text("No Compatible Photos Found")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(LightroomTheme.textPrimary)
+                
+                Text("Supported formats: .ARW, .CR2, .CR3, .NEF, .DNG, .RAF, .JPG, .TIFF")
+                    .font(.system(size: 12))
+                    .foregroundColor(LightroomTheme.textSecondary)
+                
+                Button {
+                    appState.viewMode = .grid
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "square.grid.3x3")
+                        Text("Return to Library (G)")
+                    }
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(LightroomTheme.textPrimary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(LightroomTheme.cardBackground)
+                    .cornerRadius(4)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(LightroomTheme.cardBorder, lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+            } else if appState.displayedAssets.isEmpty {
+                Text("No Photos Match Filter")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(LightroomTheme.textPrimary)
+                
+                Button {
+                    appState.filterCriteria.reset()
+                } label: {
+                    Text("Clear Filter")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.black)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 5)
+                        .background(LightroomTheme.accentYellow)
+                        .cornerRadius(4)
+                }
+                .buttonStyle(.plain)
+            } else {
+                Text("No Photo Selected")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(LightroomTheme.textPrimary)
+                
+                Text("Select a photo from the library to view or edit.")
+                    .font(.system(size: 12))
+                    .foregroundColor(LightroomTheme.textSecondary)
+                
+                Button {
+                    appState.viewMode = .grid
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "square.grid.3x3")
+                        Text("Return to Library (G)")
+                    }
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(LightroomTheme.textPrimary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(LightroomTheme.cardBackground)
+                    .cornerRadius(4)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(LightroomTheme.cardBorder, lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(40)
+        .background(LightroomTheme.workspaceBackground)
+    }
+    
+    private func chooseFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.canCreateDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Choose"
+        if panel.runModal() == .OK, let url = panel.url {
+            appState.openFolder(url: url)
+        }
     }
 }

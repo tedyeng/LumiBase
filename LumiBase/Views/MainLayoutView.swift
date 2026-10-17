@@ -186,6 +186,24 @@ public struct MainLayoutView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseResetDevelop"))) { _ in
             appState.resetDevelopSettings()
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseSwitchWorkspace"))) { notif in
+            if let mode = notif.object as? WorkspaceMode {
+                appState.workspaceMode = mode
+                if mode == .develop && appState.viewMode == .grid {
+                    if appState.primarySelectedAsset != nil {
+                        appState.viewMode = .loupe
+                    } else if let first = appState.displayedAssets.first {
+                        appState.selectAsset(first)
+                        appState.viewMode = .loupe
+                    }
+                } else if mode == .library {
+                    appState.viewMode = .grid
+                }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseViewModeLoupe"))) { _ in
+            appState.viewMode = .loupe
+        }
         .sheet(isPresented: $appState.showSyncDialog) {
             SyncSettingsDialogView(
                 mode: .synchronize,

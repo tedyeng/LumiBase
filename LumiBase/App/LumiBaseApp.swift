@@ -79,6 +79,34 @@ struct LumiBaseApp: App {
                 }
                 .keyboardShortcut(.delete, modifiers: .command)
             }
+            CommandMenu("View") {
+                Button("Library (Grid)") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseSwitchWorkspace"), object: WorkspaceMode.library)
+                }
+                .keyboardShortcut("g", modifiers: [])
+                
+                Button("Develop") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseSwitchWorkspace"), object: WorkspaceMode.develop)
+                }
+                .keyboardShortcut("d", modifiers: [])
+                
+                Divider()
+                
+                Button("Loupe View") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseViewModeLoupe"), object: nil)
+                }
+                .keyboardShortcut("e", modifiers: [])
+                
+                Button("Toggle Fullscreen Zoom (100%)") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseToggleZoom"), object: nil)
+                }
+                .keyboardShortcut("z", modifiers: [])
+                
+                Button("Toggle Photo Info Overlay") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseToggleInfoOverlay"), object: nil)
+                }
+                .keyboardShortcut("i", modifiers: [])
+            }
             CommandMenu("Photo") {
                 Button("Previous Photo") {
                     NotificationCenter.default.post(name: NSNotification.Name("LumiBaseNavPrev"), object: nil)

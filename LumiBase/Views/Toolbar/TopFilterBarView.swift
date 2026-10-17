@@ -14,26 +14,8 @@ public struct TopFilterBarView: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 .frame(width: 160)
+                .help("Switch Workspace: Library (G) / Develop (D)")
                 Spacer()
-                
-                // Reload XMP Button
-                Button {
-                    appState.reloadXMP()
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 10, weight: .semibold))
-                        Text("Reload XMP")
-                            .font(.system(size: 10, weight: .medium))
-                    }
-                    .foregroundColor(LightroomTheme.textSecondary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(Color.white.opacity(0.06))
-                    .cornerRadius(4)
-                }
-                .buttonStyle(.plain)
-                .help("Reload XMP metadata from disk for selected photos or folder (⇧⌘R)")
             }
             HStack(spacing: 10) {
                 // Search Input
@@ -167,10 +149,19 @@ public struct TopFilterBarView: View {
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.counterclockwise")
+                                .font(.system(size: 10, weight: .semibold))
                             Text("Reset Filter")
+                                .font(.system(size: 10, weight: .medium))
                         }
-                        .font(.system(size: 10, weight: .medium))
                         .foregroundColor(LightroomTheme.accentYellow)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3.5)
+                        .background(LightroomTheme.cardBackground)
+                        .cornerRadius(4)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(LightroomTheme.accentYellow.opacity(0.6), lineWidth: 1)
+                        )
                     }
                     .buttonStyle(.plain)
                     .help("Reset All Filters")
@@ -181,9 +172,14 @@ public struct TopFilterBarView: View {
                     Image(systemName: "gearshape")
                         .font(.system(size: 11))
                         .foregroundColor(LightroomTheme.textSecondary)
-                        .padding(4)
-                        .background(Color.white.opacity(0.06))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3.5)
+                        .background(LightroomTheme.cardBackground)
                         .cornerRadius(4)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(LightroomTheme.cardBorder, lineWidth: 1)
+                        )
                 }
                 .buttonStyle(.plain)
                 .help("Preferences / Settings (⌘,)")
