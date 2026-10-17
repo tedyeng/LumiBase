@@ -159,7 +159,7 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
                 }
             } else if key.hasSuffix("label") || key == "label" {
                 parsedLabel = parseColorLabel(val)
-            } else if key.hasSuffix("pick") || key.hasSuffix("flag") || key == "pick" || key == "flag" {
+            } else if key.hasSuffix("pick") || key.hasSuffix("pickedstatus") || key.hasSuffix("flag") || key == "pick" || key == "pickedstatus" || key == "flag" {
                 parsedFlag = parseFlag(val)
             } else if key.hasSuffix("exposure2012") || key.hasSuffix("exposure") {
                 parsedExposure = Double(val)
@@ -268,7 +268,7 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
             }
         } else if lowerElement.hasSuffix("label") {
             parsedLabel = parseColorLabel(trimmed)
-        } else if lowerElement.hasSuffix("pick") || lowerElement.hasSuffix("flag") {
+        } else if lowerElement.hasSuffix("pick") || lowerElement.hasSuffix("pickedstatus") || lowerElement.hasSuffix("flag") {
             parsedFlag = parseFlag(trimmed)
         } else if lowerElement.hasSuffix("exposure2012") || lowerElement.hasSuffix("exposure") {
             parsedExposure = Double(trimmed)
@@ -417,7 +417,7 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
             label = parseColorLabel(labelMatch)
         }
         
-        if let flagMatch = matchFirst(pattern: #"(?:Pick|Flag)="?(-?1|pick|reject)"#, in: content) {
+        if let flagMatch = matchFirst(pattern: #"(?:Pick|PickedStatus|Flag)="?(-?1|pick|reject)"#, in: content) {
             flag = parseFlag(flagMatch)
         }
         

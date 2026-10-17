@@ -399,4 +399,70 @@ final class PhotoExportServiceTests: XCTestCase {
         
         XCTAssertEqual(maxDiff, 0, "Darkroom RAW preview must match reference JPEG with 0 pixel difference")
     }
+
+    func testWorkflowParityForTempDataset0401() async throws {
+        let baseDir = URL(fileURLWithPath: "/Volumes/Super SSD/Photo/Temp/04-01")
+        let outputDir = baseDir.appendingPathComponent("output")
+        let tempDir = inspectionTestScratchURL("LumiBaseWorkflowTest_\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        guard FileManager.default.fileExists(atPath: baseDir.path),
+              FileManager.default.fileExists(atPath: outputDir.path) else {
+            throw XCTSkip("Dataset files not available on Super SSD")
+        }
+
+        UserDefaults.standard.set(RAWColorPipelineEngine.darkroom.rawValue, forKey: "rawColorPipelineEngine")
+        RAWImageLoader.shared.clearCache()
+
+        let testFilenames = ["A7C03690", "A7M06832", "A7M06789", "A7M06995"]
+        let ctx = CIContext(options: [.useSoftwareRenderer: false])
+        let cs = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+        let sampleRect = CGRect(x: 1000, y: 1000, width: 256, height: 256)
+
+        for name in testFilenames {
+            let rawURL = baseDir.appendingPathComponent("\(name).ARW")
+            let darkroomJPG = outputDir.appendingPathComponent("\(name).jpg")
+            let lumibaseJPG = tempDir.appendingPathComponent("\(name)_lumibase.jpg")
+
+            guard FileManager.default.fileExists(atPath: rawURL.path),
+                  FileManager.default.fileExists(atPath: darkroomJPG.path) else {
+                continue
+            }
+
+            // 1. Verify XMP sidecar auto loading
+            let xmp = XMPParser.loadXMP(for: rawURL)
+            XCTAssertTrue(xmp.isLoadedFromSidecar, "\(name) XMP sidecar should be loaded")
+
+            // 2. Export via LumiBase PhotoExportService
+            let asset = PhotoAsset(fileURL: rawURL, xmp: xmp)
+            try PhotoExportService.shared.exportPhoto(asset: asset, to: lumibaseJPG, quality: 0.95)
+            XCTAssertTrue(FileManager.default.fileExists(atPath: lumibaseJPG.path))
+
+            // 3. Compare Dimensions & Render Output with Darkroom output
+            guard let darkroomCI = CIImage(contentsOf: darkroomJPG),
+                  let lumibaseCI = CIImage(contentsOf: lumibaseJPG) else {
+                XCTFail("Failed to load exported JPEGs for \(name)")
+                continue
+            }
+
+            XCTAssertEqual(lumibaseCI.extent.width, darkroomCI.extent.width, "\(name) width mismatch")
+            XCTAssertEqual(lumibaseCI.extent.height, darkroomCI.extent.height, "\(name) height mismatch")
+
+            var darkroomBytes = [UInt8](repeating: 0, count: 256 * 256 * 4)
+            var lumibaseBytes = [UInt8](repeating: 0, count: 256 * 256 * 4)
+
+            ctx.render(darkroomCI, toBitmap: &darkroomBytes, rowBytes: 256 * 4, bounds: sampleRect, format: .RGBA8, colorSpace: cs)
+            ctx.render(lumibaseCI, toBitmap: &lumibaseBytes, rowBytes: 256 * 4, bounds: sampleRect, format: .RGBA8, colorSpace: cs)
+
+            var maxDiff: Int = 0
+            for i in 0..<darkroomBytes.count {
+                let diff = abs(Int(darkroomBytes[i]) - Int(lumibaseBytes[i]))
+                if diff > maxDiff { maxDiff = diff }
+            }
+
+            print("Workflow parity comparison on \(name).ARW: maxDiff = \(maxDiff)")
+            XCTAssertEqual(maxDiff, 0, "\(name).ARW: LumiBase exported JPEG must match darkroom exported JPEG with 0 pixel difference")
+        }
+    }
 }
