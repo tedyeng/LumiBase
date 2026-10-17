@@ -266,6 +266,7 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
             return "\(value.utf8.count):\(value)"
         }
         return [
+            "engine=\(PerformanceSettings.currentRAWPipelineEngine.rawValue)",
             "exposure=\(decimal(exposure2012))", "temperature=\(integer(temperature))",
             "tint=\(integer(tint))", "contrast=\(integer(contrast2012))",
             "highlights=\(integer(highlights2012))", "shadows=\(integer(shadows2012))",

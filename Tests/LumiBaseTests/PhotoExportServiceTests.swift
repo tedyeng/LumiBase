@@ -286,4 +286,117 @@ final class PhotoExportServiceTests: XCTestCase {
             print("Thumbnail size for old A7C01319.jpg: \(thumb.size.width) x \(thumb.size.height)")
         }
     }
+    
+    func testDarkroomRAWExportParityWithReferenceJPEG() throws {
+        let rawURL = URL(fileURLWithPath: "/Volumes/Super SSD/Photo/Temp/05-29_威爾森餐酒館慶生/A7C09068.ARW")
+        let xmpURL = URL(fileURLWithPath: "/Volumes/Super SSD/Photo/Temp/05-29_威爾森餐酒館慶生/A7C09068.xmp")
+        let refURL = URL(fileURLWithPath: "/Volumes/Super SSD/Photo/Temp/05-29_威爾森餐酒館慶生/jpeg/A7C09068.jpg")
+        
+        guard FileManager.default.fileExists(atPath: rawURL.path),
+              FileManager.default.fileExists(atPath: xmpURL.path),
+              FileManager.default.fileExists(atPath: refURL.path) else {
+            throw XCTSkip("Darkroom fixture files on Super SSD not mounted/available")
+        }
+        
+        UserDefaults.standard.set(RAWColorPipelineEngine.darkroom.rawValue, forKey: "rawColorPipelineEngine")
+        
+        let parsedXmp = XMPParser.parse(url: xmpURL)
+        
+        let asset = PhotoAsset(fileURL: rawURL, xmp: parsedXmp)
+        let tempDir = inspectionTestScratchURL("LumiBaseDarkroomParity_\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        
+        let outURL = tempDir.appendingPathComponent("A7C09068_exported.jpg")
+        try PhotoExportService.shared.exportPhoto(asset: asset, to: outURL, quality: 0.95)
+        
+        guard let refImg = CIImage(contentsOf: refURL),
+              let outImg = CIImage(contentsOf: outURL) else {
+            XCTFail("Failed to load exported or reference image")
+            return
+        }
+        
+        XCTAssertEqual(outImg.extent.width, refImg.extent.width)
+        XCTAssertEqual(outImg.extent.height, refImg.extent.height)
+        
+        let ctx = CIContext(options: [.useSoftwareRenderer: false])
+        let cs = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+        let sampleRect = CGRect(x: 1000, y: 1000, width: 256, height: 256)
+        
+        var refBytes = [UInt8](repeating: 0, count: 256 * 256 * 4)
+        var outBytes = [UInt8](repeating: 0, count: 256 * 256 * 4)
+        
+        ctx.render(refImg, toBitmap: &refBytes, rowBytes: 256 * 4, bounds: sampleRect, format: .RGBA8, colorSpace: cs)
+        ctx.render(outImg, toBitmap: &outBytes, rowBytes: 256 * 4, bounds: sampleRect, format: .RGBA8, colorSpace: cs)
+        
+        var maxDiff: Int = 0
+        for i in 0..<refBytes.count {
+            let diff = abs(Int(refBytes[i]) - Int(outBytes[i]))
+            if diff > maxDiff { maxDiff = diff }
+        }
+        
+        XCTAssertEqual(maxDiff, 0, "Darkroom RAW export must match reference JPEG with 0 pixel difference")
+    }
+    
+    func testDarkroomRAWPreviewParityWithReferenceJPEG() async throws {
+        let rawURL = URL(fileURLWithPath: "/Volumes/Super SSD/Photo/Temp/05-29_威爾森餐酒館慶生/A7C09068.ARW")
+        let xmpURL = URL(fileURLWithPath: "/Volumes/Super SSD/Photo/Temp/05-29_威爾森餐酒館慶生/A7C09068.xmp")
+        let refURL = URL(fileURLWithPath: "/Volumes/Super SSD/Photo/Temp/05-29_威爾森餐酒館慶生/jpeg/A7C09068.jpg")
+        
+        guard FileManager.default.fileExists(atPath: rawURL.path),
+              FileManager.default.fileExists(atPath: xmpURL.path),
+              FileManager.default.fileExists(atPath: refURL.path) else {
+            throw XCTSkip("Darkroom fixture files on Super SSD not mounted/available")
+        }
+        
+        UserDefaults.standard.set(RAWColorPipelineEngine.darkroom.rawValue, forKey: "rawColorPipelineEngine")
+        RAWImageLoader.shared.clearCache()
+        
+        let parsedXmp = XMPParser.parse(url: xmpURL)
+        guard let holder = await RAWImageLoader.shared.loadBaseHolder(from: rawURL, xmp: parsedXmp, useSharedCache: false) else {
+            XCTFail("Failed to load base holder")
+            return
+        }
+        
+        let previewFull = AdobeColorPipeline.shared.process(image: holder.full, cameraModel: "ILCE-7C", xmp: parsedXmp, baseHolder: holder)
+        
+        let tempDir = inspectionTestScratchURL("LumiBaseDarkroomPreviewParity_\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        
+        let outURL = tempDir.appendingPathComponent("preview_full.jpg")
+        let ctx = CIContext(options: [.useSoftwareRenderer: false])
+        let cs = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+        
+        try ctx.writeJPEGRepresentation(
+            of: previewFull,
+            to: outURL,
+            colorSpace: cs,
+            options: [kCGImageDestinationLossyCompressionQuality as CIImageRepresentationOption: 0.95]
+        )
+        
+        guard let refImg = CIImage(contentsOf: refURL),
+              let outImg = CIImage(contentsOf: outURL) else {
+            XCTFail("Failed to load exported preview or reference image")
+            return
+        }
+        
+        XCTAssertEqual(outImg.extent.width, refImg.extent.width)
+        XCTAssertEqual(outImg.extent.height, refImg.extent.height)
+        
+        let sampleRect = CGRect(x: 1000, y: 1000, width: 256, height: 256)
+        var refBytes = [UInt8](repeating: 0, count: 256 * 256 * 4)
+        var outBytes = [UInt8](repeating: 0, count: 256 * 256 * 4)
+        
+        ctx.render(refImg, toBitmap: &refBytes, rowBytes: 256 * 4, bounds: sampleRect, format: .RGBA8, colorSpace: cs)
+        ctx.render(outImg, toBitmap: &outBytes, rowBytes: 256 * 4, bounds: sampleRect, format: .RGBA8, colorSpace: cs)
+        
+        var maxDiff: Int = 0
+        for i in 0..<refBytes.count {
+            let diff = abs(Int(refBytes[i]) - Int(outBytes[i]))
+            if diff > maxDiff { maxDiff = diff }
+        }
+        
+        XCTAssertEqual(maxDiff, 0, "Darkroom RAW preview must match reference JPEG with 0 pixel difference")
+    }
 }

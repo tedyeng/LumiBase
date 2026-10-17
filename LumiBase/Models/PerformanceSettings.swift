@@ -1,5 +1,18 @@
 import SwiftUI
 
+public enum RAWColorPipelineEngine: String, CaseIterable, Identifiable, Sendable {
+    case darkroom = "darkroom"
+    case adobePV2012 = "adobePV2012"
+    
+    public var id: String { rawValue }
+    public var title: String {
+        switch self {
+        case .darkroom: return "Darkroom (Shutter Lab 1:1 / Default)"
+        case .adobePV2012: return "Adobe PV2012 (Advanced Tone & Color)"
+        }
+    }
+}
+
 public enum HighlightPreviewQuality: Int, CaseIterable, Identifiable, Sendable {
     case fast = 0
     case full = 1
@@ -15,12 +28,24 @@ public enum HighlightPreviewQuality: Int, CaseIterable, Identifiable, Sendable {
 
 @MainActor final class PerformanceSettings: ObservableObject {
     static let shared = PerformanceSettings()
+    public nonisolated static var currentRAWPipelineEngine: RAWColorPipelineEngine {
+        let saved = UserDefaults.standard.string(forKey: "rawColorPipelineEngine") ?? RAWColorPipelineEngine.darkroom.rawValue
+        return RAWColorPipelineEngine(rawValue: saved) ?? .darkroom
+    }
     public nonisolated static var currentHighlightPreviewQuality: HighlightPreviewQuality {
         let savedQuality = UserDefaults.standard.object(forKey: "highlightPreviewQuality") as? Int ?? HighlightPreviewQuality.fast.rawValue
         return HighlightPreviewQuality(rawValue: savedQuality) ?? .fast
     }
     private let defaults: UserDefaults
     private let cache: LibraryJPEGROICache
+    @Published var rawPipelineEngine: RAWColorPipelineEngine {
+        didSet {
+            defaults.set(rawPipelineEngine.rawValue, forKey: "rawColorPipelineEngine")
+            RAWImageLoader.shared.clearCache()
+            NativeHighlightsService.shared.clear()
+            NotificationCenter.default.post(name: NSNotification.Name("LumiBaseRefreshHighlights"), object: nil)
+        }
+    }
     @Published var sharpnessEnabled: Bool {
         didSet { defaults.set(sharpnessEnabled, forKey: "previewSharpnessEnabled") }
     }
@@ -51,6 +76,8 @@ public enum HighlightPreviewQuality: Int, CaseIterable, Identifiable, Sendable {
     init(defaults: UserDefaults = .standard, cache: LibraryJPEGROICache = .shared) {
         self.defaults = defaults
         self.cache = cache
+        let savedEngine = defaults.string(forKey: "rawColorPipelineEngine") ?? RAWColorPipelineEngine.darkroom.rawValue
+        rawPipelineEngine = RAWColorPipelineEngine(rawValue: savedEngine) ?? .darkroom
         sharpnessEnabled = defaults.bool(forKey: "previewSharpnessEnabled")
         roiRadius = min(2, max(0, defaults.integer(forKey: "libraryJPEGROIRadius")))
         let saved = defaults.integer(forKey: "libraryJPEGROIBudgetMiB")
@@ -136,6 +163,19 @@ struct PerformanceSettingsView: View {
     
     private var renderingTab: some View {
         Form {
+            Section("RAW Color & Tone Engine") {
+                Picker("Color pipeline", selection: $settings.rawPipelineEngine) {
+                    ForEach(RAWColorPipelineEngine.allCases) { engine in
+                        Text(engine.title).tag(engine)
+                    }
+                }
+                .accessibilityIdentifier("rawColorPipelineEngine")
+                
+                Text("Darkroom (Shutter Lab 1:1 / Default): Delivers bit-for-bit identical color grading and export matching Darkroom / Shutter Lab with Apple vendor lens correction and direct GPU Metal JPEG output.\n\nAdobe PV2012: Calibrated Adobe Camera Raw process version 2012 emulation with advanced tone curve rolloff and multi-bracket HDR highlight fusion.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            
             Section("RAW Highlight Recovery Preview Quality") {
                 Picker("Preview quality", selection: $settings.highlightPreviewQuality) {
                     ForEach(HighlightPreviewQuality.allCases) { quality in

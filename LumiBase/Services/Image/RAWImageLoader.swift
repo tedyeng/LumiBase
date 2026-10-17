@@ -46,9 +46,11 @@ final class RAWDecodeConcurrencyGate: @unchecked Sendable {
 struct RAWDecodeSettings: Equatable {
     let temperature: Int?
     let tint: Int?
+    let engine: RAWColorPipelineEngine
     init(_ xmp: XMPMetadata?) {
         temperature = xmp?.temperature
         tint = xmp?.tint
+        engine = PerformanceSettings.currentRAWPipelineEngine
     }
 }
 
@@ -169,24 +171,36 @@ public final class RAWImageLoader: @unchecked Sendable {
                             } else {
                                 baseTemp = defaultTemp
                             }
-                            if let tint = xmp?.tint {
-                                // Adobe Camera Raw Planckian locus compensation:
-                                // When Kelvin changes relative to native shot temp, Apple RAW drifts in tint without Planckian offset
-                                let tempDelta = Double((baseTemp ?? defaultTemp) - defaultTemp)
-                                let tintOffset = Float(tempDelta * 0.012)
-                                rawFilter.neutralTint = Float(tint) + tintOffset
-                                baseTint = Float(tint)
+                            let engine = PerformanceSettings.currentRAWPipelineEngine
+                            if engine == .darkroom {
+                                rawFilter.isLensCorrectionEnabled = true
+                                if let tint = xmp?.tint {
+                                    rawFilter.neutralTint = Float(tint)
+                                    baseTint = Float(tint)
+                                } else {
+                                    baseTint = defaultTint
+                                }
+                                // Apple default shadowBias (3.0) and boostShadowAmount (0.9) preserved
                             } else {
-                                baseTint = defaultTint
-                            }
-                    
-                            // Preserve the decoder's per-file BaselineExposure; 0.30 is not a relative EV offset.
-                            // Keep the existing shadow/boost policy unchanged.
-                            rawFilter.shadowBias = 0.0
-                            rawFilter.boostShadowAmount = 0.0
-                            rawFilter.boostAmount = 1.0
-                            if #available(macOS 26.0, *) {
-                                rawFilter.isHighlightRecoveryEnabled = true
+                                if let tint = xmp?.tint {
+                                    // Adobe Camera Raw Planckian locus compensation:
+                                    // When Kelvin changes relative to native shot temp, Apple RAW drifts in tint without Planckian offset
+                                    let tempDelta = Double((baseTemp ?? defaultTemp) - defaultTemp)
+                                    let tintOffset = Float(tempDelta * 0.012)
+                                    rawFilter.neutralTint = Float(tint) + tintOffset
+                                    baseTint = Float(tint)
+                                } else {
+                                    baseTint = defaultTint
+                                }
+
+                                // Preserve the decoder's per-file BaselineExposure; 0.30 is not a relative EV offset.
+                                // Keep the existing shadow/boost policy unchanged.
+                                rawFilter.shadowBias = 0.0
+                                rawFilter.boostShadowAmount = 0.0
+                                rawFilter.boostAmount = 1.0
+                                if #available(macOS 26.0, *) {
+                                    rawFilter.isHighlightRecoveryEnabled = true
+                                }
                             }
                     
                             baseCIImage = rawFilter.outputImage

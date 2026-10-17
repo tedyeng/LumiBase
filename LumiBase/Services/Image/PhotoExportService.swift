@@ -68,6 +68,7 @@ public final class PhotoExportService: @unchecked Sendable {
         quality: Float = 0.95
     ) throws -> URL {
         // 1. Decode full resolution image
+        let engine = PerformanceSettings.currentRAWPipelineEngine
         let sourceRecipe = asset.isRaw ? HighlightsSourceRecipe(url: asset.fileURL) : nil
         var baseCI: CIImage?
         var exportBaseHolder: BaseImageHolder? = nil
@@ -75,48 +76,83 @@ public final class PhotoExportService: @unchecked Sendable {
             if let rawFilter = CIRAWFilter(imageURL: asset.fileURL) {
                 let defaultTemp = rawFilter.neutralTemperature
                 let defaultTint = rawFilter.neutralTint
-                let ev = Float(asset.xmp.exposure2012 ?? 0.0)
-                // Bake the RAW exposure into this render endpoint. The holder's
-                // baseExposure must describe the pixels it owns so the downstream
-                // EV-delta stage does not apply the same adjustment twice.
-                rawFilter.exposure = ev
-                let decodedTemp: Float
-                if let temp = asset.xmp.temperature, temp > 0 {
-                    rawFilter.neutralTemperature = Float(temp)
-                    decodedTemp = Float(temp)
+                
+                if engine == .darkroom {
+                    rawFilter.isLensCorrectionEnabled = true
+                    rawFilter.exposure = 0.0
+                    let decodedTemp: Float
+                    if let temp = asset.xmp.temperature, temp > 0 {
+                        rawFilter.neutralTemperature = Float(temp)
+                        decodedTemp = Float(temp)
+                    } else {
+                        decodedTemp = defaultTemp
+                    }
+                    let decodedTint: Float
+                    if let tint = asset.xmp.tint {
+                        rawFilter.neutralTint = Float(tint)
+                        decodedTint = Float(tint)
+                    } else {
+                        decodedTint = defaultTint
+                    }
+                    if let out = rawFilter.outputImage {
+                        baseCI = out
+                        exportBaseHolder = BaseImageHolder(
+                            full: out,
+                            display: out,
+                            interactive: out,
+                            fullExtent: out.extent,
+                            displayExtent: out.extent,
+                            interactiveExtent: out.extent,
+                            baseTemperature: decodedTemp,
+                            baseTint: decodedTint,
+                            baseExposure: 0.0,
+                            isRaw: true
+                        )
+                    }
                 } else {
-                    decodedTemp = defaultTemp
-                }
-                let decodedTint: Float
-                if let tint = asset.xmp.tint {
-                    let tempDelta = Double(decodedTemp - defaultTemp)
-                    let tintOffset = Float(tempDelta * 0.012)
-                    rawFilter.neutralTint = Float(tint) + tintOffset
-                    decodedTint = Float(tint)
-                } else {
-                    decodedTint = defaultTint
-                }
-                // Preserve native per-file BaselineExposure, independently of the user's exposure EV.
-                rawFilter.shadowBias = 0.0
-                rawFilter.boostShadowAmount = 0.0
-                rawFilter.boostAmount = 1.0
-                if #available(macOS 26.0, *) {
-                    rawFilter.isHighlightRecoveryEnabled = true
-                }
-                if let out = rawFilter.outputImage {
-                    baseCI = out
-                    exportBaseHolder = BaseImageHolder(
-                        full: out,
-                        display: out,
-                        interactive: out,
-                        fullExtent: out.extent,
-                        displayExtent: out.extent,
-                        interactiveExtent: out.extent,
-                        baseTemperature: decodedTemp,
-                        baseTint: decodedTint,
-                        baseExposure: ev,
-                        isRaw: true
-                    )
+                    let ev = Float(asset.xmp.exposure2012 ?? 0.0)
+                    // Bake the RAW exposure into this render endpoint. The holder's
+                    // baseExposure must describe the pixels it owns so the downstream
+                    // EV-delta stage does not apply the same adjustment twice.
+                    rawFilter.exposure = ev
+                    let decodedTemp: Float
+                    if let temp = asset.xmp.temperature, temp > 0 {
+                        rawFilter.neutralTemperature = Float(temp)
+                        decodedTemp = Float(temp)
+                    } else {
+                        decodedTemp = defaultTemp
+                    }
+                    let decodedTint: Float
+                    if let tint = asset.xmp.tint {
+                        let tempDelta = Double(decodedTemp - defaultTemp)
+                        let tintOffset = Float(tempDelta * 0.012)
+                        rawFilter.neutralTint = Float(tint) + tintOffset
+                        decodedTint = Float(tint)
+                    } else {
+                        decodedTint = defaultTint
+                    }
+                    // Preserve native per-file BaselineExposure, independently of the user's exposure EV.
+                    rawFilter.shadowBias = 0.0
+                    rawFilter.boostShadowAmount = 0.0
+                    rawFilter.boostAmount = 1.0
+                    if #available(macOS 26.0, *) {
+                        rawFilter.isHighlightRecoveryEnabled = true
+                    }
+                    if let out = rawFilter.outputImage {
+                        baseCI = out
+                        exportBaseHolder = BaseImageHolder(
+                            full: out,
+                            display: out,
+                            interactive: out,
+                            fullExtent: out.extent,
+                            displayExtent: out.extent,
+                            interactiveExtent: out.extent,
+                            baseTemperature: decodedTemp,
+                            baseTint: decodedTint,
+                            baseExposure: ev,
+                            isRaw: true
+                        )
+                    }
                 }
             }
         }
@@ -143,9 +179,9 @@ public final class PhotoExportService: @unchecked Sendable {
             throw ExportError.failedToDecodeSource(asset.fileURL)
         }
         
-        // 2. Apply Adobe PV2012 Color Pipeline (Exposure, WB, Highlights, Shadows, Contrast, Saturation, Clarity)
+        // 2. Apply Color Pipeline
         let processedCI: CIImage
-        if NativeHighlightsService.isAdvancedEnabled(for: asset.xmp), exportBaseHolder != nil, (asset.xmp.highlights2012 ?? 0) < 0 {
+        if engine == .adobePV2012, NativeHighlightsService.isAdvancedEnabled(for: asset.xmp), exportBaseHolder != nil, (asset.xmp.highlights2012 ?? 0) < 0 {
             guard let recipe = sourceRecipe else {
                 throw ExportError.failedToRenderImage("Highlights require a current source and off-main render; preparation was cancelled or failed")
             }
@@ -176,7 +212,24 @@ public final class PhotoExportService: @unchecked Sendable {
             throw ExportError.failedToRenderImage("Render extent is invalid")
         }
         
-        // 3. Render to high-fidelity CGImage in sRGB color space
+        // 3. For Darkroom RAW engine, write direct Metal JPEG with native sensor metadata
+        if engine == .darkroom && asset.isRaw {
+            guard !Task.isCancelled else { throw ExportError.cancelled }
+            let outputCI = processedCI.extent.isInfinite ? processedCI.cropped(to: renderExtent) : processedCI
+            do {
+                try ciContext.writeJPEGRepresentation(
+                    of: outputCI,
+                    to: destinationURL,
+                    colorSpace: sRGBColorSpace,
+                    options: [kCGImageDestinationLossyCompressionQuality as CIImageRepresentationOption: quality]
+                )
+                return destinationURL
+            } catch {
+                throw ExportError.failedToFinalizeDestination(destinationURL)
+            }
+        }
+        
+        // 4. Render to high-fidelity CGImage in sRGB color space
         guard !Task.isCancelled else { throw ExportError.cancelled }
         let renderContext = NativeHighlightsService.isAdvancedEnabled(for: asset.xmp) && exportBaseHolder != nil && (asset.xmp.highlights2012 ?? 0) < 0 ? NativeHighlightsService.shared.renderContext : ciContext
         guard let cgImage = renderContext.createCGImage(

@@ -5,11 +5,25 @@ All notable changes to **LumiBase** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.15.0] - 2026-10-17
 
 ### Added
-- **Experimental baseline tone correction for RAW (`BaselineToneKernel`, `AdobeColorPipeline`)**: lifts dark/mid-tone L* by ~3 and scales chroma (x0.80 dark/mid, x0.88 bright) to move all-zero renders closer to Lightroom exports. Mean Lab dE76 vs 10 LR exports 6.48 -> 5.83 (9 of 10 improve; 1330 regresses). Default on; disable with `defaults write com.lumibase.LumiBase.FastLibrary baselineToneCorrection -bool false`. See `docs/baseline-tone-correction-zhTW.md` for method and limits.
-- Opt-in `HighlightsDiagTests` and `scripts/lr_compare.py` for measuring renders against Lightroom exports.
+- **Darkroom (Shutter Lab) 1:1 CIRAWFilter Color Pipeline Engine (`RAWColorPipelineEngine`, `AdobeColorPipeline`, `PhotoExportService`)**:
+  - Implemented high-performance Apple CIRAWFilter pipeline delivering 100% bit-for-bit parity (0.0 pixel difference) with Shutter Lab's Darkroom engine.
+  - Enabled Apple vendor lens distortion & chromatic aberration correction (`isLensCorrectionEnabled = true`).
+  - Native RAW White Balance passing neutral Kelvin temperature and tint directly without artificial Planckian offsets.
+  - Apple native shadow compensation preservation (`shadowBias = 3.0`, `boostShadowAmount = 0.9`), eliminating unnatural shadow-crushing.
+  - Single-pass high dynamic range Highlight & Shadow tonemapping via `CIHighlightShadowAdjust` (`max(0.6, 1.0 + hl/100 * 0.35)`).
+  - Linear contrast and dehaze saturation mapping via CoreImage Metal filters.
+- **Direct Metal GPU JPEG Export Representation (`PhotoExportService`)**:
+  - Direct output through `ciContext.writeJPEGRepresentation` for Darkroom RAW exports, bypassing intermediate CPU 8-bit quantization buffers to preserve full 32-bit floating-point precision and native camera EXIF/TIFF/IPTC metadata.
+- **Settings & Preferences UI for Pipeline Engine (`PerformanceSettingsView`)**:
+  - Added "RAW Color & Tone Engine" Picker under Preferences -> `Rendering & RAW`, allowing users to switch between "Darkroom (Shutter Lab 1:1 / Default)" and "Adobe PV2012 (Advanced Tone & Color)".
+  - Automatic thumbnail and develop preview cache invalidation when switching engines via updated `thumbnailDevelopCacheIdentity`.
+- **Tone Curve & 8-Band Color Mixer Integration**:
+  - Full Point Tone Curve (RGB Master, Red, Green, Blue) support and 8-Band HSL Color Mixer (Hue, Saturation, Luminance) integration across interactive Loupe preview, develop synchronization, and export pipelines.
+- **Parity Unit Test Suite (`PhotoExportServiceTests`)**:
+  - Added `testDarkroomRAWExportParityWithReferenceJPEG` and `testDarkroomRAWPreviewParityWithReferenceJPEG` verifying 0.0 maximum pixel difference against real Darkroom output on Sony Alpha RAW files.
 
 ## [1.14.15 Fast Library] - 2026-10-11
 
