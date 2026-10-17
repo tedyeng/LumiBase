@@ -145,6 +145,10 @@ public struct PhotoAsset: Identifiable, Hashable, Sendable {
         hasher.combine(id)
         hasher.combine(companionURLs)
         hasher.combine(sourceOrientation)
+        hasher.combine(xmp.rating)
+        hasher.combine(xmp.colorLabel)
+        hasher.combine(xmp.flag)
+        hasher.combine(xmp.thumbnailDevelopCacheIdentity)
     }
     
     public static func == (lhs: PhotoAsset, rhs: PhotoAsset) -> Bool {

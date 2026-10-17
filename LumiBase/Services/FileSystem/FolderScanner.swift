@@ -180,18 +180,7 @@ public final class FolderScanner: Sendable {
         let (cameraMetadata, embeddedXMP) = MetadataReader.readMetadata(from: fileURL)
         
         // 2. Read XMP sidecar if present
-        var xmpMetadata = embeddedXMP ?? .empty
-        let parentDir = fileURL.deletingLastPathComponent()
-        
-        // Support DSC0001.ARW.xmp AND DSC0001.xmp
-        let directXmp = parentDir.appendingPathComponent("\(fileURL.lastPathComponent).xmp")
-        let baseNameXmp = parentDir.appendingPathComponent("\(fileURL.deletingPathExtension().lastPathComponent).xmp")
-        
-        if fileManager.fileExists(atPath: directXmp.path) {
-            xmpMetadata = XMPParser.parse(url: directXmp)
-        } else if fileManager.fileExists(atPath: baseNameXmp.path) {
-            xmpMetadata = XMPParser.parse(url: baseNameXmp)
-        }
+        let xmpMetadata = XMPParser.loadXMP(for: fileURL, fallbackEmbeddedXMP: embeddedXMP)
         
         let source = CGImageSourceCreateWithURL(fileURL as CFURL, nil)
         let properties = source.flatMap { CGImageSourceCopyPropertiesAtIndex($0, 0, nil) as? [CFString: Any] }

@@ -79,15 +79,27 @@ public actor ThumbnailLoader {
     private let cache = ThumbnailCacheManager.shared
     private var inFlightTasks: [String: Task<NSImage?, Never>] = [:]
 
-    // Bounded concurrent queue prevents memory thrashing while enabling parallel thumbnail generation.
-    private nonisolated static let decodeSemaphore = DispatchSemaphore(value: min(4, max(2, ProcessInfo.processInfo.activeProcessorCount)))
-    private nonisolated static let decodeQueue = DispatchQueue(
-        label: "com.lumibase.thumbnail.decode", qos: .userInitiated, attributes: .concurrent)
+    // Dedicated bounded operation queue prevents thread pool starvation and QoS priority inversion.
+    private nonisolated static let decodeOperationQueue: OperationQueue = {
+        let q = OperationQueue()
+        q.name = "com.lumibase.thumbnail.decode"
+        q.qualityOfService = .userInitiated
+        q.maxConcurrentOperationCount = min(6, max(2, ProcessInfo.processInfo.activeProcessorCount))
+        return q
+    }()
     private nonisolated static let renderContext = CIContext(options: [.useSoftwareRenderer: false])
 
     /// Returns only an already resident thumbnail; safe for the synchronous selection handoff.
     public nonisolated static func cachedMemoryThumbnail(for asset: PhotoAsset, maxPixelSize: Int = 1600) -> NSImage? {
         let cache = ThumbnailCacheManager.shared
+        if !asset.xmp.hasDevelopEdits {
+            let versions = cameraSourceVersion(for: asset)
+            let cameraKey = cache.cacheKey(for: asset.fileURL, maxPixelSize: maxPixelSize,
+                dateModified: asset.dateModified, developTag: "camera-jpeg-only-v2|" + versions)
+            if let cameraImg = cache.memoryImage(forKey: cameraKey) {
+                return cameraImg
+            }
+        }
         return cache.memoryImage(forKey: cacheKey(for: asset, maxPixelSize: maxPixelSize))
     }
 
@@ -116,15 +128,19 @@ public actor ThumbnailLoader {
         let cancellation = CameraPreviewCancellation()
         let task = Task<NSImage?, Never>.detached(priority: .userInitiated) {
             return await withCheckedContinuation { continuation in
-                Self.decodeQueue.async {
-                    Self.decodeSemaphore.wait()
-                    defer { Self.decodeSemaphore.signal() }
-                    let image = autoreleasepool {
-                        guard !cancellation.isCancelled else { return nil as NSImage? }
+                let op = BlockOperation()
+                op.addExecutionBlock { [weak op] in
+                    guard !(op?.isCancelled ?? false), !cancellation.isCancelled else {
+                        continuation.resume(returning: nil)
+                        return
+                    }
+                    let image = autoreleasepool { () -> NSImage? in
+                        guard !(op?.isCancelled ?? false), !cancellation.isCancelled else { return nil }
                         return Self.createThumbnail(for: targetAsset, maxPixelSize: maxPixelSize)
                     }
-                    continuation.resume(returning: image)
+                    continuation.resume(returning: (op?.isCancelled ?? false) || cancellation.isCancelled ? nil : image)
                 }
+                Self.decodeOperationQueue.addOperation(op)
             }
         }
         
@@ -184,7 +200,7 @@ public actor ThumbnailLoader {
         let key = cameraReadyKey(asset, maxPixelSize: maxPixelSize)
         if let existing = cameraReady.frames.object(forKey: key), existing.sourceVersion == version, existing.image === image { return }
         let extent: CGRect = await withCheckedContinuation { continuation in
-            decodeQueue.async { continuation.resume(returning: cameraFullExtent(for: asset)) }
+            DispatchQueue.global(qos: .userInitiated).async { continuation.resume(returning: cameraFullExtent(for: asset)) }
         }
         guard !Task.isCancelled, cameraSourceVersion(for: asset) == version else { return }
         let frame = CameraReadyFrame(image: image, sourceVersion: version, fullExtent: extent, urls: [asset.fileURL] + asset.companionURLs) {
@@ -220,9 +236,14 @@ public actor ThumbnailLoader {
         let cancellation = CameraPreviewCancellation()
         let image: NSImage? = await withTaskCancellationHandler {
           await withCheckedContinuation { continuation in
-            Self.decodeQueue.async {
-                guard !cancellation.isCancelled else { continuation.resume(returning: nil); return }
-                let result: NSImage? = autoreleasepool {
+            let op = BlockOperation()
+            op.addExecutionBlock { [weak op] in
+                guard !(op?.isCancelled ?? false), !cancellation.isCancelled else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+                let result: NSImage? = autoreleasepool { () -> NSImage? in
+                    guard !(op?.isCancelled ?? false), !cancellation.isCancelled else { return nil }
                     func extract(_ url: URL, embeddedOnly: Bool) -> NSImage? {
                         let options: [CFString: Any] = [
                             kCGImageSourceShouldCache: false,
@@ -244,8 +265,9 @@ public actor ThumbnailLoader {
                     }
                     return nil
                 }
-                continuation.resume(returning: result)
+                continuation.resume(returning: (op?.isCancelled ?? false) || cancellation.isCancelled ? nil : result)
             }
+            Self.decodeOperationQueue.addOperation(op)
           }
         } onCancel: { cancellation.cancel() }
         guard !Task.isCancelled, Self.cameraSourceVersion(for: asset) == versions else { return nil }
@@ -356,22 +378,67 @@ public actor ThumbnailLoader {
         return nil
     }
 
-    /// Synchronously creates a thumbnail from disk using CIRAWFilter draft mode (for exact preview match) or ImageIO
+    /// Extract a pre-scaled base image via companion JPEG or fast ImageIO embedded RAW preview (2-5ms)
+    /// without expensive 33MP demosaicing.
+    private nonisolated static func extractBaseImage(for asset: PhotoAsset, targetMaxPixelSize: Int) -> CIImage? {
+        let options: [CFString: Any] = [
+            kCGImageSourceShouldCache: false,
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: targetMaxPixelSize
+        ]
+        
+        // 1. Companion JPEG (e.g. RAW+JPG pair)
+        for companion in asset.companionURLs where ["jpg", "jpeg"].contains(companion.pathExtension.lowercased()) &&
+            companion.deletingPathExtension().lastPathComponent == asset.fileURL.deletingPathExtension().lastPathComponent &&
+            companion.deletingLastPathComponent() == asset.fileURL.deletingLastPathComponent() {
+            if let source = CGImageSourceCreateWithURL(companion as CFURL, nil),
+               let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) {
+                return CIImage(cgImage: cg)
+            }
+        }
+        
+        // 2. Embedded preview in RAW / fileURL via ImageIO
+        if let source = CGImageSourceCreateWithURL(asset.fileURL as CFURL, nil),
+           let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) {
+            return CIImage(cgImage: cg)
+        }
+        
+        // 3. Fallback for RAW if ImageIO could not extract embedded thumbnail
+        if asset.isRaw {
+            if let rawFilter = CIRAWFilter(imageURL: asset.fileURL) {
+                rawFilter.isDraftModeEnabled = true
+                if let rawOutput = rawFilter.outputImage {
+                    let extent = rawOutput.extent
+                    let currentMax = max(extent.width, extent.height)
+                    if currentMax > CGFloat(targetMaxPixelSize), currentMax > 0 {
+                        let scale = CGFloat(targetMaxPixelSize) / currentMax
+                        return rawOutput.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+                    }
+                    return rawOutput
+                }
+            }
+        } else if let fileCI = CIImage(contentsOf: asset.fileURL) {
+            let extent = fileCI.extent
+            let currentMax = max(extent.width, extent.height)
+            if currentMax > CGFloat(targetMaxPixelSize), currentMax > 0 {
+                let scale = CGFloat(targetMaxPixelSize) / currentMax
+                return fileCI.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+            }
+            return fileCI
+        }
+        
+        return nil
+    }
+
+    /// Synchronously creates a thumbnail from disk using pre-scaled ImageIO preview + AdobeColorPipeline
     private nonisolated static func createThumbnail(for asset: PhotoAsset, maxPixelSize: Int) -> NSImage? {
         // 1. For assets with develop edits (both RAW and JPEG), process through AdobeColorPipeline
         // so crop (e.g. 2:3, 16:9), rotation, and tone adjustments are accurately reflected on the thumbnail
         if asset.xmp.hasDevelopEdits {
-            var baseCI: CIImage? = nil
-            if asset.isRaw {
-                if let rawFilter = CIRAWFilter(imageURL: asset.fileURL) {
-                    rawFilter.isDraftModeEnabled = true
-                    baseCI = rawFilter.outputImage
-                }
-            } else {
-                baseCI = CIImage(contentsOf: asset.fileURL)
-            }
-            
-            if let inputCI = baseCI {
+            // Pre-scale input to max(maxPixelSize * 2, 800) so filters run in <1ms instead of processing 33MP!
+            let intermediateMax = max(maxPixelSize * 2, 800)
+            if let inputCI = extractBaseImage(for: asset, targetMaxPixelSize: intermediateMax) {
                 let processed = AdobeColorPipeline.shared.process(
                     image: inputCI,
                     cameraModel: asset.cameraMetadata.model,
@@ -399,7 +466,9 @@ public actor ThumbnailLoader {
             kCGImageSourceThumbnailMaxPixelSize: maxPixelSize
         ]
         
-        for companion in asset.companionURLs where ["jpg", "jpeg"].contains(companion.pathExtension.lowercased()) {
+        for companion in asset.companionURLs where ["jpg", "jpeg"].contains(companion.pathExtension.lowercased()) &&
+            companion.deletingPathExtension().lastPathComponent == asset.fileURL.deletingPathExtension().lastPathComponent &&
+            companion.deletingLastPathComponent() == asset.fileURL.deletingLastPathComponent() {
             if let source = CGImageSourceCreateWithURL(companion as CFURL, nil),
                let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) {
                 return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))

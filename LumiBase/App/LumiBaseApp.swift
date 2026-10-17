@@ -13,8 +13,8 @@ struct LumiBaseApp: App {
     }
     
     private var appTitleWithVersion: String {
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.14.0"
-        return "LumiBase Fast Library v\(version)"
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.14.15"
+        return "LumiBase v\(version)"
     }
     
     var body: some Scene {
@@ -109,6 +109,13 @@ struct LumiBaseApp: App {
                 Button("Flag as Pick") { NotificationCenter.default.post(name: NSNotification.Name("LumiBaseFlag"), object: FlagStatus.pick) }.keyboardShortcut("p", modifiers: [])
                 Button("Flag as Reject") { NotificationCenter.default.post(name: NSNotification.Name("LumiBaseFlag"), object: FlagStatus.reject) }.keyboardShortcut("x", modifiers: [])
                 Button("Unflag") { NotificationCenter.default.post(name: NSNotification.Name("LumiBaseFlag"), object: FlagStatus.unflagged) }.keyboardShortcut("u", modifiers: [])
+                
+                Divider()
+                
+                Button("Reload XMP from Disk") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseReloadXMP"), object: nil)
+                }
+                .keyboardShortcut("r", modifiers: [.command, .shift])
             }
             CommandMenu("Develop") {
                 Button("Edit Adjustments") {

@@ -211,7 +211,14 @@ struct FilmstripItemView: View {
             onSelect(isToggle, isRange)
         }
         .task(id: ThumbnailLoader.cacheKey(for: asset, maxPixelSize: 180)) {
-            thumbnail = nil; onPreview(nil)
+            if let cached = ThumbnailLoader.cachedMemoryThumbnail(for: asset, maxPixelSize: 180) {
+                self.thumbnail = cached
+                self.thumbnailIdentity = previewIdentity
+                onPreview(cached)
+            } else {
+                thumbnail = nil
+                onPreview(nil)
+            }
             let loaded = asset.xmp.hasDevelopEdits
                 ? await ThumbnailLoader.shared.loadThumbnail(for: asset, maxPixelSize: 180)
                 : await ThumbnailLoader.shared.loadCameraPreview(for: asset, maxPixelSize: 180)

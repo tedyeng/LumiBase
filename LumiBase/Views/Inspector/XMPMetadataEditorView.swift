@@ -8,12 +8,13 @@ public struct XMPMetadataEditorView: View {
     @State private var newKeyword: String = ""
     @State private var titleText: String = ""
     @State private var captionText: String = ""
+    @State private var isReloading: Bool = false
     
     public var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             
             // 0. XMP Sidecar Status Banner
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     HStack(spacing: 5) {
                         Circle()
@@ -35,14 +36,56 @@ public struct XMPMetadataEditorView: View {
                     }
                 }
                 
-                if let sidecarName = asset.xmp.sidecarFilename {
-                    Text("File: \(sidecarName)")
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundColor(LightroomTheme.textSecondary)
-                } else if asset.xmp.isLoadedFromSidecar {
-                    Text("File: \(asset.fileURL.deletingPathExtension().lastPathComponent).xmp")
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundColor(LightroomTheme.textSecondary)
+                HStack(alignment: .center) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        if let sidecarName = asset.xmp.sidecarFilename {
+                            Text("File: \(sidecarName)")
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundColor(LightroomTheme.textSecondary)
+                        } else if asset.xmp.isLoadedFromSidecar {
+                            Text("File: \(asset.fileURL.deletingPathExtension().lastPathComponent).xmp")
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundColor(LightroomTheme.textSecondary)
+                        } else {
+                            Text("No external .xmp")
+                                .font(.system(size: 10))
+                                .foregroundColor(LightroomTheme.textMuted)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    Button {
+                        appState.reloadXMP(for: [asset.id])
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isReloading = true
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                isReloading = false
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 9, weight: .semibold))
+                                .rotationEffect(.degrees(isReloading ? 360 : 0))
+                                .animation(isReloading ? Animation.linear(duration: 0.6) : .default, value: isReloading)
+                            Text(isReloading ? "Reloaded" : "Reload XMP")
+                                .font(.system(size: 10, weight: .medium))
+                        }
+                        .foregroundColor(isReloading ? LightroomTheme.accentYellow : LightroomTheme.textPrimary)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(LightroomTheme.cardSelectedBackground)
+                        .cornerRadius(3)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 3)
+                                .stroke(isReloading ? LightroomTheme.accentYellow.opacity(0.8) : LightroomTheme.cardBorder, lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .help("Reload XMP sidecar from disk for this photo (⇧⌘R)")
                 }
             }
             .padding(8)
@@ -245,6 +288,10 @@ public struct XMPMetadataEditorView: View {
         .onChange(of: asset.id) { _, _ in
             titleText = asset.xmp.title ?? ""
             captionText = asset.xmp.caption ?? ""
+        }
+        .onChange(of: asset.xmp) { _, newXMP in
+            titleText = newXMP.title ?? ""
+            captionText = newXMP.caption ?? ""
         }
     }
     

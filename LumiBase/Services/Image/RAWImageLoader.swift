@@ -97,6 +97,13 @@ public final class RAWImageLoader: @unchecked Sendable {
     private var cachedBaseHolder: BaseImageHolder?
     private let cacheLock = NSLock()
     
+    public func cachedHolder(for url: URL) -> BaseImageHolder? {
+        cacheLock.lock()
+        let holder = (cachedBaseURL == url) ? cachedBaseHolder : nil
+        cacheLock.unlock()
+        return holder
+    }
+
     private func getCached(for url: URL, settings: RAWDecodeSettings) -> BaseImageHolder? {
         cacheLock.lock()
         let holder = (cachedBaseURL == url && cachedSettings == settings) ? cachedBaseHolder : nil

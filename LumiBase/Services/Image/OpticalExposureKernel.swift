@@ -25,6 +25,7 @@ public enum OpticalExposureKernel {
             
             float gain = pow(2.0, ev);
             float y = max(dot(c, vec3(0.2126, 0.7152, 0.0722)), 1e-6);
+            vec3 toned;
             
             if (ev > 0.0) {
                 // Adaptive shoulder parameter: alpha = 1.0 - 2^(-ev)
@@ -44,7 +45,7 @@ public enum OpticalExposureKernel {
                 
                 // Apply luminance scale to RGB channels
                 float scale = yTarget / y;
-                vec3 toned = c * scale;
+                toned = c * scale;
                 
                 // Specular highlight desaturation & gamut map (Lightcraft camera highlight bleaching):
                 // Highly saturated channels approaching 1.0 naturally bleach toward white
@@ -54,13 +55,19 @@ public enum OpticalExposureKernel {
                     float t = clamp((mx - 1.0) / max(mx - yTarget, 1e-6), 0.0, 1.0);
                     toned = mix(toned, vec3(yTarget), t);
                 }
-                
-                return vec4(clamp(toned, 0.0, 1.0), s.a);
             } else {
                 // Negative exposure: smooth linear optical pulldown
-                vec3 toned = c * gain;
-                return vec4(max(toned, vec3(0.0)), s.a);
+                toned = c * gain;
             }
+            
+            // Adobe Camera Raw black point toe compensation after exposure gain:
+            // Quadratic roll-off in deep shadows (yToned < 0.05) with delta_black = 0.0015 * 2^EV
+            float yToned = dot(toned, vec3(0.2126, 0.7152, 0.0722));
+            float blackToe = min(0.008, 0.0015 * gain);
+            float toeWeight = clamp(1.0 - (yToned / 0.05), 0.0, 1.0);
+            toned = max(vec3(0.0), toned - vec3(blackToe * toeWeight * toeWeight));
+            
+            return vec4(clamp(toned, 0.0, 1.0), s.a);
         }
     """)
 

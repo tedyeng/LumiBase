@@ -131,6 +131,9 @@ public struct MainLayoutView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseDeletePhotos"))) { _ in
             appState.requestDeleteSelectedPhotos()
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseReloadXMP"))) { _ in
+            appState.reloadXMP()
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseSyncSettings"))) { _ in
             if appState.selectedAssetIDs.count > 1 {
                 appState.showSyncDialog = true

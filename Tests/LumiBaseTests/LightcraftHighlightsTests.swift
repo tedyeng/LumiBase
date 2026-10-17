@@ -187,4 +187,46 @@ final class LightcraftHighlightsTests: XCTestCase {
         XCTAssertNotNil(fullRender)
         fputs(">>> Full preview render took: \(String(format: "%.1f", fullElapsed))ms\n", stderr)
     }
+    
+    func testNativeHighlightsWithColorMixerSliderLiveUpdate() async throws {
+        let arwURL = URL(fileURLWithPath: "/Volumes/Super SSD/Photo/Temp/09-17_淡江大橋/A7C00904.ARW")
+        guard FileManager.default.fileExists(atPath: arwURL.path) else { return }
+        
+        var xmp = XMPMetadata()
+        xmp.highlights2012 = -80
+        xmp.advancedRAWHighlightRecovery = true
+        
+        guard let holder = await RAWImageLoader.shared.loadBaseHolder(from: arwURL, xmp: xmp),
+              let source = holder.highlightsSource else {
+            XCTFail("Failed to load holder and highlightsSource")
+            return
+        }
+        
+        let advService = NativeHighlightsService.shared
+        advService.clear()
+        
+        // 1. Render baseline (Blue = 0)
+        let img0 = try XCTUnwrap(advService.image(source: source, xmp: xmp, cameraModel: "ILCE-7CM2"))
+        
+        // 2. Adjust Blue slider: Luminance = 100
+        var xmpBlue100 = xmp
+        xmpBlue100.hsl.blue.luminance = 100
+        let imgBlue100 = try XCTUnwrap(advService.image(source: source, xmp: xmpBlue100, cameraModel: "ILCE-7CM2"))
+        
+        // 3. Render a patch from the sky region (e.g. at x=3000, y=1000)
+        let ctx = CIContext()
+        func samplePatch(_ img: CIImage) -> [Float] {
+            var pixels = [Float](repeating: 0, count: 16 * 16 * 4)
+            ctx.render(img, toBitmap: &pixels, rowBytes: 16 * 16,
+                       bounds: CGRect(x: 3000, y: 1000, width: 16, height: 16),
+                       format: .RGBAf, colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
+            return pixels
+        }
+        
+        let p0 = samplePatch(img0)
+        let pBlue = samplePatch(imgBlue100)
+        
+        // The pixels must NOT be identical: Blue Luminance +100 must alter the sky preview
+        XCTAssertNotEqual(p0, pBlue, "Preview must change when Blue Luminance is set to 100")
+    }
 }

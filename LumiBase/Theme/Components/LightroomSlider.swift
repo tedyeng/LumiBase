@@ -90,6 +90,7 @@ public struct LightroomSlider: View {
     public let defaultValue: Double
     public let trackStyle: LightroomSliderTrackStyle
     public let valueFormatter: (Double) -> String
+    public var leadingColor: Color? = nil
     public var onEditingChanged: ((Bool) -> Void)? = nil
     public var onReset: (() -> Void)? = nil
     
@@ -123,6 +124,7 @@ public struct LightroomSlider: View {
         defaultValue: Double = 0.0,
         trackStyle: LightroomSliderTrackStyle = .standard,
         valueFormatter: @escaping (Double) -> String = { String(format: "%+.0f", $0) },
+        leadingColor: Color? = nil,
         field: BasicSliderField? = nil,
         focusedField: FocusState<BasicSliderField?>.Binding? = nil,
         onNextField: (() -> Void)? = nil,
@@ -137,6 +139,7 @@ public struct LightroomSlider: View {
         self.defaultValue = defaultValue
         self.trackStyle = trackStyle
         self.valueFormatter = valueFormatter
+        self.leadingColor = leadingColor
         self.field = field
         self.focusedField = focusedField
         self.onNextField = onNextField
@@ -160,15 +163,23 @@ public struct LightroomSlider: View {
     public var body: some View {
         HStack(spacing: 8) {
             // 1. Title Label (Double click to reset)
-            Text(title)
-                .font(.system(size: 11, weight: .regular))
-                .foregroundColor(isNonDefault ? LightroomTheme.textPrimary : LightroomTheme.textSecondary)
-                .frame(width: 72, alignment: .leading)
-                .contentShape(Rectangle())
-                .onTapGesture(count: 2) {
-                    resetToDefault()
+            HStack(spacing: 5) {
+                if let dotColor = leadingColor {
+                    Circle()
+                        .fill(dotColor)
+                        .frame(width: 6, height: 6)
                 }
-                .help("Double-click to reset")
+                Text(title)
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundColor(isNonDefault ? LightroomTheme.textPrimary : LightroomTheme.textSecondary)
+                    .lineLimit(1)
+            }
+            .frame(width: 72, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture(count: 2) {
+                resetToDefault()
+            }
+            .help("Double-click to reset")
             
             // 2. Custom Slider Track & Thumb
             GeometryReader { geo in

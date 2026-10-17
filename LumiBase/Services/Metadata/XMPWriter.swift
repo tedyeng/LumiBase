@@ -129,6 +129,37 @@ public final class XMPWriter: Sendable {
             if let profile = metadata.cameraProfile, !profile.isEmpty {
                 developAttrs += " crs:CameraProfile=\"\(escapeXML(profile))\""
             }
+            if !metadata.hsl.isZero {
+                for band in HSLColorBand.allCases {
+                    let adj = metadata.hsl[band]
+                    if adj.hue != 0 {
+                        developAttrs += " crs:HueAdjustment\(band.rawValue)=\"\(adj.hue)\""
+                    }
+                    if adj.saturation != 0 {
+                        developAttrs += " crs:SaturationAdjustment\(band.rawValue)=\"\(adj.saturation)\""
+                    }
+                    if adj.luminance != 0 {
+                        developAttrs += " crs:LuminanceAdjustment\(band.rawValue)=\"\(adj.luminance)\""
+                    }
+                }
+            }
+            if !metadata.toneCurve.isLinear {
+                func formatPoints(_ pts: [ToneCurvePoint]) -> String {
+                    pts.map { "\(Int(round($0.x))), \(Int(round($0.y)))" }.joined(separator: ", ")
+                }
+                if metadata.toneCurve.rgbPoints != ToneCurveData.linearPoints {
+                    developAttrs += " crs:ToneCurvePV2012=\"\(formatPoints(metadata.toneCurve.rgbPoints))\""
+                }
+                if metadata.toneCurve.redPoints != ToneCurveData.linearPoints {
+                    developAttrs += " crs:ToneCurvePV2012Red=\"\(formatPoints(metadata.toneCurve.redPoints))\""
+                }
+                if metadata.toneCurve.greenPoints != ToneCurveData.linearPoints {
+                    developAttrs += " crs:ToneCurvePV2012Green=\"\(formatPoints(metadata.toneCurve.greenPoints))\""
+                }
+                if metadata.toneCurve.bluePoints != ToneCurveData.linearPoints {
+                    developAttrs += " crs:ToneCurvePV2012Blue=\"\(formatPoints(metadata.toneCurve.bluePoints))\""
+                }
+            }
         }
         
         let xml = """
