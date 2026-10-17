@@ -289,7 +289,7 @@ public final class AdobeColorPipeline: Sendable {
 
 
 /// Baseline dark/mid-tone correction measured against Lightroom (all-zero) and Sony JPEG references:
-/// lifts L* by ~3 and scales chroma by ~0.8 in the L* 1..35 band, and by ~0.88 for L* > 45. Experimental; see docs/baseline-tone-a.md.
+/// lifts L* by ~3 and scales chroma by ~0.8 in the L* 1..35 band, and by ~0.88 for L* > 45. Experimental; see docs/baseline-tone-correction-zhTW.md.
 public enum BaselineToneKernel {
     static var isEnabled: Bool {
         if let e = ProcessInfo.processInfo.environment["LB_BASELINE_A"] { return e != "0" }
@@ -300,21 +300,10 @@ public enum BaselineToneKernel {
         return String(d)
     }
     private static let kernel = CIColorKernel(source: """
-        vec3 srgbEnc(vec3 c) {
-            vec3 lo = c * 12.92;
-            vec3 hi = 1.055 * pow(max(c, vec3(0.0031308)), vec3(1.0/2.4)) - 0.055;
-            return mix(hi, lo, step(c, vec3(0.0031308)));
-        }
-        vec3 srgbDec(vec3 c) {
-            vec3 lo = c / 12.92;
-            vec3 hi = pow((max(c, vec3(0.04045)) + 0.055) / 1.055, vec3(2.4));
-            return mix(hi, lo, step(c, vec3(0.04045)));
-        }
         float labF(float t) { return t > 0.008856 ? pow(t, 1.0/3.0) : 7.787 * t + 16.0/116.0; }
         float labFInv(float t) { float t3 = t*t*t; return t3 > 0.008856 ? t3 : (t - 16.0/116.0) / 7.787; }
         kernel vec4 baselineTone(__sample s, float lift, float chroma, float brightChroma) {
             vec3 lin = s.rgb;
-            vec3 enc = srgbEnc(clamp(lin, 0.0, 1.0));
             vec3 l = clamp(lin, 0.0, 1.0);
             float X = dot(l, vec3(0.4124, 0.3576, 0.1805)) / 0.95047;
             float Y = dot(l, vec3(0.2126, 0.7152, 0.0722));
