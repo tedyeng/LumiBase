@@ -299,6 +299,26 @@ public final class AdobeColorPipeline: Sendable {
             ])
         }
         
+        // 2b. Whites & Blacks (Dynamic Range Endpoints via CIToneCurve)
+        let whites = Double(xmp.whites2012 ?? 0)
+        let blacks = Double(xmp.blacks2012 ?? 0)
+        if whites != 0 || blacks != 0 {
+            let wFactor = whites / 100.0
+            let bFactor = blacks / 100.0
+            let p0Y = max(0.0, min(0.04, 0.0 + (bFactor * 0.01)))
+            let p1Y = max(0.12, min(0.35, 0.25 + (bFactor * 0.15)))
+            let p2Y = 0.50
+            let p3Y = max(0.60, min(0.90, 0.75 + (wFactor * 0.10)))
+            let p4Y = max(0.95, min(1.0, 1.0 + (wFactor * 0.03)))
+            current = current.applyingFilter("CIToneCurve", parameters: [
+                "inputPoint0": CIVector(x: 0.0, y: p0Y),
+                "inputPoint1": CIVector(x: 0.25, y: p1Y),
+                "inputPoint2": CIVector(x: 0.50, y: p2Y),
+                "inputPoint3": CIVector(x: 0.75, y: p3Y),
+                "inputPoint4": CIVector(x: 1.0, y: p4Y)
+            ])
+        }
+        
         // 3. Contrast & Dehaze
         let contrast = Double(xmp.contrast2012 ?? 0)
         let dehaze = Double(xmp.dehaze ?? 0)
@@ -321,13 +341,22 @@ public final class AdobeColorPipeline: Sendable {
             ])
         }
         
-        // 5. Clarity & Texture (only positive clarity > 5 applies unsharp mask)
+        // 5. Clarity & Texture
         let clarity = Double(xmp.clarity2012 ?? 0) + Double(xmp.texture ?? 0)
         if clarity > 5 {
             let intensity = min(0.4, clarity / 100.0 * 0.3)
             current = current.applyingFilter("CIUnsharpMask", parameters: [
                 kCIInputRadiusKey: 1.5,
                 kCIInputIntensityKey: intensity
+            ])
+        } else if clarity < -5 {
+            let glowFactor = min(0.35, abs(clarity) / 100.0 * 0.30)
+            let blurred = current.applyingFilter("CIGaussianBlur", parameters: [
+                kCIInputRadiusKey: 6.0
+            ]).cropped(to: current.extent)
+            current = current.applyingFilter("CIDissolveTransition", parameters: [
+                "inputTargetImage": blurred,
+                "inputTime": glowFactor
             ])
         }
         
