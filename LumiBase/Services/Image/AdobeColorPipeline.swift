@@ -341,6 +341,11 @@ public final class AdobeColorPipeline: Sendable {
             ])
         }
         
+        // 4b. Color Mixer (8-Band HSL)
+        if !xmp.hsl.isZero {
+            current = ColorMixerKernel.apply(image: current, hsl: xmp.hsl)
+        }
+        
         // 5. Clarity & Texture
         let clarity = Double(xmp.clarity2012 ?? 0) + Double(xmp.texture ?? 0)
         if clarity > 5 {
