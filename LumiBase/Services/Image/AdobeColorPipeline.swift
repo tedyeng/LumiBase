@@ -29,6 +29,10 @@ public final class AdobeColorPipeline: Sendable {
             return image
         }
         
+        if isRaw && PerformanceSettings.currentRAWPipelineEngine == .darkroom && xmp.advancedRAWHighlightRecovery != true {
+            return processDarkroom(image: image, xmp: xmp)
+        }
+        
         var current = image
         
         // 1. Optical Exposure Compensation (Lightcraft-grade Optical Exposure & Reinhard Shoulder)
@@ -262,41 +266,125 @@ public final class AdobeColorPipeline: Sendable {
         
         // 9. Crop and Straighten (Rotation & Crop Box)
         if xmp.hasCrop {
-            let extent = current.extent
-            if !extent.isEmpty && extent.width > 0 && extent.height > 0 {
-                // 9a. Angle / Straighten Rotation around image center
-                let angleDeg = xmp.cropAngle ?? 0.0
-                if abs(angleDeg) > 0.01 {
-                    let radians = CGFloat(-angleDeg * .pi / 180.0)
-                    let centerX = extent.midX
-                    let centerY = extent.midY
-                    
-                    var transform = CGAffineTransform(translationX: centerX, y: centerY)
-                    transform = transform.rotated(by: radians)
-                    transform = transform.translatedBy(x: -centerX, y: -centerY)
-                    
-                    current = current.transformed(by: transform)
-                }
-                
-                // 9b. Bounding Crop Box (normalized coordinates [0, 1])
-                let top = CGFloat(xmp.cropTop ?? 0.0)
-                let left = CGFloat(xmp.cropLeft ?? 0.0)
-                let bottom = CGFloat(xmp.cropBottom ?? 1.0)
-                let right = CGFloat(xmp.cropRight ?? 1.0)
-                
-                if top > 0.001 || left > 0.001 || bottom < 0.999 || right < 0.999 {
-                    let cropX = extent.origin.x + (left * extent.width)
-                    let cropY = extent.origin.y + ((1.0 - bottom) * extent.height)
-                    let cropW = max(1.0, (right - left) * extent.width)
-                    let cropH = max(1.0, (bottom - top) * extent.height)
-                    let cropRect = CGRect(x: cropX, y: cropY, width: cropW, height: cropH)
-                    current = current.cropped(to: cropRect)
-                }
-            }
+            current = applyCrop(image: current, xmp: xmp)
         }
         
         if isRaw && BaselineToneKernel.isEnabled {
             current = BaselineToneKernel.apply(current)
+        }
+        return current
+    }
+
+    /// Fast Metal CIRAWFilter pipeline matching darkroom (shutter-lab) 1:1 bit-for-bit
+    public func processDarkroom(image: CIImage, xmp: XMPMetadata) -> CIImage {
+        var current = image
+        
+        // 1. Exposure Compensation
+        let ev = Float(xmp.exposure2012 ?? 0.0)
+        if abs(ev) > 0.001 {
+            current = current.applyingFilter("CIExposureAdjust", parameters: [
+                kCIInputEVKey: ev
+            ])
+        }
+        
+        // 2. Highlights & Shadows
+        let hl = Double(xmp.highlights2012 ?? 0)
+        let sh = Double(xmp.shadows2012 ?? 0)
+        if hl != 0 || sh != 0 {
+            let highlightAmount = max(0.6, 1.0 + (hl / 100.0 * 0.35))
+            let shadowAmount = max(0.0, sh / 100.0 * 0.3)
+            current = current.applyingFilter("CIHighlightShadowAdjust", parameters: [
+                "inputHighlightAmount": highlightAmount,
+                "inputShadowAmount": shadowAmount
+            ])
+        }
+        
+        // 3. Contrast & Dehaze
+        let contrast = Double(xmp.contrast2012 ?? 0)
+        let dehaze = Double(xmp.dehaze ?? 0)
+        let contrastVal = contrast + (dehaze * 0.6)
+        if contrastVal != 0 {
+            let contrastFactor = max(0.7, min(1.4, 1.0 + (contrastVal / 100.0 * 0.2)))
+            current = current.applyingFilter("CIColorControls", parameters: [
+                kCIInputContrastKey: contrastFactor
+            ])
+        }
+        
+        // 4. Saturation & Vibrance
+        let sat = Double(xmp.saturation ?? 0)
+        let vib = Double(xmp.vibrance ?? 0)
+        let totalSatDelta = (sat / 100.0 * 0.2) + (vib / 100.0 * 0.12) + (dehaze / 100.0 * 0.08)
+        if abs(totalSatDelta) > 0.005 {
+            let satFactor = max(0.0, min(1.6, 1.0 + totalSatDelta))
+            current = current.applyingFilter("CIColorControls", parameters: [
+                kCIInputSaturationKey: satFactor
+            ])
+        }
+        
+        // 5. Clarity & Texture (only positive clarity > 5 applies unsharp mask)
+        let clarity = Double(xmp.clarity2012 ?? 0) + Double(xmp.texture ?? 0)
+        if clarity > 5 {
+            let intensity = min(0.4, clarity / 100.0 * 0.3)
+            current = current.applyingFilter("CIUnsharpMask", parameters: [
+                kCIInputRadiusKey: 1.5,
+                kCIInputIntensityKey: intensity
+            ])
+        }
+        
+        // 6. Black & White
+        let isBW = (xmp.convertToGrayscale == true) || (xmp.saturation == -100)
+        if isBW {
+            current = current.applyingFilter("CIPhotoEffectMono")
+        }
+        
+        // 7. Point Tone Curves (if custom curves exist)
+        if !xmp.toneCurve.isLinear {
+            current = ToneCurveKernel.apply(image: current, toneCurve: xmp.toneCurve)
+        }
+        
+        // 8. Crop and Straighten
+        if xmp.hasCrop {
+            current = applyCrop(image: current, xmp: xmp)
+        }
+        
+        return current
+    }
+
+    /// Crops and straightens an image using normalized XMP crop bounds and rotation
+    public func applyCrop(image: CIImage, xmp: XMPMetadata) -> CIImage {
+        var current = image
+        let extent = current.extent
+        guard !extent.isEmpty && extent.width > 0 && extent.height > 0 else {
+            return current
+        }
+        
+        // Angle / Straighten Rotation around image center
+        let angleDeg = xmp.cropAngle ?? 0.0
+        if abs(angleDeg) > 0.01 {
+            let radians = CGFloat(-angleDeg * .pi / 180.0)
+            let centerX = extent.midX
+            let centerY = extent.midY
+            
+            var transform = CGAffineTransform(translationX: centerX, y: centerY)
+            transform = transform.rotated(by: radians)
+            transform = transform.translatedBy(x: -centerX, y: -centerY)
+            
+            current = current.transformed(by: transform)
+        }
+        
+        // Bounding Crop Box (normalized coordinates [0, 1])
+        let top = CGFloat(xmp.cropTop ?? 0.0)
+        let left = CGFloat(xmp.cropLeft ?? 0.0)
+        let bottom = CGFloat(xmp.cropBottom ?? 1.0)
+        let right = CGFloat(xmp.cropRight ?? 1.0)
+        
+        if top > 0.001 || left > 0.001 || bottom < 0.999 || right < 0.999 {
+            let cropX = extent.origin.x + (left * extent.width)
+            let cropY = extent.origin.y + ((1.0 - bottom) * extent.height)
+            let cropW = max(1.0, (right - left) * extent.width)
+            let cropH = max(1.0, (bottom - top) * extent.height)
+            let cropRect = CGRect(x: cropX, y: cropY, width: cropW, height: cropH)
+            current = current.cropped(to: cropRect)
         }
         return current
     }

@@ -3,6 +3,22 @@ import CoreImage
 @testable import LumiBase
 
 final class DevelopEnhancementsTests: XCTestCase {
+    private var savedEngine: String?
+    
+    override func setUp() {
+        super.setUp()
+        savedEngine = UserDefaults.standard.string(forKey: "rawColorPipelineEngine")
+        UserDefaults.standard.set(RAWColorPipelineEngine.adobePV2012.rawValue, forKey: "rawColorPipelineEngine")
+    }
+    
+    override func tearDown() {
+        if let savedEngine {
+            UserDefaults.standard.set(savedEngine, forKey: "rawColorPipelineEngine")
+        } else {
+            UserDefaults.standard.removeObject(forKey: "rawColorPipelineEngine")
+        }
+        super.tearDown()
+    }
     
     // MARK: - Tone Curve Data Tests
     
