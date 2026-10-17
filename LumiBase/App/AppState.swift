@@ -264,6 +264,13 @@ public final class AppState: ObservableObject {
         }
         
         setupKeyMonitor()
+        NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
+            .sink { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.scheduleFolderRefresh()
+                }
+            }
+            .store(in: &previewSubscriptions)
         PerformanceSettings.shared.$sharpnessEnabled.dropFirst().sink { [weak self] enabled in
             if !enabled { self?.previewSharpness.clear() }
             else { Task { @MainActor [weak self] in await Task.yield(); self?.refreshPreviewSharpness() } }
@@ -726,7 +733,22 @@ public final class AppState: ObservableObject {
         let retained = allAssets.filter { deletingAssetIDs.contains($0.id) }
         safe.append(contentsOf: retained)
         for failed in failedTrashAssets.values where (currentFolderURL == nil || failed.fileURL.deletingLastPathComponent().standardizedFileURL.path == currentFolderURL?.standardizedFileURL.path) && !safe.contains(where: { $0.id == failed.id }) { safe.append(failed) }
+        
+        let oldPrimary = allAssets.first { $0.id == primarySelectedAssetID }
+        let newPrimary = safe.first { $0.id == primarySelectedAssetID }
+        let primaryXMPChanged = oldPrimary != nil && newPrimary != nil && oldPrimary?.xmp.thumbnailDevelopCacheIdentity != newPrimary?.xmp.thumbnailDevelopCacheIdentity
+        
+        if let liveID = liveDevelopAssetID,
+           xmpDebounceTasks[liveID] == nil,
+           let updatedLiveAsset = safe.first(where: { $0.id == liveID }),
+           liveDevelopXMP?.thumbnailDevelopCacheIdentity != updatedLiveAsset.xmp.thumbnailDevelopCacheIdentity {
+            liveDevelopXMP = updatedLiveAsset.xmp
+        }
+        
         allAssets = safe
+        if primaryXMPChanged {
+            invalidateDisplaySource()
+        }
         let sorted = displayedAssets
         if primarySelectedAssetID == nil || !safe.contains(where: { $0.id == primarySelectedAssetID }) {
             if let first = sorted.first {
@@ -736,7 +758,7 @@ public final class AppState: ObservableObject {
             } else {
                 primarySelectedAssetID = nil
                 selectionAnchorAssetID = nil
-                selectedAssetIDs.removeAll()
+                selectedAssetIDs = []
             }
         }
     }
@@ -1571,6 +1593,20 @@ public final class AppState: ObservableObject {
         guard !assets.isEmpty, !isExporting else { return }
         
         let syncedAssets = assets.map { asset -> PhotoAsset in
+            if xmpDebounceTasks[asset.id] == nil && asset.hasSidecarXMP {
+                let diskXMP = XMPParser.loadXMP(for: asset.fileURL)
+                if diskXMP.isLoadedFromSidecar {
+                    var a = asset
+                    a.xmp = diskXMP
+                    if let idx = allAssets.firstIndex(where: { $0.id == asset.id }) {
+                        allAssets[idx].xmp = diskXMP
+                    }
+                    if liveDevelopAssetID == asset.id {
+                        liveDevelopXMP = diskXMP
+                    }
+                    return a
+                }
+            }
             if liveDevelopAssetID == asset.id, let live = liveDevelopXMP {
                 var a = asset
                 a.xmp = live
