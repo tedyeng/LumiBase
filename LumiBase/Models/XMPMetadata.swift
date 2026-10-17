@@ -67,6 +67,8 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
     public var cropAngle: Double?
     public var cameraProfile: String?
     public var convertToGrayscale: Bool?
+    public var toneCurve: ToneCurveData = .linear
+    public var hsl: HSLAdjustments = .zero
     private var _hasCrop: Bool = false
     
     public var hasCrop: Bool {
@@ -123,7 +125,9 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
         cropRight: Double? = nil,
         cropAngle: Double? = nil,
         cameraProfile: String? = nil,
-        convertToGrayscale: Bool? = nil
+        convertToGrayscale: Bool? = nil,
+        toneCurve: ToneCurveData = .linear,
+        hsl: HSLAdjustments = .zero
     ) {
         self.isLoadedFromSidecar = isLoadedFromSidecar
         self.sidecarFilename = sidecarFilename
@@ -158,6 +162,8 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
         self.cropAngle = cropAngle
         self.cameraProfile = cameraProfile
         self.convertToGrayscale = convertToGrayscale
+        self.toneCurve = toneCurve
+        self.hsl = hsl
     }
     
     public var cropGeometry: CropGeometry {
@@ -214,6 +220,8 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
         (clarity2012 != nil && clarity2012 != 0) ||
         (texture != nil && texture != 0) ||
         (convertToGrayscale == true) ||
+        !toneCurve.isLinear ||
+        !hsl.isZero ||
         hasCrop
     }
 
@@ -237,6 +245,8 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
         before.texture = nil
         before.convertToGrayscale = nil
         before.cameraProfile = nil
+        before.toneCurve = .linear
+        before.hsl = .zero
         if !preserveCrop {
             before.resetCrop()
         }
@@ -265,7 +275,8 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
             "saturation=\(integer(saturation))", "clarity=\(integer(clarity2012))",
             "texture=\(integer(texture))",
             "crop=\(hasCrop ? 1 : 0):\(decimal(cropTop)):\(decimal(cropLeft)):\(decimal(cropBottom)):\(decimal(cropRight)):\(decimal(cropAngle))",
-            "profile=\(string(cameraProfile))", "grayscale=\(convertToGrayscale.map { $0 ? 1 : 0 } ?? -1)"
+            "profile=\(string(cameraProfile))", "grayscale=\(convertToGrayscale.map { $0 ? 1 : 0 } ?? -1)",
+            "toneCurve=\(toneCurve.cacheIdentity)", "hsl=\(hsl.cacheIdentity)"
         ].joined(separator: "|")
     }
     
@@ -285,7 +296,10 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
         saturation = nil
         clarity2012 = nil
         texture = nil
+        cameraProfile = nil
         convertToGrayscale = nil
+        toneCurve = .linear
+        hsl = .zero
         resetCrop()
     }
     

@@ -19,6 +19,25 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
         return parser.parseData(data)
     }
     
+    /// Resolves and loads XMP metadata from an external sidecar file (.ARW.xmp or .xmp) or embedded XMP
+    public static func loadXMP(for fileURL: URL, fallbackEmbeddedXMP: XMPMetadata? = nil) -> XMPMetadata {
+        let parentDir = fileURL.deletingLastPathComponent()
+        let directXmp = parentDir.appendingPathComponent("\(fileURL.lastPathComponent).xmp")
+        let baseNameXmp = parentDir.appendingPathComponent("\(fileURL.deletingPathExtension().lastPathComponent).xmp")
+        let fileManager = FileManager.default
+        
+        if fileManager.fileExists(atPath: directXmp.path) {
+            return parse(url: directXmp)
+        } else if fileManager.fileExists(atPath: baseNameXmp.path) {
+            return parse(url: baseNameXmp)
+        } else if let fallback = fallbackEmbeddedXMP {
+            return fallback
+        } else {
+            let (_, embeddedXMP) = MetadataReader.readMetadata(from: fileURL)
+            return embeddedXMP ?? .empty
+        }
+    }
+    
     // Internal parser state
     private var currentText: String = ""
     private var currentElement: String = ""
@@ -56,10 +75,14 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
     private var parsedCropAngle: Double?
     private var parsedCameraProfile: String?
     private var parsedConvertToGrayscale: Bool?
+    private var parsedToneCurve: ToneCurveData = .linear
+    private var parsedHSL: HSLAdjustments = .zero
     
     private var inSubjectBag: Bool = false
     private var inTitleAlt: Bool = false
     private var inDescriptionAlt: Bool = false
+    private var activeToneCurveSeqChannel: String? = nil
+    private var currentSeqPoints: [ToneCurvePoint] = []
     
     public func parseData(_ data: Data) -> XMPMetadata {
         let xmlParser = XMLParser(data: data)
@@ -101,7 +124,9 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
                 cropRight: parsedCropRight,
                 cropAngle: parsedCropAngle,
                 cameraProfile: parsedCameraProfile,
-                convertToGrayscale: parsedConvertToGrayscale
+                convertToGrayscale: parsedConvertToGrayscale,
+                toneCurve: parsedToneCurve,
+                hsl: parsedHSL
             )
         }
         
@@ -180,6 +205,25 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
                 parsedCameraProfile = val
             } else if key.hasSuffix("converttograyscale") {
                 parsedConvertToGrayscale = (val.lowercased() == "true" || val == "1")
+            } else if key.hasSuffix("tonecurvepv2012") {
+                parsedToneCurve.rgbPoints = Self.parsePoints(val)
+            } else if key.hasSuffix("tonecurvepv2012red") {
+                parsedToneCurve.redPoints = Self.parsePoints(val)
+            } else if key.hasSuffix("tonecurvepv2012green") {
+                parsedToneCurve.greenPoints = Self.parsePoints(val)
+            } else if key.hasSuffix("tonecurvepv2012blue") {
+                parsedToneCurve.bluePoints = Self.parsePoints(val)
+            } else {
+                for band in HSLColorBand.allCases {
+                    let bName = band.rawValue.lowercased()
+                    if key.hasSuffix("hueadjustment\(bName)") {
+                        if let v = Int(val) { parsedHSL[band].hue = v }
+                    } else if key.hasSuffix("saturationadjustment\(bName)") {
+                        if let v = Int(val) { parsedHSL[band].saturation = v }
+                    } else if key.hasSuffix("luminanceadjustment\(bName)") {
+                        if let v = Int(val) { parsedHSL[band].luminance = v }
+                    }
+                }
             }
         }
         
@@ -190,6 +234,18 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
             inTitleAlt = true
         } else if lowerElement.hasSuffix("description") {
             inDescriptionAlt = true
+        } else if lowerElement.hasSuffix("tonecurvepv2012") {
+            activeToneCurveSeqChannel = "rgb"
+            currentSeqPoints = []
+        } else if lowerElement.hasSuffix("tonecurvepv2012red") {
+            activeToneCurveSeqChannel = "red"
+            currentSeqPoints = []
+        } else if lowerElement.hasSuffix("tonecurvepv2012green") {
+            activeToneCurveSeqChannel = "green"
+            currentSeqPoints = []
+        } else if lowerElement.hasSuffix("tonecurvepv2012blue") {
+            activeToneCurveSeqChannel = "blue"
+            currentSeqPoints = []
         }
     }
     
@@ -237,7 +293,13 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
         } else if lowerElement.hasSuffix("cropangle") {
             parsedCropAngle = Double(trimmed)
         } else if lowerElement.hasSuffix("li") {
-            if inSubjectBag && !trimmed.isEmpty && !parsedKeywords.contains(trimmed) {
+            if let activeChannel = activeToneCurveSeqChannel, !trimmed.isEmpty {
+                let pts = Self.parsePoints(trimmed)
+                if let firstPt = pts.first, pts.count == 1 || trimmed.contains(",") {
+                    currentSeqPoints.append(firstPt)
+                }
+                _ = activeChannel
+            } else if inSubjectBag && !trimmed.isEmpty && !parsedKeywords.contains(trimmed) {
                 parsedKeywords.append(trimmed)
             } else if inTitleAlt && !trimmed.isEmpty {
                 parsedTitle = trimmed
@@ -260,6 +322,22 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
             inTitleAlt = false
         } else if lowerElement.hasSuffix("description") {
             inDescriptionAlt = false
+        } else if lowerElement.hasSuffix("tonecurvepv2012") {
+            if currentSeqPoints.count >= 2 { parsedToneCurve.rgbPoints = currentSeqPoints }
+            activeToneCurveSeqChannel = nil
+            currentSeqPoints = []
+        } else if lowerElement.hasSuffix("tonecurvepv2012red") {
+            if currentSeqPoints.count >= 2 { parsedToneCurve.redPoints = currentSeqPoints }
+            activeToneCurveSeqChannel = nil
+            currentSeqPoints = []
+        } else if lowerElement.hasSuffix("tonecurvepv2012green") {
+            if currentSeqPoints.count >= 2 { parsedToneCurve.greenPoints = currentSeqPoints }
+            activeToneCurveSeqChannel = nil
+            currentSeqPoints = []
+        } else if lowerElement.hasSuffix("tonecurvepv2012blue") {
+            if currentSeqPoints.count >= 2 { parsedToneCurve.bluePoints = currentSeqPoints }
+            activeToneCurveSeqChannel = nil
+            currentSeqPoints = []
         }
     }
     
@@ -290,6 +368,19 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
         case "false", "0": return false
         default: return nil
         }
+    }
+    
+    public static func parsePoints(_ string: String) -> [ToneCurvePoint] {
+        let parts = string.components(separatedBy: CharacterSet(charactersIn: ", \t\n\r")).filter { !$0.isEmpty }
+        var pts: [ToneCurvePoint] = []
+        var i = 0
+        while i + 1 < parts.count {
+            if let x = Double(parts[i]), let y = Double(parts[i + 1]) {
+                pts.append(ToneCurvePoint(x: x, y: y))
+            }
+            i += 2
+        }
+        return pts.isEmpty ? ToneCurveData.linearPoints : pts
     }
 
     // MARK: - Regex Fallback
@@ -428,6 +519,34 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
             convertToGrayscale = !grayMatch.isEmpty
         }
         
+        var toneCurve = parsedToneCurve
+        if let tcMatch = matchFirst(pattern: #"ToneCurvePV2012="([^"]+)""#, in: content) {
+            toneCurve.rgbPoints = Self.parsePoints(tcMatch)
+        }
+        if let tcRMatch = matchFirst(pattern: #"ToneCurvePV2012Red="([^"]+)""#, in: content) {
+            toneCurve.redPoints = Self.parsePoints(tcRMatch)
+        }
+        if let tcGMatch = matchFirst(pattern: #"ToneCurvePV2012Green="([^"]+)""#, in: content) {
+            toneCurve.greenPoints = Self.parsePoints(tcGMatch)
+        }
+        if let tcBMatch = matchFirst(pattern: #"ToneCurvePV2012Blue="([^"]+)""#, in: content) {
+            toneCurve.bluePoints = Self.parsePoints(tcBMatch)
+        }
+        
+        var hsl = parsedHSL
+        for band in HSLColorBand.allCases {
+            let bName = band.rawValue
+            if let hMatch = matchFirst(pattern: #"HueAdjustment\#(bName)="([+-]?\d+)""#, in: content), let v = Int(hMatch) {
+                hsl[band].hue = v
+            }
+            if let sMatch = matchFirst(pattern: #"SaturationAdjustment\#(bName)="([+-]?\d+)""#, in: content), let v = Int(sMatch) {
+                hsl[band].saturation = v
+            }
+            if let lMatch = matchFirst(pattern: #"LuminanceAdjustment\#(bName)="([+-]?\d+)""#, in: content), let v = Int(lMatch) {
+                hsl[band].luminance = v
+            }
+        }
+        
         return XMPMetadata(
             isLoadedFromSidecar: true,
             rating: rating,
@@ -457,7 +576,9 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
             cropRight: cropRight,
             cropAngle: cropAngle,
             cameraProfile: cameraProfile,
-            convertToGrayscale: convertToGrayscale
+            convertToGrayscale: convertToGrayscale,
+            toneCurve: toneCurve,
+            hsl: hsl
         )
     }
     

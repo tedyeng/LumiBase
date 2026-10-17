@@ -197,4 +197,55 @@ final class XMPParserTests: XCTestCase {
         XCTAssertTrue(dst.hasCrop)
         XCTAssertEqual(dst.cropAngle, 2.0)
     }
+    
+    func testLoadXMPFromDiskAndSidecar() throws {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        
+        let photoURL = tempDir.appendingPathComponent("DSC_0001.ARW")
+        try "fake-image".data(using: .utf8)!.write(to: photoURL)
+        
+        let sidecarURL = tempDir.appendingPathComponent("DSC_0001.ARW.xmp")
+        let metadata = XMPMetadata(rating: 4, exposure2012: 1.25)
+        try XMPWriter.write(metadata: metadata, to: sidecarURL)
+        
+        let loaded = XMPParser.loadXMP(for: photoURL)
+        XCTAssertTrue(loaded.isLoadedFromSidecar)
+        XCTAssertEqual(loaded.rating, 4)
+        XCTAssertEqual(loaded.exposure2012, 1.25)
+    }
+    
+    @MainActor
+    func testAppStateReloadXMP() throws {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+        
+        let photoURL = tempDir.appendingPathComponent("TEST_RELOAD.ARW")
+        try "dummy-raw".data(using: .utf8)!.write(to: photoURL)
+        
+        let sidecarURL = tempDir.appendingPathComponent("TEST_RELOAD.ARW.xmp")
+        let initialMeta = XMPMetadata(rating: 1, caption: "Original")
+        try XMPWriter.write(metadata: initialMeta, to: sidecarURL)
+        
+        let appState = AppState()
+        let initialAsset = PhotoAsset(
+            fileURL: photoURL,
+            xmp: initialMeta
+        )
+        appState.allAssets = [initialAsset]
+        appState.primarySelectedAssetID = initialAsset.id
+        appState.selectedAssetIDs = [initialAsset.id]
+        
+        // Now simulate external editing of XMP on disk
+        let updatedMeta = XMPMetadata(rating: 5, caption: "Reloaded from external edit")
+        try XMPWriter.write(metadata: updatedMeta, to: sidecarURL)
+        
+        // Trigger reloadXMP
+        appState.reloadXMP(for: [initialAsset.id])
+        
+        XCTAssertEqual(appState.allAssets[0].xmp.rating, 5)
+        XCTAssertEqual(appState.allAssets[0].xmp.caption, "Reloaded from external edit")
+    }
 }

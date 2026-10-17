@@ -61,6 +61,13 @@
 		A10000012C00000100000041 /* PerformanceSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000041 /* PerformanceSettings.swift */; };
 		A10000012C00000100000042 /* PreviewSharpness.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000042 /* PreviewSharpness.swift */; };
 		A10000012C00000100000043 /* OpticalExposureKernel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000043 /* OpticalExposureKernel.swift */; };
+		A10000012C00000100000044 /* ToneCurveData.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000044 /* ToneCurveData.swift */; };
+		A10000012C00000100000045 /* HSLAdjustments.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000045 /* HSLAdjustments.swift */; };
+		A10000012C00000100000046 /* AutoToneService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000046 /* AutoToneService.swift */; };
+		A10000012C00000100000047 /* ToneCurveKernel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000047 /* ToneCurveKernel.swift */; };
+		A10000012C00000100000048 /* ColorMixerKernel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000048 /* ColorMixerKernel.swift */; };
+		A10000012C00000100000049 /* ToneCurvePanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C00000100000049 /* ToneCurvePanelView.swift */; };
+		A10000012C0000010000004A /* ColorMixerPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000022C0000010000004A /* ColorMixerPanelView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -119,6 +126,13 @@
 		A10000022C00000100000041 /* PerformanceSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceSettings.swift; sourceTree = "<group>"; };
 		A10000022C00000100000042 /* PreviewSharpness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewSharpness.swift; sourceTree = "<group>"; };
 		A10000022C00000100000043 /* OpticalExposureKernel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpticalExposureKernel.swift; sourceTree = "<group>"; };
+		A10000022C00000100000044 /* ToneCurveData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToneCurveData.swift; sourceTree = "<group>"; };
+		A10000022C00000100000045 /* HSLAdjustments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HSLAdjustments.swift; sourceTree = "<group>"; };
+		A10000022C00000100000046 /* AutoToneService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoToneService.swift; sourceTree = "<group>"; };
+		A10000022C00000100000047 /* ToneCurveKernel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToneCurveKernel.swift; sourceTree = "<group>"; };
+		A10000022C00000100000048 /* ColorMixerKernel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorMixerKernel.swift; sourceTree = "<group>"; };
+		A10000022C00000100000049 /* ToneCurvePanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToneCurvePanelView.swift; sourceTree = "<group>"; };
+		A10000022C0000010000004A /* ColorMixerPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorMixerPanelView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -185,6 +199,8 @@
 				A10000022C0000010000002C /* DevelopSyncOptions.swift */,
 				A10000022C0000010000002E /* CropSettings.swift */,
 				A10000022C00000100000031 /* ComparisonMode.swift */,
+				A10000022C00000100000044 /* ToneCurveData.swift */,
+				A10000022C00000100000045 /* HSLAdjustments.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -218,6 +234,9 @@
 				A10000022C0000010000002A /* AcceptedHighlightsKernel.swift */,
 				A10000022C0000010000002B /* NativeHighlightsService.swift */,
 				A10000022C00000100000043 /* OpticalExposureKernel.swift */,
+				A10000022C00000100000046 /* AutoToneService.swift */,
+				A10000022C00000100000047 /* ToneCurveKernel.swift */,
+				A10000022C00000100000048 /* ColorMixerKernel.swift */,
 			);
 			path = Image;
 			sourceTree = "<group>";
@@ -303,6 +322,8 @@
 				A10000022C0000010000001B /* EXIFInfoView.swift */,
 				A10000022C0000010000001C /* XMPMetadataEditorView.swift */,
 				A10000022C0000010000002D /* SyncSettingsDialogView.swift */,
+				A10000022C00000100000049 /* ToneCurvePanelView.swift */,
+				A10000022C0000010000004A /* ColorMixerPanelView.swift */,
 			);
 			path = Inspector;
 			sourceTree = "<group>";
@@ -443,6 +464,13 @@
 				A10000012C00000100000031 /* ComparisonMode.swift in Sources */,
 				A10000012C00000100000032 /* ComparisonOverlayViews.swift in Sources */,
 				A10000012C00000100000043 /* OpticalExposureKernel.swift in Sources */,
+				A10000012C00000100000044 /* ToneCurveData.swift in Sources */,
+				A10000012C00000100000045 /* HSLAdjustments.swift in Sources */,
+				A10000012C00000100000046 /* AutoToneService.swift in Sources */,
+				A10000012C00000100000047 /* ToneCurveKernel.swift in Sources */,
+				A10000012C00000100000048 /* ColorMixerKernel.swift in Sources */,
+				A10000012C00000100000049 /* ToneCurvePanelView.swift in Sources */,
+				A10000012C0000010000004A /* ColorMixerPanelView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -548,8 +576,8 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.14.15;
-				PRODUCT_BUNDLE_IDENTIFIER = com.lumibase.LumiBase.FastLibrary;
-				PRODUCT_NAME = "LumiBase Fast Library";
+				PRODUCT_BUNDLE_IDENTIFIER = com.lumibase.LumiBase;
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 			};
@@ -574,8 +602,8 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.14.15;
-				PRODUCT_BUNDLE_IDENTIFIER = com.lumibase.LumiBase.FastLibrary;
-				PRODUCT_NAME = "LumiBase Fast Library";
+				PRODUCT_BUNDLE_IDENTIFIER = com.lumibase.LumiBase;
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 			};

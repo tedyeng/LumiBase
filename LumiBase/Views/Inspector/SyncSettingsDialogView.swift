@@ -149,6 +149,14 @@ public struct SyncSettingsDialogView: View {
                         }
                     }
                     
+                    // Tone Curve & Color Mixer
+                    categoryBox(title: "CURVES & COLOR MIXER") {
+                        VStack(alignment: .leading, spacing: 6) {
+                            checkboxRow(title: "Tone Curve", isOn: $options.toneCurve)
+                            checkboxRow(title: "Color Mixer (HSL)", isOn: $options.colorMixer)
+                        }
+                    }
+                    
                     // Geometry / Crop
                     categoryBox(title: "GEOMETRY") {
                         checkboxRow(title: "Crop", isOn: $options.crop)

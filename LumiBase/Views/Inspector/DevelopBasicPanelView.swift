@@ -165,10 +165,7 @@ public struct DevelopBasicPanelView: View {
                             }
                         }
                         Button("Auto") {
-                            appState.updateDevelopSettings(for: asset.id, isDragging: false) {
-                                $0.temperature = 5200
-                                $0.tint = 2
-                            }
+                            appState.autoWhiteBalance(for: asset.id)
                         }
                         Button("Daylight (5500K)") {
                             appState.updateDevelopSettings(for: asset.id, isDragging: false) {
@@ -615,7 +612,6 @@ public struct DevelopBasicPanelView: View {
             return "As Shot"
         }
         let tint = currentXMP.tint ?? 0
-        if temp == 5200 && tint == 2 { return "Auto" }
         if temp == 5500 && tint == 10 { return "Daylight" }
         if temp == 6500 && tint == 10 { return "Cloudy" }
         if temp == 7500 && tint == 10 { return "Shade" }

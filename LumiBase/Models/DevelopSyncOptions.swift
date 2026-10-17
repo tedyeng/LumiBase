@@ -24,6 +24,10 @@ public struct DevelopSyncOptions: Codable, Equatable, Sendable {
     public var cameraProfile: Bool
     public var treatment: Bool // ConvertToGrayscale / Black & White
     
+    // Tone Curve & Color Mixer
+    public var toneCurve: Bool
+    public var colorMixer: Bool
+    
     // Geometry
     public var crop: Bool
     
@@ -42,6 +46,8 @@ public struct DevelopSyncOptions: Codable, Equatable, Sendable {
         saturation: Bool = true,
         cameraProfile: Bool = true,
         treatment: Bool = true,
+        toneCurve: Bool = true,
+        colorMixer: Bool = true,
         crop: Bool = false // In Lightroom Classic, crop is unchecked by default
     ) {
         self.whiteBalance = whiteBalance
@@ -58,6 +64,8 @@ public struct DevelopSyncOptions: Codable, Equatable, Sendable {
         self.saturation = saturation
         self.cameraProfile = cameraProfile
         self.treatment = treatment
+        self.toneCurve = toneCurve
+        self.colorMixer = colorMixer
         self.crop = crop
     }
     
@@ -98,7 +106,8 @@ public struct DevelopSyncOptions: Codable, Equatable, Sendable {
     
     public var hasAnySelected: Bool {
         whiteBalance || exposure || contrast || highlights || shadows || whites || blacks ||
-        texture || clarity || dehaze || vibrance || saturation || cameraProfile || treatment || crop
+        texture || clarity || dehaze || vibrance || saturation || cameraProfile || treatment ||
+        toneCurve || colorMixer || crop
     }
     
     public mutating func checkAll(includeCrop: Bool = false) {
@@ -107,6 +116,8 @@ public struct DevelopSyncOptions: Codable, Equatable, Sendable {
         setAllPresence(true)
         cameraProfile = true
         treatment = true
+        toneCurve = true
+        colorMixer = true
         crop = includeCrop
     }
     
@@ -116,6 +127,8 @@ public struct DevelopSyncOptions: Codable, Equatable, Sendable {
         setAllPresence(false)
         cameraProfile = false
         treatment = false
+        toneCurve = false
+        colorMixer = false
         crop = false
     }
     
@@ -137,6 +150,8 @@ public struct DevelopSyncOptions: Codable, Equatable, Sendable {
         
         cameraProfile = (source.cameraProfile != nil)
         treatment = (source.convertToGrayscale != nil)
+        toneCurve = !source.toneCurve.isLinear
+        colorMixer = !source.hsl.isZero
         crop = source.hasCrop
     }
     
@@ -190,6 +205,12 @@ public struct DevelopSyncOptions: Codable, Equatable, Sendable {
         }
         if treatment {
             target.convertToGrayscale = source.convertToGrayscale
+        }
+        if toneCurve {
+            target.toneCurve = source.toneCurve
+        }
+        if colorMixer {
+            target.hsl = source.hsl
         }
         
         if crop {

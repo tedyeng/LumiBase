@@ -73,26 +73,27 @@ public final class AdobeColorPipeline: Sendable {
             }
         }
         
-        // 3. Contrast & Dehaze Contrast (Lightroom PV2012 midtone punch)
+        // 3. Contrast & Dehaze Contrast (Lightroom PV2012 midtone punch with scene-adaptive pivot)
         let dehaze = Double(xmp.dehaze ?? 0)
         let contrastVal = Double(xmp.contrast2012 ?? 0) + (dehaze * 0.40)
         if contrastVal != 0 {
             let contrastFactor = max(0.6, min(1.6, 1.0 + (contrastVal / 100.0 * 0.20)))
-            current = current.applyingFilter("CIColorControls", parameters: [
-                kCIInputContrastKey: contrastFactor
-            ])
+            let pivot = AutoToneService.estimateContrastPivot(from: baseHolder)
+            current = AdaptiveContrastKernel.apply(
+                image: current,
+                contrastFactor: Float(contrastFactor),
+                pivot: Float(pivot)
+            )
         }
         
-        // 4. Black & White or Vibrance and Saturation (Color enrichment before tone luminosity mapping)
+        // 4. Vibrance and Saturation (Color enrichment before tone luminosity mapping)
         let isBW = (xmp.convertToGrayscale == true) || (xmp.saturation == -100)
         let hl = Double(xmp.highlights2012 ?? 0)
         let hlFactor = hl / 100.0
         // Natural highlight desaturation: in Adobe PV2012, positive highlights roll off gently towards specular white
         let hlDesatScale = hlFactor > 0 ? max(0.80, 1.0 - (hlFactor * 0.20)) : 1.0
         
-        if isBW {
-            current = current.applyingFilter("CIPhotoEffectMono")
-        } else {
+        if !isBW {
             let vib = Double(xmp.vibrance ?? 0)
             let totalVib = ((vib / 100.0 * 0.80) + (dehaze / 100.0 * 0.20)) * hlDesatScale
             if abs(totalVib) > 0.01 {
@@ -204,8 +205,22 @@ public final class AdobeColorPipeline: Sendable {
             }
         }
 
+        // 6. Color Mixer (8-Band HSL) - runs before B&W conversion so HSL Luminance acts as 8-band B&W Mix
+        if !xmp.hsl.isZero {
+            current = ColorMixerKernel.apply(image: current, hsl: xmp.hsl)
+        }
         
-        // 7. Texture (Fine Detail: >0 Sharpen, <0 Skin Soften)
+        // 6b. Black & White Conversion (after Color Mixer so per-band luminance adjustments shape grayscale tones)
+        if isBW {
+            current = current.applyingFilter("CIPhotoEffectMono")
+        }
+
+        // 7. Point Tone Curves (RGB Master, Red, Green, Blue) - runs after HSL so per-channel curves aren't skewed by HSL
+        if !xmp.toneCurve.isLinear {
+            current = ToneCurveKernel.apply(image: current, toneCurve: xmp.toneCurve)
+        }
+        
+        // 8. Texture (Fine Detail: >0 Sharpen, <0 Skin Soften)
         if let texture = xmp.texture, texture != 0 {
             if texture > 0 {
                 let texIntensity = min(1.0, Double(texture) / 100.0 * 0.8)
@@ -287,6 +302,23 @@ public final class AdobeColorPipeline: Sendable {
     }
 }
 
+
+/// Scene-adaptive contrast kernel that pivots around an image-dependent midtone pivot [0.35, 0.65]
+public enum AdaptiveContrastKernel {
+    private static let kernel = CIColorKernel(source: """
+        kernel vec4 adaptiveContrast(__sample s, float contrastFactor, float pivot) {
+            vec3 c = s.rgb;
+            vec3 outRgb = (c - vec3(pivot)) * contrastFactor + vec3(pivot);
+            return vec4(clamp(outRgb, 0.0, 1.0), s.a);
+        }
+    """)
+
+    public static func apply(image: CIImage, contrastFactor: Float, pivot: Float) -> CIImage {
+        guard let kernel, !image.extent.isInfinite else { return image }
+        let clampedPivot = max(0.35, min(0.65, pivot))
+        return kernel.apply(extent: image.extent, arguments: [image, contrastFactor, clampedPivot]) ?? image
+    }
+}
 
 /// Baseline dark/mid-tone correction measured against Lightroom (all-zero) and Sony JPEG references:
 /// lifts L* by ~3 and scales chroma by ~0.8 in the L* 1..35 band, and by ~0.88 for L* > 45. Experimental; see docs/baseline-tone-correction-zhTW.md.

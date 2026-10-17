@@ -14,8 +14,26 @@ public struct TopFilterBarView: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 .frame(width: 160)
-                .help("Library: camera JPEG, edits retained but not displayed. Develop: accurate RAW + edits.")
                 Spacer()
+                
+                // Reload XMP Button
+                Button {
+                    appState.reloadXMP()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 10, weight: .semibold))
+                        Text("Reload XMP")
+                            .font(.system(size: 10, weight: .medium))
+                    }
+                    .foregroundColor(LightroomTheme.textSecondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Color.white.opacity(0.06))
+                    .cornerRadius(4)
+                }
+                .buttonStyle(.plain)
+                .help("Reload XMP metadata from disk for selected photos or folder (⇧⌘R)")
             }
             HStack(spacing: 10) {
                 // Search Input
@@ -67,7 +85,7 @@ public struct TopFilterBarView: View {
                     RoundedRectangle(cornerRadius: 4)
                         .stroke(isSearchFocused ? LightroomTheme.accentYellow.opacity(0.8) : LightroomTheme.cardBorder, lineWidth: 1)
                 )
-                .frame(minWidth: 120, idealWidth: 250, maxWidth: 250)
+                .frame(minWidth: 120, idealWidth: 200, maxWidth: 250)
                 .onAppear {
                     isSearchFocused = false
                     DispatchQueue.main.async {

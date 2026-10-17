@@ -6,6 +6,8 @@ public struct RightInspectorView: View {
     
     @State private var isHistogramExpanded: Bool = true
     @State private var isDevelopExpanded: Bool = true
+    @State private var isToneCurveExpanded: Bool = true
+    @State private var isColorMixerExpanded: Bool = true
     @State private var isMetadataExpanded: Bool = true
     @State private var isEXIFExpanded: Bool = true
     
@@ -92,6 +94,20 @@ public struct RightInspectorView: View {
                                 collapsibleSection(title: "BASIC (DEVELOP)", isExpanded: $isDevelopExpanded, badge: asset.xmp.hasDevelopEdits ? "Active" : nil) {
                                     DevelopBasicPanelView(asset: asset, appState: appState)
                                 }
+                                
+                                Divider().background(LightroomTheme.dividerColor)
+                                
+                                // 2c. Tone Curve Section
+                                collapsibleSection(title: "TONE CURVE", isExpanded: $isToneCurveExpanded, badge: !asset.xmp.toneCurve.isLinear ? "Active" : nil) {
+                                    ToneCurvePanelView(asset: asset, appState: appState)
+                                }
+                                
+                                Divider().background(LightroomTheme.dividerColor)
+                                
+                                // 2d. Color Mixer (HSL) Section
+                                collapsibleSection(title: "COLOR MIXER (HSL)", isExpanded: $isColorMixerExpanded, badge: !asset.xmp.hsl.isZero ? "Active" : nil) {
+                                    ColorMixerPanelView(asset: asset, appState: appState)
+                                }
                             }
                         
                             Divider().background(LightroomTheme.dividerColor)
@@ -129,6 +145,7 @@ public struct RightInspectorView: View {
             }
         }
         .frame(minWidth: 240, idealWidth: 280, maxWidth: 360)
+        .clipped()
         .background(LightroomTheme.panelBackground)
     }
     

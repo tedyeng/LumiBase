@@ -175,16 +175,6 @@ struct PerformanceSettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            
-            Section("About LumiBase") {
-                let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.14.15"
-                LabeledContent("Version", value: "v\(appVersion)")
-                LabeledContent("Engine", value: "Apple Silicon Metal & Accelerate")
-                LabeledContent("Settings Shortcut", value: "⌘, (Command + Comma)")
-                Text("High-performance photo culling, rating, tone reconstruction, and Adobe XMP RAW development workflow.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
         }
         .formStyle(.grouped)
     }

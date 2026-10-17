@@ -32,9 +32,18 @@ public struct PhotoGridItemView: View {
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else {
+                    } else if let cached = ThumbnailLoader.cachedMemoryThumbnail(for: asset, maxPixelSize: Int(size * 2)) {
+                        Image(nsImage: cached)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else if isLoading {
                         ProgressView()
                             .scaleEffect(0.7)
+                    } else {
+                        Image(systemName: "photo")
+                            .font(.system(size: 20))
+                            .foregroundColor(LightroomTheme.textMuted)
                     }
                 }
                 .frame(width: size, height: size * 0.75)
@@ -115,10 +124,10 @@ public struct PhotoGridItemView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 4)
                 .stroke(
-                    isPrimary ? LightroomTheme.accentYellow :
-                    (isSelected ? Color.white.opacity(0.8) : LightroomTheme.cardBorder),
-                    lineWidth: isPrimary ? 2 : (isSelected ? 1.5 : 0.5)
-                )
+                isPrimary ? LightroomTheme.accentYellow :
+                (isSelected ? Color.white.opacity(0.8) : LightroomTheme.cardBorder),
+                lineWidth: isPrimary ? 2 : (isSelected ? 1.5 : 0.5)
+            )
         )
         .contentShape(Rectangle())
         .onTapGesture {
@@ -133,6 +142,22 @@ public struct PhotoGridItemView: View {
             }
         )
         .onChange(of: isPrimary) { _, primary in if primary && thumbnailIdentity == previewIdentity { onPreview(thumbnail) } }
+        .onChange(of: previewIdentity) { _, newIdentity in
+            if thumbnailIdentity != newIdentity {
+                if let cached = ThumbnailLoader.cachedMemoryThumbnail(for: asset, maxPixelSize: Int(size * 2)) {
+                    self.thumbnail = cached
+                    self.thumbnailIdentity = newIdentity
+                    self.isLoading = false
+                    if isPrimary {
+                        onPreview(cached)
+                    }
+                } else {
+                    self.thumbnail = nil
+                    self.thumbnailIdentity = nil
+                    self.isLoading = true
+                }
+            }
+        }
         .task(id: "\(ThumbnailLoader.cacheKey(for: asset, maxPixelSize: Int(size * 2)))|\(sourceRevision)") {
             await loadThumbnail()
         }
@@ -140,12 +165,28 @@ public struct PhotoGridItemView: View {
     
     @MainActor
     private func loadThumbnail() async {
-        if thumbnail == nil {
-            isLoading = true
+        if let cached = ThumbnailLoader.cachedMemoryThumbnail(for: asset, maxPixelSize: Int(size * 2)) {
+            self.thumbnail = cached
+            self.thumbnailIdentity = previewIdentity
+            self.isLoading = false
+            if isPrimary {
+                onPreview(cached)
+            }
+        } else if thumbnail == nil || thumbnailIdentity != previewIdentity {
+            self.thumbnail = nil
+            self.thumbnailIdentity = nil
+            self.isLoading = true
         }
-        let loaded = asset.xmp.hasDevelopEdits
+        
+        var loaded = asset.xmp.hasDevelopEdits
             ? await ThumbnailLoader.shared.loadThumbnail(for: asset, maxPixelSize: Int(size * 2))
             : await ThumbnailLoader.shared.loadCameraPreview(for: asset, maxPixelSize: Int(size * 2))
+            
+        // Robust fallback: If develop thumbnail rendering returned nil, fall back to camera preview!
+        if loaded == nil && asset.xmp.hasDevelopEdits {
+            loaded = await ThumbnailLoader.shared.loadCameraPreview(for: asset, maxPixelSize: Int(size * 2))
+        }
+        
         guard !Task.isCancelled else { return }
         self.thumbnail = loaded
         self.thumbnailIdentity = previewIdentity

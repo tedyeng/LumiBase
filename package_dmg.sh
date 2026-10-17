@@ -44,13 +44,9 @@ xcodebuild \
   -derivedDataPath "$DERIVED_DATA_DIR" \
   build -quiet
 
-# Locate built application bundle (support both LumiBase.app and LumiBase Fast Library.app)
+# Locate built application bundle
 if [ ! -d "$APP_BUNDLE_PATH" ]; then
-    if [ -d "${DERIVED_DATA_DIR}/Build/Products/${CONFIGURATION}/LumiBase Fast Library.app" ]; then
-        APP_BUNDLE_PATH="${DERIVED_DATA_DIR}/Build/Products/${CONFIGURATION}/LumiBase Fast Library.app"
-    else
-        APP_BUNDLE_PATH=$(find "${DERIVED_DATA_DIR}/Build/Products/${CONFIGURATION}" -maxdepth 1 -name "*.app" 2>/dev/null | head -n 1)
-    fi
+    APP_BUNDLE_PATH=$(find "${DERIVED_DATA_DIR}/Build/Products/${CONFIGURATION}" -maxdepth 1 -name "*.app" 2>/dev/null | head -n 1)
 fi
 
 if [ -z "$APP_BUNDLE_PATH" ] || [ ! -d "$APP_BUNDLE_PATH" ]; then

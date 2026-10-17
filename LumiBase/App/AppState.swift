@@ -133,7 +133,12 @@ public final class AppState: ObservableObject {
     
     // Live Develop State (Isolated for ultra-fast 120fps live slider interaction)
     @Published public var liveDevelopAssetID: String?
-    @Published public var liveDevelopXMP: XMPMetadata? { didSet { previewSharpness.clear() } }
+    @Published public var liveDevelopXMP: XMPMetadata? {
+        didSet {
+            invalidateCollection()
+            previewSharpness.clear()
+        }
+    }
     
     // Sync & Copy/Paste Develop State (Lightroom Classic Workflow)
     @Published public var isAutoSyncEnabled: Bool = false
@@ -422,6 +427,10 @@ public final class AppState: ObservableObject {
                 self.pasteDevelopSettings()
                 return true
             }
+            if lower == "r" {
+                self.reloadXMP()
+                return true
+            }
         }
         
         if flags.contains([.command, .option]) && !flags.contains(.shift) {
@@ -599,7 +608,15 @@ public final class AppState: ObservableObject {
     public var displayedAssets: [PhotoAsset] {
         if let cached = displayedAssetsCache { return cached }
         let filtered = allAssets.filter { !deletingAssetIDs.contains($0.id) && !trashedAssetIDs.contains($0.id) && filterCriteria.matches(asset: $0) }
-        let result = sortAssets(filtered, by: sortOrder)
+        let sorted = sortAssets(filtered, by: sortOrder)
+        let result = sorted.map { asset -> PhotoAsset in
+            if liveDevelopAssetID == asset.id, let live = liveDevelopXMP {
+                var a = asset
+                a.xmp = live
+                return a
+            }
+            return asset
+        }
         displayedAssetsCache = result
         return result
     }
@@ -755,6 +772,48 @@ public final class AppState: ObservableObject {
             self.publishFolderAssets(assets)
             self.folderScanTask = nil
         }
+    }
+    
+    /// Reloads XMP metadata from disk for specified assets, or for the current selection / folder
+    public func reloadXMP(for assetIDs: Set<String>? = nil) {
+        let targetIDs: Set<String>
+        if let assetIDs = assetIDs, !assetIDs.isEmpty {
+            targetIDs = assetIDs
+        } else if !selectedAssetIDs.isEmpty {
+            targetIDs = selectedAssetIDs
+        } else if let primary = primarySelectedAssetID {
+            targetIDs = [primary]
+        } else {
+            refreshCurrentFolder()
+            return
+        }
+        
+        let scoped = currentFolderURL?.startAccessingSecurityScopedResource() ?? false
+        defer {
+            if scoped { currentFolderURL?.stopAccessingSecurityScopedResource() }
+        }
+        
+        for id in targetIDs {
+            guard fileMutationFence.permits(id),
+                  let idx = allAssets.firstIndex(where: { $0.id == id }) else { continue }
+            
+            xmpDebounceTasks[id]?.cancel()
+            xmpDebounceTasks.removeValue(forKey: id)
+            
+            let asset = allAssets[idx]
+            let freshXMP = XMPParser.loadXMP(for: asset.fileURL)
+            allAssets[idx].xmp = freshXMP
+            
+            if liveDevelopAssetID == id {
+                liveCommitTask?.cancel()
+                liveDevelopXMP = freshXMP
+            }
+        }
+        
+        invalidateCollection()
+        invalidateDisplaySource()
+        highlightsRenderRevision &+= 1
+        schedulePreviewRefresh()
     }
     
     // MARK: - Selection Actions
@@ -1039,6 +1098,7 @@ public final class AppState: ObservableObject {
             liveCommitTask?.cancel()
             allAssets[index].xmp = currentXMP
             debouncedSyncXMP(for: allAssets[index])
+            displaySourceRevision &+= 1
             
             if applyAutoSync {
                 for otherID in otherSelectedIDs {
@@ -1150,17 +1210,68 @@ public final class AppState: ObservableObject {
         }
     }
     
+    private var autoToneTask: Task<Void, Never>?
+    private var autoWBTask: Task<Void, Never>?
+
     /// Resets develop settings to default zero for the asset
     public func resetDevelopSettings(for assetID: String? = nil) {
+        autoToneTask?.cancel()
+        autoWBTask?.cancel()
         invalidateDisplaySource()
         updateDevelopSettings(for: assetID, isDragging: false) { xmp in
             xmp.resetDevelopSettings()
         }
     }
     
-    /// Auto calculates tone (balanced exposure and highlights/shadows recovery)
+    /// Auto calculates tone using statistical percentile prediction modeled from Lightroom Classic PV2012
     public func autoTone(for assetID: String? = nil) {
-        updateDevelopSettings(for: assetID, isDragging: false) { xmp in
+        let targetID = assetID ?? primarySelectedAssetID
+        guard let validID = targetID, let asset = allAssets.first(where: { $0.id == validID }) else { return }
+        
+        autoToneTask?.cancel()
+        
+        // 1. Fast synchronous path if base holder is already decoded in memory (e.g. active in Loupe/Develop view)
+        if let interactive = RAWImageLoader.shared.cachedHolder(for: asset.fileURL)?.interactive {
+            let result = AutoToneService.shared.estimateAutoTone(from: interactive)
+            updateDevelopSettings(for: validID, isDragging: false) { xmp in
+                xmp.exposure2012 = result.exposure
+                xmp.contrast2012 = result.contrast
+                xmp.highlights2012 = result.highlights
+                xmp.shadows2012 = result.shadows
+                xmp.whites2012 = result.whites
+                xmp.blacks2012 = result.blacks
+                xmp.vibrance = result.vibrance
+                xmp.saturation = result.saturation
+            }
+            return
+        }
+        
+        // 2. If asset file exists on disk, decode and apply statistical prediction in a single pass (no intermediate flash)
+        if FileManager.default.fileExists(atPath: asset.fileURL.path) {
+            autoToneTask = Task { [weak self] in
+                let holder = await RAWImageLoader.shared.loadBaseHolder(from: asset.fileURL, xmp: nil)
+                guard !Task.isCancelled, let interactive = holder?.interactive else { return }
+                let result = AutoToneService.shared.estimateAutoTone(from: interactive)
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    guard !Task.isCancelled else { return }
+                    self?.updateDevelopSettings(for: validID, isDragging: false) { xmp in
+                        xmp.exposure2012 = result.exposure
+                        xmp.contrast2012 = result.contrast
+                        xmp.highlights2012 = result.highlights
+                        xmp.shadows2012 = result.shadows
+                        xmp.whites2012 = result.whites
+                        xmp.blacks2012 = result.blacks
+                        xmp.vibrance = result.vibrance
+                        xmp.saturation = result.saturation
+                    }
+                }
+            }
+            return
+        }
+        
+        // 3. Fallback baseline when file does not exist on disk (e.g. synthetic unit tests)
+        updateDevelopSettings(for: validID, isDragging: false) { xmp in
             xmp.exposure2012 = 0.20
             xmp.contrast2012 = 15
             xmp.highlights2012 = -30
@@ -1168,6 +1279,48 @@ public final class AppState: ObservableObject {
             xmp.whites2012 = 10
             xmp.blacks2012 = -10
             xmp.vibrance = 15
+        }
+    }
+    
+    /// Auto calculates white balance using Gray World with Lightroom mired offset
+    public func autoWhiteBalance(for assetID: String? = nil) {
+        let targetID = assetID ?? primarySelectedAssetID
+        guard let validID = targetID, let asset = allAssets.first(where: { $0.id == validID }) else { return }
+        
+        autoWBTask?.cancel()
+        
+        // 1. Fast synchronous path if base holder is already decoded in memory
+        if let interactive = RAWImageLoader.shared.cachedHolder(for: asset.fileURL)?.interactive {
+            let result = AutoToneService.shared.estimateAutoWB(from: interactive)
+            updateDevelopSettings(for: validID, isDragging: false) { xmp in
+                xmp.temperature = result.temperature
+                xmp.tint = result.tint
+            }
+            return
+        }
+        
+        // 2. If asset file exists on disk, decode and apply statistical estimation in a single pass
+        if FileManager.default.fileExists(atPath: asset.fileURL.path) {
+            autoWBTask = Task { [weak self] in
+                let holder = await RAWImageLoader.shared.loadBaseHolder(from: asset.fileURL, xmp: nil)
+                guard !Task.isCancelled, let interactive = holder?.interactive else { return }
+                let result = AutoToneService.shared.estimateAutoWB(from: interactive)
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    guard !Task.isCancelled else { return }
+                    self?.updateDevelopSettings(for: validID, isDragging: false) { xmp in
+                        xmp.temperature = result.temperature
+                        xmp.tint = result.tint
+                    }
+                }
+            }
+            return
+        }
+        
+        // 3. Fallback baseline when file does not exist on disk
+        updateDevelopSettings(for: validID, isDragging: false) { xmp in
+            xmp.temperature = 5500
+            xmp.tint = 10
         }
     }
     

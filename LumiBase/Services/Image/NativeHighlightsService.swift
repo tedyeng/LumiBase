@@ -49,9 +49,8 @@ final class NativeHighlightsService: @unchecked Sendable {
         let field: LightcraftHighlightsKernel.Field
         let baseHolder: BaseImageHolder
         let cameraModel: String?
-        let xmp: XMPMetadata
         
-        func image(strength: Float, hlFactor: Float) -> CIImage? {
+        func image(xmp: XMPMetadata, strength: Float, hlFactor: Float) -> CIImage? {
             guard let recovered = LightcraftHighlightsKernel.apply(field: field, hlFactor: hlFactor) else { return nil }
             return AdobeColorPipeline.shared.process(image: recovered, cameraModel: cameraModel, xmp: xmp, baseHolder: baseHolder)
         }
@@ -114,7 +113,7 @@ final class NativeHighlightsService: @unchecked Sendable {
         if let ready = entry, ready.key == key {
             hits += 1
             stateLock.unlock()
-            return ready.image(strength: amount, hlFactor: hlFactor)
+            return ready.image(xmp: xmp, strength: amount, hlFactor: hlFactor)
         }
         // Evict the previous source/settings graph before preparing a replacement;
         // completed UI bitmaps have their own existing ROI/Fit ownership.
@@ -130,7 +129,7 @@ final class NativeHighlightsService: @unchecked Sendable {
                   isCurrent(), !Task.isCancelled else { return nil }
             guard let field = LightcraftHighlightsKernel.prepare(ev0: baselineHolder.full, ev2: targetHolder.full),
                   isCurrent(), !Task.isCancelled else { return nil }
-            return Entry(key: key, field: field, baseHolder: baselineHolder, cameraModel: cameraModel, xmp: xmp)
+            return Entry(key: key, field: field, baseHolder: baselineHolder, cameraModel: cameraModel)
         }
         guard let prepared, isCurrent(), !Task.isCancelled, source.isCurrent else { return nil }
         stateLock.lock(); defer { stateLock.unlock() }
@@ -138,7 +137,7 @@ final class NativeHighlightsService: @unchecked Sendable {
         preparationMilliseconds = (ProcessInfo.processInfo.systemUptime - start) * 1000
         preparations += 1
         entry = prepared
-        return prepared.image(strength: amount, hlFactor: hlFactor)
+        return prepared.image(xmp: xmp, strength: amount, hlFactor: hlFactor)
     }
 
     private static let strengthKernel = CIColorKernel(source: """
