@@ -15,13 +15,14 @@ public final class AdobeColorPipeline: Sendable {
         image: CIImage,
         cameraModel: String?,
         xmp: XMPMetadata?,
-        baseHolder: BaseImageHolder? = nil
+        baseHolder: BaseImageHolder? = nil,
+        isRaw: Bool? = nil
     ) -> CIImage {
         guard let xmp = xmp else {
             return image
         }
         
-        let isRaw = baseHolder?.isRaw ?? false
+        let isRaw = isRaw ?? (baseHolder?.isRaw ?? false)
         let hasDevelopEdits = xmp.hasDevelopEdits
         
         // If non-raw without develop edits, passthrough untouched
@@ -407,10 +408,25 @@ public final class AdobeColorPipeline: Sendable {
         }
         
         // Bounding Crop Box (normalized coordinates [0, 1])
-        let top = CGFloat(xmp.cropTop ?? 0.0)
-        let left = CGFloat(xmp.cropLeft ?? 0.0)
-        let bottom = CGFloat(xmp.cropBottom ?? 1.0)
-        let right = CGFloat(xmp.cropRight ?? 1.0)
+        var top = CGFloat(xmp.cropTop ?? 0.0)
+        var left = CGFloat(xmp.cropLeft ?? 0.0)
+        var bottom = CGFloat(xmp.cropBottom ?? 1.0)
+        var right = CGFloat(xmp.cropRight ?? 1.0)
+        
+        // If rotation angle is applied and no custom crop coordinates were explicitly specified,
+        // automatically compute inner bounding crop box to eliminate black corners (matching darkroom CoreImageDecoder)
+        if abs(angleDeg) > 0.01 && (top <= 0.001 && left <= 0.001 && bottom >= 0.999 && right >= 0.999) {
+            let rad = CGFloat(abs(angleDeg) * .pi / 180.0)
+            let sinA = sin(rad)
+            let cosA = cos(rad)
+            let aspect = extent.width / max(1.0, extent.height)
+            let cropWNorm = 1.0 / (cosA + (1.0 / aspect) * sinA)
+            let cropHNorm = 1.0 / (cosA + aspect * sinA)
+            left = max(0.0, (1.0 - cropWNorm) / 2.0)
+            right = min(1.0, 1.0 - left)
+            top = max(0.0, (1.0 - cropHNorm) / 2.0)
+            bottom = min(1.0, 1.0 - top)
+        }
         
         if top > 0.001 || left > 0.001 || bottom < 0.999 || right < 0.999 {
             let cropX = extent.origin.x + (left * extent.width)

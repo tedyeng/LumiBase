@@ -248,4 +248,55 @@ final class XMPParserTests: XCTestCase {
         XCTAssertEqual(appState.allAssets[0].xmp.rating, 5)
         XCTAssertEqual(appState.allAssets[0].xmp.caption, "Reloaded from external edit")
     }
+    
+    func testParsePickedStatusAttribute() {
+        let xmpPick = """
+        <x:xmpmeta xmlns:x="adobe:ns:meta/">
+         <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+          <rdf:Description rdf:about=""
+            xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
+            crs:PickedStatus="1" />
+         </rdf:RDF>
+        </x:xmpmeta>
+        """
+        let metaPick = XMPParser.parse(data: xmpPick.data(using: .utf8)!)
+        XCTAssertEqual(metaPick.flag, .pick)
+
+        let xmpReject = """
+        <x:xmpmeta xmlns:x="adobe:ns:meta/">
+         <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+          <rdf:Description rdf:about=""
+            xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
+            crs:PickedStatus="-1" />
+         </rdf:RDF>
+        </x:xmpmeta>
+        """
+        let metaReject = XMPParser.parse(data: xmpReject.data(using: .utf8)!)
+        XCTAssertEqual(metaReject.flag, .reject)
+    }
+
+    func testParsePickedStatusElement() {
+        let xmpElement = """
+        <x:xmpmeta xmlns:x="adobe:ns:meta/">
+         <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+          <rdf:Description rdf:about=""
+            xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/">
+            <crs:PickedStatus>1</crs:PickedStatus>
+          </rdf:Description>
+         </rdf:RDF>
+        </x:xmpmeta>
+        """
+        let meta = XMPParser.parse(data: xmpElement.data(using: .utf8)!)
+        XCTAssertEqual(meta.flag, .pick)
+    }
+
+    func testParsePickedStatusRegexFallback() {
+        let malformedXMP = """
+        <malformed-header>
+        <rdf:Description crs:PickedStatus="-1" Exposure2012="+0.50" />
+        """
+        let meta = XMPParser.parse(data: malformedXMP.data(using: .utf8)!)
+        XCTAssertEqual(meta.flag, .reject)
+        XCTAssertEqual(meta.exposure2012, 0.50)
+    }
 }

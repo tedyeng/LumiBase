@@ -442,7 +442,8 @@ public actor ThumbnailLoader {
                 let processed = AdobeColorPipeline.shared.process(
                     image: inputCI,
                     cameraModel: asset.cameraMetadata.model,
-                    xmp: asset.xmp
+                    xmp: asset.xmp,
+                    isRaw: asset.isRaw
                 )
                 let extent = processed.extent
                 if !extent.isEmpty && extent.width > 0 && extent.height > 0 {

@@ -348,8 +348,20 @@ struct InspectionFrameLayout {
             transform = transform.translatedBy(x: -source.midX, y: -source.midY)
             output = source.applying(transform)
         }
-        let top = CGFloat(xmp.cropTop ?? 0), left = CGFloat(xmp.cropLeft ?? 0)
-        let bottom = CGFloat(xmp.cropBottom ?? 1), right = CGFloat(xmp.cropRight ?? 1)
+        var top = CGFloat(xmp.cropTop ?? 0), left = CGFloat(xmp.cropLeft ?? 0)
+        var bottom = CGFloat(xmp.cropBottom ?? 1), right = CGFloat(xmp.cropRight ?? 1)
+        if abs(angle) > 0.01 && (top <= 0.001 && left <= 0.001 && bottom >= 0.999 && right >= 0.999) {
+            let rad = CGFloat(abs(angle) * .pi / 180.0)
+            let sinA = sin(rad)
+            let cosA = cos(rad)
+            let aspect = source.width / max(1.0, source.height)
+            let cropWNorm = 1.0 / (cosA + (1.0 / aspect) * sinA)
+            let cropHNorm = 1.0 / (cosA + aspect * sinA)
+            left = max(0.0, (1.0 - cropWNorm) / 2.0)
+            right = min(1.0, 1.0 - left)
+            top = max(0.0, (1.0 - cropHNorm) / 2.0)
+            bottom = min(1.0, 1.0 - top)
+        }
         if top > 0.001 || left > 0.001 || bottom < 0.999 || right < 0.999 {
             output = CGRect(x: source.minX + left * source.width, y: source.minY + (1 - bottom) * source.height,
                 width: max(1, (right - left) * source.width), height: max(1, (bottom - top) * source.height))

@@ -21,4 +21,21 @@ final class MergedCropRenderTests: XCTestCase {
         XCTAssertEqual(cg.width, 200)
         XCTAssertEqual(cg.height, 150)
     }
+
+    func testRotationAutoInnerBoundingBoxCrop() throws {
+        let image = CIImage(color: CIColor(red: 0.4, green: 0.2, blue: 0.1))
+            .cropped(to: CGRect(x: 0, y: 0, width: 400, height: 300))
+        var settings = XMPMetadata()
+        settings.hasCrop = true
+        settings.cropAngle = 5.0 // 5 degrees rotation without manual crop coordinates
+
+        let croppedCI = AdobeColorPipeline.shared.applyCrop(image: image, xmp: settings)
+        let extent = croppedCI.extent
+        
+        // Extent should be smaller than original 400x300 due to automatic inner bounding box
+        XCTAssertLessThan(extent.width, 400)
+        XCTAssertLessThan(extent.height, 300)
+        XCTAssertGreaterThan(extent.width, 300)
+        XCTAssertGreaterThan(extent.height, 200)
+    }
 }
