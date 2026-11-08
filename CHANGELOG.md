@@ -5,6 +5,19 @@ All notable changes to **LumiBase** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.15.3] - 2026-11-08
+
+### Fixed
+- **Crop Aspect Ratio & Layout Geometry (`LoupeView`, `AppState`)**:
+  - Fixed cropped image distortion in Develop mode where `fitExtent` and `frameExtent` forced cropped renders into uncropped 3:2 layout frames.
+  - Updated `setCropPreset` and `flipCropOrientation` to use actual asset dimensions (`pixelWidth` / `pixelHeight` with EXIF orientation) instead of hardcoded 3:2 ratios.
+  - Fixed floating-point rounding precision in `InspectionFrameLayout.processedFullExtent`.
+- **120Hz Smooth Crop Overlay Dragging (`CropOverlayView`, `LoupeView`, `AppState`)**:
+  - Fixed local coordinate space feedback oscillation during crop pan and handle resize by anchoring `DragGesture` to a stationary named coordinate space.
+  - Decoupled live drag state (`dragLiveGeometry`, `dragGridCounts`) from per-frame global `AppState` invalidations and background RAW re-renders, committing crop geometry on mouse release without flashing the display source.
+- **Crop Panel Workflow Persistence (`AppState`, `CropControlPanelView`, `LoupeView`)**:
+  - Separated right inspector tool selection (`activeDevelopTool == .crop`) from interactive crop overlay state (`isCropOverlayActive`), keeping the `CROP & STRAIGHTEN` panel open after clicking **Done** / pressing `Return` while displaying the cropped result in the center canvas.
+
 ## [1.15.0] - 2026-10-17
 
 ### Added

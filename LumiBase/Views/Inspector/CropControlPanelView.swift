@@ -193,12 +193,16 @@ public struct CropControlPanelView: View {
                 Spacer()
                 
                 Button {
-                    appState.activeDevelopTool = .edit
+                    if appState.isCropOverlayActive {
+                        appState.completeCropEditing()
+                    } else {
+                        appState.isCropOverlayActive = true
+                    }
                 } label: {
                     HStack(spacing: 4) {
-                        Image(systemName: "checkmark")
+                        Image(systemName: appState.isCropOverlayActive ? "checkmark" : "crop")
                             .font(.system(size: 9, weight: .bold))
-                        Text("Done")
+                        Text(appState.isCropOverlayActive ? "Done" : "Edit Crop")
                             .font(.system(size: 10, weight: .bold))
                     }
                     .foregroundColor(.black)
@@ -209,7 +213,7 @@ public struct CropControlPanelView: View {
                 }
                 .buttonStyle(.plain)
                 .keyboardShortcut(.defaultAction)
-                .help("Commit and Close Crop Tool (Return / R)")
+                .help(appState.isCropOverlayActive ? "Apply Crop and Stay in Crop Panel (Return / R)" : "Show Interactive Crop Overlay (R)")
             }
             .padding(.horizontal, 10)
         }

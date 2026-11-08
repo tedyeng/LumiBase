@@ -15,6 +15,10 @@ public struct CropOverlayView: View {
     @State private var isDragging: Bool = false
     @State private var activeHandle: CropHandle?
     @State private var dragInitialGeometry: CropGeometry?
+    @State private var dragLiveGeometry: CropGeometry?
+    @State private var dragGridCounts: (cols: Int, rows: Int)?
+    
+    private static let coordinateSpaceName = "CropOverlayCoordinateSpace"
     
     public init(imageSize: CGSize, containerSize: CGSize, appState: AppState) {
         self.imageSize = imageSize
@@ -34,11 +38,15 @@ public struct CropOverlayView: View {
         return CGRect(x: originX, y: originY, width: dispW, height: dispH)
     }
     
-    private var currentGeometry: CropGeometry {
+    private var committedGeometry: CropGeometry {
         if let live = appState.liveDevelopXMP {
             return live.cropGeometry
         }
         return appState.primarySelectedAsset?.xmp.cropGeometry ?? .full
+    }
+    
+    private var currentGeometry: CropGeometry {
+        dragLiveGeometry ?? committedGeometry
     }
     
     private func cropRect(in imgRect: CGRect) -> CGRect {
@@ -76,7 +84,7 @@ public struct CropOverlayView: View {
                 Rectangle()
                     .fill(Color.black.opacity(0.001)) // Transparent hit target
                     .gesture(
-                        DragGesture(minimumDistance: 1)
+                        DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.coordinateSpaceName))
                             .onChanged { value in
                                 handlePanDrag(translation: value.translation, imgRect: imgRect)
                             }
@@ -94,7 +102,13 @@ public struct CropOverlayView: View {
             }
         }
         .frame(width: containerSize.width, height: containerSize.height)
+        .coordinateSpace(name: Self.coordinateSpaceName)
         .contentShape(Rectangle())
+        .onChange(of: committedGeometry) { _, _ in
+            if !isDragging {
+                dragLiveGeometry = nil
+            }
+        }
     }
     
     // MARK: - Mask Subviews
@@ -114,12 +128,12 @@ public struct CropOverlayView: View {
         Canvas { context, sz in
             guard sz.width > 0, sz.height > 0 else { return }
             
-            // Target cell density (~32pt per grid square)
+            // Target cell density (~32pt per grid square); lock cell count during active drag to prevent line popping
             let targetCellSize: CGFloat = 32.0
-            let numCols = max(4, Int(round(sz.width / targetCellSize)))
+            let numCols = dragGridCounts?.cols ?? max(4, Int(round(sz.width / targetCellSize)))
             let stepX = sz.width / CGFloat(numCols)
             
-            let numRows = max(4, Int(round(sz.height / targetCellSize)))
+            let numRows = dragGridCounts?.rows ?? max(4, Int(round(sz.height / targetCellSize)))
             let stepY = sz.height / CGFloat(numRows)
             
             var path = Path()
@@ -196,7 +210,7 @@ public struct CropOverlayView: View {
         .contentShape(Rectangle())
         .position(pos)
         .gesture(
-            DragGesture(minimumDistance: 1)
+            DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.coordinateSpaceName))
                 .onChanged { value in
                     handleResizeDrag(handle: handle, translation: value.translation, imgRect: imgRect)
                 }
@@ -223,7 +237,14 @@ public struct CropOverlayView: View {
     
     private func handlePanDrag(translation: CGSize, imgRect: CGRect) {
         if dragInitialGeometry == nil {
-            dragInitialGeometry = currentGeometry
+            let initial = currentGeometry
+            dragInitialGeometry = initial
+            let initW = initial.widthFraction * imgRect.width
+            let initH = initial.heightFraction * imgRect.height
+            dragGridCounts = (
+                cols: max(4, Int(round(initW / 32.0))),
+                rows: max(4, Int(round(initH / 32.0)))
+            )
             isDragging = true
         }
         guard let initial = dragInitialGeometry, imgRect.width > 0, imgRect.height > 0 else { return }
@@ -240,19 +261,25 @@ public struct CropOverlayView: View {
         newLeft = max(0.0, min(1.0 - width, newLeft))
         newTop = max(0.0, min(1.0 - height, newTop))
         
-        let newGeom = CropGeometry(
+        dragLiveGeometry = CropGeometry(
             top: newTop,
             left: newLeft,
             bottom: newTop + height,
             right: newLeft + width,
             angle: initial.angle
         )
-        appState.updateCropGeometry(newGeom, isDragging: true)
     }
     
     private func handleResizeDrag(handle: CropHandle, translation: CGSize, imgRect: CGRect) {
         if dragInitialGeometry == nil {
-            dragInitialGeometry = currentGeometry
+            let initial = currentGeometry
+            dragInitialGeometry = initial
+            let initW = initial.widthFraction * imgRect.width
+            let initH = initial.heightFraction * imgRect.height
+            dragGridCounts = (
+                cols: max(4, Int(round(initW / 32.0))),
+                rows: max(4, Int(round(initH / 32.0)))
+            )
             activeHandle = handle
             isDragging = true
         }
@@ -292,41 +319,90 @@ public struct CropOverlayView: View {
         // Apply Aspect Ratio Constraint if locked
         if appState.isCropAspectLocked, let ratio = appState.cropAspectRatioPreset.ratio(originalWidth: imageSize.width, originalHeight: imageSize.height) {
             let imgAspect = imageSize.width / max(1, imageSize.height)
-            let desiredFractionRatio = ratio / imgAspect
-            
-            let curW = right - left
-            let curH = bottom - top
+            let desiredFractionRatio = Double(ratio / imgAspect)
             
             if handle == .topMid || handle == .bottomMid {
-                let targetW = min(1.0, curH * desiredFractionRatio)
-                let center = (left + right) / 2.0
-                left = max(0.0, center - targetW / 2.0)
-                right = min(1.0, left + targetW)
+                var curH = bottom - top
+                var targetW = curH * desiredFractionRatio
+                if targetW > 1.0 {
+                    targetW = 1.0
+                    curH = targetW / desiredFractionRatio
+                    if handle == .topMid {
+                        top = bottom - curH
+                    } else {
+                        bottom = top + curH
+                    }
+                }
+                let centerX = (initial.left + initial.right) / 2.0
+                left = max(0.0, min(1.0 - targetW, centerX - targetW / 2.0))
+                right = left + targetW
+            } else if handle == .midLeft || handle == .midRight {
+                var curW = right - left
+                var targetH = curW / desiredFractionRatio
+                if targetH > 1.0 {
+                    targetH = 1.0
+                    curW = targetH * desiredFractionRatio
+                    if handle == .midLeft {
+                        left = right - curW
+                    } else {
+                        right = left + curW
+                    }
+                }
+                let centerY = (initial.top + initial.bottom) / 2.0
+                top = max(0.0, min(1.0 - targetH, centerY - targetH / 2.0))
+                bottom = top + targetH
             } else {
-                let targetH = min(1.0, curW / desiredFractionRatio)
-                if handle == .topLeft || handle == .topRight {
-                    top = max(0.0, bottom - targetH)
+                // Corner handles: anchor opposite corner and clamp to image boundaries
+                let maxW = (handle == .topLeft || handle == .bottomLeft) ? initial.right : (1.0 - initial.left)
+                let maxH = (handle == .topLeft || handle == .topRight) ? initial.bottom : (1.0 - initial.top)
+                
+                var w = min(maxW, max(0.05, right - left))
+                var h = w / desiredFractionRatio
+                if h > maxH {
+                    h = maxH
+                    w = h * desiredFractionRatio
+                }
+                if h < 0.05 {
+                    h = 0.05
+                    w = min(maxW, h * desiredFractionRatio)
+                }
+                
+                if handle == .topLeft || handle == .bottomLeft {
+                    left = initial.right - w
+                    right = initial.right
                 } else {
-                    bottom = min(1.0, top + targetH)
+                    left = initial.left
+                    right = initial.left + w
+                }
+                
+                if handle == .topLeft || handle == .topRight {
+                    top = initial.bottom - h
+                    bottom = initial.bottom
+                } else {
+                    top = initial.top
+                    bottom = initial.top + h
                 }
             }
         }
         
-        let newGeom = CropGeometry(
+        dragLiveGeometry = CropGeometry(
             top: top,
             left: left,
             bottom: bottom,
             right: right,
             angle: initial.angle
         )
-        appState.updateCropGeometry(newGeom, isDragging: true)
     }
     
     private func handleDragEnd() {
-        if dragInitialGeometry != nil {
+        if let finalGeometry = dragLiveGeometry {
+            appState.updateCropGeometry(finalGeometry, isDragging: false)
+        } else if dragInitialGeometry != nil {
             appState.updateCropGeometry(currentGeometry, isDragging: false)
         }
         dragInitialGeometry = nil
+        dragLiveGeometry = nil
+        dragGridCounts = nil
         activeHandle = nil
         isDragging = false
     }

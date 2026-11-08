@@ -149,7 +149,19 @@ public final class AppState: ObservableObject {
     @Published public var lastSyncOptions: DevelopSyncOptions = .default
     
     // Active Develop Tool Mode (Edit vs Crop & Rotate)
-    @Published public var activeDevelopTool: DevelopToolMode = .edit
+    @Published public var activeDevelopTool: DevelopToolMode = .edit {
+        didSet {
+            if activeDevelopTool != .crop {
+                isCropOverlayActive = false
+            } else if oldValue != .crop {
+                isCropOverlayActive = true
+            }
+        }
+    }
+    @Published public var isCropOverlayActive: Bool = false
+    public var isEditingCropOverlay: Bool {
+        activeDevelopTool == .crop && isCropOverlayActive
+    }
     @Published public var cropAspectRatioPreset: CropAspectRatioPreset = .original
     @Published public var isCropAspectLocked: Bool = true
     @Published public var cropOverlayStyle: CropOverlayStyle = .grid
@@ -511,9 +523,9 @@ public final class AppState: ObservableObject {
                 self.flipCropOrientation()
                 return true
             }
-            if keyCode == 36 || keyCode == 76 || keyCode == 53 { // Enter / Return / Esc exits crop
+            if (keyCode == 36 || keyCode == 76 || keyCode == 53) && self.isCropOverlayActive { // Enter / Return / Esc finishes crop overlay
                 withAnimation(.easeInOut(duration: 0.15)) {
-                    self.activeDevelopTool = .edit
+                    self.completeCropEditing()
                 }
                 return true
             }
@@ -1134,7 +1146,9 @@ public final class AppState: ObservableObject {
             liveCommitTask?.cancel()
             allAssets[index].xmp = currentXMP
             debouncedSyncXMP(for: allAssets[index])
-            displaySourceRevision &+= 1
+            if !isEditingCropOverlay {
+                displaySourceRevision &+= 1
+            }
             
             if applyAutoSync {
                 for otherID in otherSelectedIDs {
@@ -1420,15 +1434,31 @@ public final class AppState: ObservableObject {
             }
         }
         if activeDevelopTool == .crop {
-            activeDevelopTool = .edit
+            if isCropOverlayActive {
+                completeCropEditing()
+            } else {
+                isCropOverlayActive = true
+                comparisonMode = .off
+                isBeforeToggled = false
+                if viewMode == .grid {
+                    viewMode = .loupe
+                }
+            }
         } else {
             activeDevelopTool = .crop
+            isCropOverlayActive = true
             comparisonMode = .off
             isBeforeToggled = false
             if viewMode == .grid {
                 viewMode = .loupe
             }
         }
+    }
+    
+    /// Commits crop editing and hides the interactive crop overlay while keeping the Crop & Straighten panel active
+    public func completeCropEditing() {
+        guard activeDevelopTool == .crop else { return }
+        isCropOverlayActive = false
     }
     
     /// Updates normalized crop geometry with live preview and catalog persistence
@@ -1444,6 +1474,9 @@ public final class AppState: ObservableObject {
     
     /// Updates straighten / rotation angle (-45° to +45°)
     public func updateCropAngle(_ angle: Double, for assetID: String? = nil, isDragging: Bool = false) {
+        if activeDevelopTool == .crop && !isCropOverlayActive {
+            isCropOverlayActive = true
+        }
         updateDevelopSettings(for: assetID, isDragging: isDragging) { xmp in
             xmp.cropAngle = max(-45.0, min(45.0, angle))
         }
@@ -1456,20 +1489,49 @@ public final class AppState: ObservableObject {
         }
     }
     
+    public func assetDimensions(for asset: PhotoAsset) -> (width: CGFloat, height: CGFloat) {
+        if let pw = asset.cameraMetadata.pixelWidth, let ph = asset.cameraMetadata.pixelHeight, pw > 0, ph > 0 {
+            let isRotated = [5, 6, 7, 8].contains(asset.sourceOrientation ?? 1)
+            let w = CGFloat(isRotated ? ph : pw)
+            let h = CGFloat(isRotated ? pw : ph)
+            return (w, h)
+        }
+        return (3.0, 2.0)
+    }
+
     /// Flips crop frame orientation between portrait and landscape (X key)
     public func flipCropOrientation(for assetID: String? = nil) {
+        if activeDevelopTool == .crop && !isCropOverlayActive {
+            isCropOverlayActive = true
+        }
         let targetID = assetID ?? primarySelectedAssetID
         guard let id = targetID, let asset = allAssets.first(where: { $0.id == id }) else { return }
         let currentXMP = (liveDevelopAssetID == id && liveDevelopXMP != nil) ? liveDevelopXMP! : asset.xmp
         let g = currentXMP.cropGeometry
+        let (rawW, rawH) = assetDimensions(for: asset)
+        let curAspect = rawW / max(1.0, rawH)
         
-        let curW = g.widthFraction
-        let curH = g.heightFraction
+        let curPixelW = g.widthFraction * rawW
+        let curPixelH = g.heightFraction * rawH
+        guard curPixelW > 0, curPixelH > 0 else { return }
+        
+        // Target pixel aspect ratio is the inverted pixel aspect ratio
+        let targetPixelAspect = curPixelH / curPixelW
+        let desiredFractionRatio = targetPixelAspect / curAspect
+        
+        var newW = min(1.0, g.heightFraction * curAspect)
+        var newH = newW / desiredFractionRatio
+        if newH > 1.0 {
+            newH = 1.0
+            newW = min(1.0, newH * desiredFractionRatio)
+        }
+        if newW > 1.0 {
+            newW = 1.0
+            newH = min(1.0, newW / desiredFractionRatio)
+        }
+        
         let centerX = (g.left + g.right) / 2.0
         let centerY = (g.top + g.bottom) / 2.0
-        
-        let newW = min(1.0, curH)
-        let newH = min(1.0, curW)
         
         let newLeft = max(0.0, min(1.0 - newW, centerX - newW / 2.0))
         let newTop = max(0.0, min(1.0 - newH, centerY - newH / 2.0))
@@ -1491,6 +1553,9 @@ public final class AppState: ObservableObject {
     
     /// Sets crop aspect ratio preset and adjusts crop geometry
     public func setCropPreset(_ preset: CropAspectRatioPreset, for assetID: String? = nil) {
+        if activeDevelopTool == .crop && !isCropOverlayActive {
+            isCropOverlayActive = true
+        }
         self.cropAspectRatioPreset = preset
         self.isCropAspectLocked = (preset != .custom)
         
@@ -1501,11 +1566,10 @@ public final class AppState: ObservableObject {
         let currentXMP = (liveDevelopAssetID == id && liveDevelopXMP != nil) ? liveDevelopXMP! : asset.xmp
         let g = currentXMP.cropGeometry
         
-        let rawW: CGFloat = 3.0
-        let rawH: CGFloat = 2.0
+        let (rawW, rawH) = assetDimensions(for: asset)
         guard let ratio = preset.ratio(originalWidth: rawW, originalHeight: rawH) else { return }
         
-        let curAspect = rawW / rawH
+        let curAspect = rawW / max(1.0, rawH)
         let desiredFractionRatio = ratio / curAspect
         
         var w = g.widthFraction
@@ -1513,6 +1577,10 @@ public final class AppState: ObservableObject {
         if h > 1.0 {
             h = 1.0
             w = h * desiredFractionRatio
+        }
+        if w > 1.0 {
+            w = 1.0
+            h = w / desiredFractionRatio
         }
         
         let centerX = (g.left + g.right) / 2.0

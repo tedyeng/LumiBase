@@ -363,8 +363,14 @@ struct InspectionFrameLayout {
             bottom = min(1.0, 1.0 - top)
         }
         if top > 0.001 || left > 0.001 || bottom < 0.999 || right < 0.999 {
-            output = CGRect(x: source.minX + left * source.width, y: source.minY + (1 - bottom) * source.height,
-                width: max(1, (right - left) * source.width), height: max(1, (bottom - top) * source.height))
+            let x = source.minX + left * source.width
+            let y = source.minY + (1 - bottom) * source.height
+            let w = max(1, (right - left) * source.width)
+            let h = max(1, (bottom - top) * source.height)
+            output = CGRect(x: (abs(x - round(x)) < 0.001) ? round(x) : x,
+                            y: (abs(y - round(y)) < 0.001) ? round(y) : y,
+                            width: (abs(w - round(w)) < 0.001) ? round(w) : w,
+                            height: (abs(h - round(h)) < 0.001) ? round(h) : h)
         }
         return CGRect(origin: .zero, size: output.integral.size)
     }
@@ -623,10 +629,10 @@ public struct LoupeView: View {
         .init(center: inspection.center, viewport: viewportPixels, backing: backingScale)
     }
     private var roiPrototypeEnabled: Bool {
-        if appState.workspaceMode == .library, let asset = appState.primarySelectedAsset, asset.xmp.hasDevelopEdits {
+        if let asset = appState.primarySelectedAsset, activeXMP(for: asset).hasCrop {
             // Cropped native pixels use the existing full processed render: ROI coordinates
             // are in the uncropped source domain and must not punch holes in the crop.
-            return !asset.xmp.hasCrop
+            return false
         }
         return roiPrototypeToggle.enabled
     }
@@ -687,9 +693,9 @@ public struct LoupeView: View {
                     Color.black.edgesIgnoringSafeArea(.all)
                     
                     if let img = img {
-                        let currentAngle = (appState.activeDevelopTool == .crop) ? (appState.liveDevelopXMP?.cropAngle ?? appState.primarySelectedAsset?.xmp.cropAngle ?? 0.0) : 0.0
+                        let currentAngle = appState.isEditingCropOverlay ? (appState.liveDevelopXMP?.cropAngle ?? appState.primarySelectedAsset?.xmp.cropAngle ?? 0.0) : 0.0
                         
-                        if appState.activeDevelopTool != .crop && appState.comparisonMode == .splitLeftRight {
+                        if !appState.isEditingCropOverlay && appState.comparisonMode == .splitLeftRight {
                             // 1. Left / Right Split View
                             let splitX = viewportSize.width * max(0.05, min(0.95, appState.splitPosition))
                             
@@ -740,7 +746,7 @@ public struct LoupeView: View {
                                 .padding(.bottom, 16)
                             }
                             
-                        } else if appState.activeDevelopTool != .crop && appState.comparisonMode == .splitTopBottom {
+                        } else if !appState.isEditingCropOverlay && appState.comparisonMode == .splitTopBottom {
                             // 2. Top / Bottom Split View
                             let splitY = viewportSize.height * max(0.05, min(0.95, appState.splitPosition))
                             
@@ -795,7 +801,7 @@ public struct LoupeView: View {
                                 }
                             }
                             
-                        } else if appState.activeDevelopTool != .crop && appState.comparisonMode == .sideBySide {
+                        } else if !appState.isEditingCropOverlay && appState.comparisonMode == .sideBySide {
                             // 3. Side-by-Side Dual Viewport
                             let halfWidth = viewportSize.width / 2
                             let halfViewport = CGSize(width: halfWidth, height: viewportSize.height)
@@ -853,7 +859,7 @@ public struct LoupeView: View {
                                 .clipped()
                             }
                             
-                        } else if appState.activeDevelopTool != .crop && appState.isBeforeToggled {
+                        } else if !appState.isEditingCropOverlay && appState.isBeforeToggled {
                             // 4. Toggle Before (Full-Screen Single Image)
                             let beforeToDisplay = beforeImage ?? img
                             Image(nsImage: beforeToDisplay)
@@ -900,7 +906,7 @@ public struct LoupeView: View {
                                 .padding(8).background(Color.black.opacity(0.7)).cornerRadius(4)
                         }.padding(12).allowsHitTesting(false)
                     }
-                    if appState.activeDevelopTool == .crop && !is100PercentZoom {
+                    if appState.isEditingCropOverlay && !is100PercentZoom {
                         CropOverlayView(imageSize: size, containerSize: viewportSize, appState: appState)
                     } else {
                         InspectionSurface(
@@ -1304,15 +1310,15 @@ public struct LoupeView: View {
             return .handled
         }
         .onKeyPress(.return) {
-            if appState.activeDevelopTool == .crop {
-                appState.activeDevelopTool = .edit
+            if appState.isEditingCropOverlay {
+                appState.completeCropEditing()
                 return .handled
             }
             return .ignored
         }
         .onKeyPress(.escape) {
-            if appState.activeDevelopTool == .crop {
-                appState.activeDevelopTool = .edit
+            if appState.isEditingCropOverlay {
+                appState.completeCropEditing()
                 return .handled
             }
             return .ignored
@@ -1386,7 +1392,7 @@ public struct LoupeView: View {
         .onChange(of: appState.primarySelectedAsset?.xmp.thumbnailDevelopCacheIdentity) { _, _ in
             appState.previewSharpness.clear()
         }
-        .task(id: "\(appState.primarySelectedAssetID ?? "")|\(appState.primarySelectedAsset?.dateModified.timeIntervalSinceReferenceDate ?? 0)|\(appState.primarySelectedAsset?.fileSize ?? 0)|\(appState.displaySourceRevision)|\(selectedUsesCamera && is100PercentZoom)|\(nativeRAWFallbackIdentity ?? "")|\(selectedUsesCamera)") {
+        .task(id: "\(appState.primarySelectedAssetID ?? "")|\(appState.primarySelectedAsset?.dateModified.timeIntervalSinceReferenceDate ?? 0)|\(appState.primarySelectedAsset?.fileSize ?? 0)|\(appState.displaySourceRevision)|\(selectedUsesCamera && is100PercentZoom)|\(nativeRAWFallbackIdentity ?? "")|\(selectedUsesCamera)|\(appState.workspaceMode)") {
             await loadSelectedImage()
             if let asset = appState.primarySelectedAsset {
                 updateBeforeImage(for: asset)
@@ -1446,6 +1452,13 @@ public struct LoupeView: View {
             }
         }
         .onChange(of: appState.activeDevelopTool) { _, _ in
+            DispatchQueue.main.async {
+                if let asset = appState.primarySelectedAsset {
+                    updateProcessedImage(with: activeXMP(for: asset))
+                }
+            }
+        }
+        .onChange(of: appState.isCropOverlayActive) { _, _ in
             DispatchQueue.main.async {
                 if let asset = appState.primarySelectedAsset {
                     updateProcessedImage(with: activeXMP(for: asset))
@@ -1770,7 +1783,7 @@ public struct LoupeView: View {
 
     private func activeXMP(for asset: PhotoAsset) -> XMPMetadata {
         var xmp = (appState.liveDevelopAssetID == asset.id && appState.liveDevelopXMP != nil) ? appState.liveDevelopXMP! : (appState.primarySelectedAsset?.id == asset.id ? appState.primarySelectedAsset!.xmp : asset.xmp)
-        if appState.activeDevelopTool == .crop {
+        if appState.isEditingCropOverlay {
             xmp.resetCrop()
         }
         return xmp
@@ -1778,6 +1791,18 @@ public struct LoupeView: View {
 
     private func updateProcessedImage(with xmp: XMPMetadata?) {
         guard !selectedUsesCamera, displaySourceVersion == appState.displaySourceRevision else { return }
+        if appState.isEditingCropOverlay, !is100PercentZoom,
+           let asset = appState.primarySelectedAsset,
+           display.owns(assetID: asset.id), display.image != nil {
+            var candidateXMP = xmp ?? activeXMP(for: asset)
+            candidateXMP.resetCrop()
+            if display.developSettingsIdentity == ProcessedROIRequest.settingsIdentity(candidateXMP) {
+                isLoading = false
+                finishROIForeground(owner: displayTicket.uuidString)
+                Task { await PreviewPreloader.shared.foregroundSelectionCompleted(asset.id) }
+                return
+            }
+        }
         let sourceRevision = appState.displaySourceRevision
         let ticket = renderRevision.next()
         LiveDevelopPreviewEngine.shared.cancelPending()
@@ -1832,7 +1857,7 @@ public struct LoupeView: View {
                     return
                 }
                 if let result {
-                    let fitExtent = appState.workspaceMode == .library && renderXMP.hasCrop
+                    let fitExtent = renderXMP.hasCrop
                         ? InspectionFrameLayout.processedFullExtent(source: holder.fullExtent, xmp: renderXMP) : holder.fullExtent
                     InspectionReadyFrameStore.shared.publishFullPreview(asset: asset, xmp: renderXMP,
                         image: result, fullExtent: fitExtent)
@@ -1907,12 +1932,12 @@ public struct LoupeView: View {
                     }
                     return
                 }
-                let croppedLibrary = appState.workspaceMode == .library && renderXMP.hasCrop && roiRect == nil
-                let frameExtent = croppedLibrary
+                let isCropped = renderXMP.hasCrop && roiRect == nil
+                let frameExtent = isCropped
                     ? (native ? CGRect(origin: .zero, size: result?.size ?? .zero) : InspectionFrameLayout.processedFullExtent(source: fresh.fullExtent, xmp: renderXMP))
                     : fresh.fullExtent
                 display.accept(result, assetID: targetID, filename: asset.filename,
-                    pixels: croppedLibrary ? frameExtent.size : (roiRect.map(\.size) ?? fresh.fullExtent.size), native: native, ticket: displayTicket,
+                    pixels: isCropped ? frameExtent.size : (roiRect.map(\.size) ?? fresh.fullExtent.size), native: native, ticket: displayTicket,
                     sourceRect: result == nil ? nil : roiRect, fullExtent: frameExtent,
                     developSettingsIdentity: renderSettingsIdentity)
                 if let result, !native {
