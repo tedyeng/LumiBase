@@ -151,6 +151,99 @@ final class LightcraftHighlightsTests: XCTestCase {
         XCTAssertGreaterThan(size, 0)
     }
     
+    func testDefaultAdvancedHighlightsWithPositiveExposureInDarkroomEngineDoesNotClip() {
+        let extent = CGRect(x: 0, y: 0, width: 16, height: 16)
+        let brightPatch = CIImage(color: CIColor(red: 0.78, green: 0.80, blue: 0.84)).cropped(to: extent)
+        let holder = BaseImageHolder(
+            full: brightPatch,
+            display: brightPatch,
+            interactive: brightPatch,
+            fullExtent: extent,
+            displayExtent: extent,
+            interactiveExtent: extent,
+            baseTemperature: 4950,
+            baseTint: 9,
+            baseExposure: 0.0,
+            isRaw: true
+        )
+        
+        var xmp = XMPMetadata()
+        xmp.exposure2012 = 0.65
+        xmp.contrast2012 = 12
+        xmp.highlights2012 = -71
+        xmp.shadows2012 = 58
+        xmp.whites2012 = -20
+        xmp.blacks2012 = -19
+        xmp.dehaze = 32
+        xmp.clarity2012 = 22
+        xmp.advancedRAWHighlightRecovery = nil // nil means default enabled via NativeHighlightsService.isAdvancedEnabled
+        
+        UserDefaults.standard.set(RAWColorPipelineEngine.darkroom.rawValue, forKey: "rawColorPipelineEngine")
+        let processed = AdobeColorPipeline.shared.process(
+            image: brightPatch,
+            cameraModel: "ILCE-7CM2",
+            xmp: xmp,
+            baseHolder: holder
+        )
+        
+        var pix = [UInt8](repeating: 0, count: 4)
+        let srgb = CGColorSpace(name: CGColorSpace.sRGB)!
+        NativeHighlightsService.shared.renderContext.render(
+            processed,
+            toBitmap: &pix,
+            rowBytes: 4,
+            bounds: CGRect(x: 4, y: 4, width: 1, height: 1),
+            format: .RGBA8,
+            colorSpace: srgb
+        )
+        
+        XCTAssertLessThan(pix[0], 245, "Bright recovered highlight patch must not clip to 255 under +0.65 EV when Highlights = -71")
+        XCTAssertLessThan(pix[1], 245, "Bright recovered highlight patch must not clip to 255 under +0.65 EV when Highlights = -71")
+        XCTAssertLessThan(pix[2], 248, "Bright recovered highlight patch must not clip to 255 under +0.65 EV when Highlights = -71")
+    }
+    
+    func testExportHakubaSnowPeakPreservesHighlightDetails() throws {
+        let arwURL = URL(fileURLWithPath: "/Volumes/Super SSD/Photo/2026/長野白馬村賞楓/10-29/A7C02380.ARW")
+        let outURL = URL(fileURLWithPath: "/Volumes/Super SSD/Photo/2026/長野白馬村賞楓/10-29/jpeg/A7C02380.jpg")
+        guard FileManager.default.fileExists(atPath: arwURL.path) else {
+            throw XCTSkip("Hakuba ARW not mounted at \(arwURL.path)")
+        }
+        guard let asset = FolderScanner.parseAsset(fileURL: arwURL) else {
+            XCTFail("Failed to parse asset for A7C02380.ARW")
+            return
+        }
+        
+        UserDefaults.standard.set(RAWColorPipelineEngine.darkroom.rawValue, forKey: "rawColorPipelineEngine")
+        NativeHighlightsService.shared.clear()
+        
+        let exportedURL = try PhotoExportService.shared.exportPhoto(asset: asset, to: outURL, quality: 0.95)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: exportedURL.path))
+        
+        guard let exportedCI = CIImage(contentsOf: exportedURL) else {
+            XCTFail("Failed to read exported JPEG at \(exportedURL.path)")
+            return
+        }
+        
+        let srgb = CGColorSpace(name: CGColorSpace.sRGB)!
+        let ctx = CIContext(options: [.useSoftwareRenderer: false])
+        // Snow peak at normalized (x = 0.65, y_from_top = 0.35 -> y_ci = 0.65)
+        let px = Int(exportedCI.extent.width * 0.65)
+        let py = Int(exportedCI.extent.height * 0.65)
+        var pix = [UInt8](repeating: 0, count: 4)
+        ctx.render(
+            exportedCI,
+            toBitmap: &pix,
+            rowBytes: 4,
+            bounds: CGRect(x: px, y: py, width: 1, height: 1),
+            format: .RGBA8,
+            colorSpace: srgb
+        )
+        fputs(">>> Exported A7C02380.jpg snow peak sRGB8 = (\(pix[0]), \(pix[1]), \(pix[2]))\n", stderr)
+        XCTAssertLessThan(pix[0], 240, "Snow peak highlight detail must be recovered (not clipped to 255)")
+        XCTAssertLessThan(pix[1], 240, "Snow peak highlight detail must be recovered (not clipped to 255)")
+        XCTAssertLessThan(pix[2], 248, "Snow peak highlight detail must be recovered (not clipped to 255)")
+    }
+    
     @MainActor
     func testHighlightPreviewQualitySettingsAndFastRender() async throws {
         let arwURL = URL(fileURLWithPath: "/Volumes/Super SSD/Photo/Temp/09-17_淡江大橋/A7C00904.ARW")

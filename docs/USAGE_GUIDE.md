@@ -222,7 +222,7 @@ LumiBase 具備媲美 Adobe Lightroom Classic 的專業修圖前後對比系統�
 ## 9. 高品質 JPEG 批次匯出 (Export Workflow)
 
 - **快捷匯出 (`⇧⌘E`)**：選取欲匯出的相片（未選取時預設匯出全部），按下 **`⇧⌘E`** (Shift + Command + E) 或點擊工具列上的 **「Export」** 按鈕。
-- **高畫質算圖**：全尺寸感光元件 Demosaicing 算圖，並完整套用色調曲線、裁切旋轉與降噪銳化。
+- **高畫質算圖**：全尺寸感光元件 Demosaicing 算圖，並完整套用雙曝光高光還原（`NativeHighlightsService`）、`OpticalExposureKernel` Reinhard 高光肩部保護、色調曲線、裁切旋轉與降噪銳化，確保匯出與預覽高光細節一致。
 - **完整 EXIF 保存**：相機型號、鏡頭資訊、ISO、快門、光圈、焦距、拍攝日期與 GPS 定位均完整保留。
 - **標準 sRGB 色彩空間**：自動標記與轉換色彩設定檔，確保在各家手機、平板與社群平台上色彩皆鮮明一致。
 - **即時進度浮動 HUD**：右下角顯示即時處理相片名稱與進度條，隨時可按 Cancel 中止。

@@ -180,8 +180,9 @@ public final class PhotoExportService: @unchecked Sendable {
         }
         
         // 2. Apply Color Pipeline
+        let useNativeHighlights = NativeHighlightsService.isAdvancedEnabled(for: asset.xmp) && exportBaseHolder != nil && (asset.xmp.highlights2012 ?? 0) < 0
         let processedCI: CIImage
-        if engine == .adobePV2012, NativeHighlightsService.isAdvancedEnabled(for: asset.xmp), exportBaseHolder != nil, (asset.xmp.highlights2012 ?? 0) < 0 {
+        if useNativeHighlights {
             guard let recipe = sourceRecipe else {
                 throw ExportError.failedToRenderImage("Highlights require a current source and off-main render; preparation was cancelled or failed")
             }
@@ -212,8 +213,8 @@ public final class PhotoExportService: @unchecked Sendable {
             throw ExportError.failedToRenderImage("Render extent is invalid")
         }
         
-        // 3. For Darkroom RAW engine, write direct Metal JPEG with native sensor metadata
-        if engine == .darkroom && asset.isRaw {
+        // 3. For Darkroom RAW engine without native highlight recovery, write direct Metal JPEG with native sensor metadata
+        if engine == .darkroom && asset.isRaw && !useNativeHighlights {
             guard !Task.isCancelled else { throw ExportError.cancelled }
             let outputCI = processedCI.extent.isInfinite ? processedCI.cropped(to: renderExtent) : processedCI
             do {
@@ -231,7 +232,7 @@ public final class PhotoExportService: @unchecked Sendable {
         
         // 4. Render to high-fidelity CGImage in sRGB color space
         guard !Task.isCancelled else { throw ExportError.cancelled }
-        let renderContext = NativeHighlightsService.isAdvancedEnabled(for: asset.xmp) && exportBaseHolder != nil && (asset.xmp.highlights2012 ?? 0) < 0 ? NativeHighlightsService.shared.renderContext : ciContext
+        let renderContext = useNativeHighlights ? NativeHighlightsService.shared.renderContext : ciContext
         guard let cgImage = renderContext.createCGImage(
             processedCI,
             from: renderExtent,

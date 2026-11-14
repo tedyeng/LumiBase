@@ -5,6 +5,14 @@ All notable changes to **LumiBase** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.15.7] - 2026-11-14
+
+### Fixed
+- **RAW-to-JPEG Export Highlight Recovery Parity (`PhotoExportService`, `AdobeColorPipeline`)**:
+  - Enabled dual-exposure native RAW highlight reconstruction (`NativeHighlightsService` / `LightcraftHighlightsKernel`) during JPEG export regardless of whether the RAW pipeline engine is set to `Darkroom` or `Adobe PV2012`, rendering through `NativeHighlightsService.shared.renderContext` (`linearSRGB`, `RGBAh`) while preserving full camera EXIF/TIFF/GPS metadata.
+  - Fixed `AdobeColorPipeline.process` routing when `xmp.advancedRAWHighlightRecovery` is `nil` (default-enabled via `NativeHighlightsService.isAdvancedEnabled(for:)`), preventing RAW highlight-recovered images with positive `Exposure2012` from being diverted into `processDarkroom` and clipped.
+  - Replaced linear `CIExposureAdjust` in `AdobeColorPipeline.processDarkroom` with `OpticalExposureKernel` (Reinhard highlight shoulder protection) so positive exposure adjustments preserve highlight gradients without clipping.
+
 ## [1.15.6] - 2026-11-14
 
 ### Added

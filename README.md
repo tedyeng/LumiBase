@@ -43,7 +43,7 @@ LumiBase 是一套專為 macOS (特別是 Apple Silicon M 系列晶片) 打造�
   - 評星等（Rating）、旗標（Pick/Reject）或調整任何 Develop 參數時自動防抖寫入 `.xmp`，不修改 RAW 原檔，並可無縫在 Adobe Lightroom Classic / Bridge / Capture One 中開啟。
 - 📤 **媲美 Lightroom 的 RAW+XMP 高畫質 JPEG 匯出**：
   - 感光元件全解析度 Demosaicing 算圖。
-  - 完美套用 Adobe PV2012 色彩管線。
+  - 完美套用 Adobe PV2012 與 Darkroom 色彩管線，並自動整合雙曝光原生高光還原（`NativeHighlightsService`）與光學 Reinhard 高光肩部保護，確保正曝光與負高光設定下雪山、雲層等高光細節不截斷。
   - 完整保留相機機身、鏡頭、快門、光圈、ISO、日期與 GPS 等 EXIF 中繼資料。
   - 強制轉換並標記 `sRGB` 色彩空間與 ICC Profile，在各種裝置與螢幕上色彩鮮明一致。
   - 支援批次匯出與即時進度浮動 HUD。

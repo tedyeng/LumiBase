@@ -30,7 +30,8 @@ public final class AdobeColorPipeline: Sendable {
             return image
         }
         
-        if isRaw && PerformanceSettings.currentRAWPipelineEngine == .darkroom && xmp.advancedRAWHighlightRecovery != true {
+        let useAdvancedRAWHighlights = isRaw && NativeHighlightsService.isAdvancedEnabled(for: xmp) && ((xmp.highlights2012 ?? 0) < 0 || xmp.advancedRAWHighlightRecovery == true)
+        if isRaw && PerformanceSettings.currentRAWPipelineEngine == .darkroom && !useAdvancedRAWHighlights {
             return processDarkroom(image: image, xmp: xmp)
         }
         
@@ -290,19 +291,18 @@ public final class AdobeColorPipeline: Sendable {
     public func processDarkroom(image: CIImage, xmp: XMPMetadata) -> CIImage {
         var current = image
         
-        // 1. Exposure Compensation
-        let ev = Float(xmp.exposure2012 ?? 0.0)
-        if abs(ev) > 0.001 {
-            current = current.applyingFilter("CIExposureAdjust", parameters: [
-                kCIInputEVKey: ev
-            ])
-        }
-        
-        // 2. Highlights & Shadows
         let hl = Double(xmp.highlights2012 ?? 0)
         let sh = Double(xmp.shadows2012 ?? 0)
         let whites = Double(xmp.whites2012 ?? 0)
         let blacks = Double(xmp.blacks2012 ?? 0)
+        
+        // 1. Optical Exposure Compensation (Reinhard highlight shoulder prevents positive EV from clipping highlights)
+        let ev = Float(xmp.exposure2012 ?? 0.0)
+        if abs(ev) > 0.001 {
+            current = OpticalExposureKernel.apply(image: current, ev: ev, whites: Float(whites))
+        }
+        
+        // 2. Highlights & Shadows
         if hl != 0 {
             let highlightAmount = max(0.6, 1.0 + (hl / 100.0 * 0.35))
             current = current.applyingFilter("CIHighlightShadowAdjust", parameters: [
