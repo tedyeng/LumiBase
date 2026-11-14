@@ -26,6 +26,59 @@ public enum HighlightPreviewQuality: Int, CaseIterable, Identifiable, Sendable {
     }
 }
 
+public enum UIFontScale: Int, CaseIterable, Identifiable, Sendable {
+    case compact = 0
+    case medium = 1
+    case large = 2
+    case extraLarge = 3
+    
+    public var id: Int { rawValue }
+    public var delta: CGFloat {
+        switch self {
+        case .compact: return 0
+        case .medium: return 2
+        case .large: return 4
+        case .extraLarge: return 6
+        }
+    }
+    public var title: String {
+        switch self {
+        case .compact: return "Default (10–11 pt)"
+        case .medium: return "Medium (+2 pt)"
+        case .large: return "Large (+4 pt)"
+        case .extraLarge: return "Extra Large (+6 pt)"
+        }
+    }
+}
+
+private struct UIFontDeltaKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 0
+}
+
+extension EnvironmentValues {
+    public var uiFontDelta: CGFloat {
+        get { self[UIFontDeltaKey.self] }
+        set { self[UIFontDeltaKey.self] = newValue }
+    }
+}
+
+private struct ScaledUIFontModifier: ViewModifier {
+    @Environment(\.uiFontDelta) private var delta
+    let size: CGFloat
+    let weight: Font.Weight
+    let design: Font.Design
+
+    func body(content: Content) -> some View {
+        content.font(.system(size: size + delta, weight: weight, design: design))
+    }
+}
+
+extension View {
+    public func uiFont(_ size: CGFloat, weight: Font.Weight = .regular, design: Font.Design = .default) -> some View {
+        modifier(ScaledUIFontModifier(size: size, weight: weight, design: design))
+    }
+}
+
 @MainActor final class PerformanceSettings: ObservableObject {
     static let shared = PerformanceSettings()
     public nonisolated static var currentRAWPipelineEngine: RAWColorPipelineEngine {
@@ -73,6 +126,11 @@ public enum HighlightPreviewQuality: Int, CaseIterable, Identifiable, Sendable {
             NotificationCenter.default.post(name: NSNotification.Name("LumiBaseRefreshHighlights"), object: nil)
         }
     }
+    @Published var uiFontScale: UIFontScale {
+        didSet {
+            defaults.set(uiFontScale.rawValue, forKey: "uiFontScale")
+        }
+    }
     init(defaults: UserDefaults = .standard, cache: LibraryJPEGROICache = .shared) {
         self.defaults = defaults
         self.cache = cache
@@ -84,6 +142,8 @@ public enum HighlightPreviewQuality: Int, CaseIterable, Identifiable, Sendable {
         cacheBudgetMiB = [64, 128, 256].contains(saved) ? saved : 64
         let savedQuality = defaults.object(forKey: "highlightPreviewQuality") as? Int ?? HighlightPreviewQuality.fast.rawValue
         highlightPreviewQuality = HighlightPreviewQuality(rawValue: savedQuality) ?? .fast
+        let savedFontScale = defaults.object(forKey: "uiFontScale") as? Int ?? UIFontScale.compact.rawValue
+        uiFontScale = UIFontScale(rawValue: savedFontScale) ?? .compact
         apply()
     }
     private func apply() {
@@ -203,6 +263,27 @@ struct PerformanceSettingsView: View {
     
     private var generalTab: some View {
         Form {
+            Section("Appearance & Interface") {
+                Picker("Interface Font Size", selection: $settings.uiFontScale) {
+                    ForEach(UIFontScale.allCases) { scale in
+                        Text(scale.title).tag(scale)
+                    }
+                }
+                .accessibilityIdentifier("uiFontScale")
+
+                HStack {
+                    Text("Preview:")
+                        .font(.system(size: 11 + settings.uiFontScale.delta, weight: .semibold))
+                    Text("Exposure  +0.25   Shadows  +100")
+                        .font(.system(size: 11 + settings.uiFontScale.delta, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                }
+
+                Text("Adjusts text size across the sidebar, filter bar, develop sliders, and inspector panels immediately.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Viewer & Overlays") {
                 Toggle("Show histogram in Loupe view", isOn: Binding(
                     get: { UserDefaults.standard.bool(forKey: "displayHistogramEnabled") },

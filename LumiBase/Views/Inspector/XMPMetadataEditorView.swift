@@ -21,13 +21,13 @@ public struct XMPMetadataEditorView: View {
                             .fill(asset.xmp.isLoadedFromSidecar ? Color.green : Color.gray)
                             .frame(width: 7, height: 7)
                         Text(asset.xmp.isLoadedFromSidecar ? "XMP Sidecar Loaded" : "No XMP Sidecar")
-                            .font(.system(size: 11, weight: .bold))
+                            .uiFont(11, weight: .bold)
                             .foregroundColor(asset.xmp.isLoadedFromSidecar ? .green : LightroomTheme.textMuted)
                     }
                     Spacer()
                     if asset.xmp.hasDevelopEdits {
                         Text("Develop Edits Active")
-                            .font(.system(size: 9, weight: .semibold))
+                            .uiFont(9, weight: .semibold)
                             .foregroundColor(LightroomTheme.accentYellow)
                             .padding(.horizontal, 4)
                             .padding(.vertical, 1)
@@ -40,15 +40,15 @@ public struct XMPMetadataEditorView: View {
                     VStack(alignment: .leading, spacing: 1) {
                         if let sidecarName = asset.xmp.sidecarFilename {
                             Text("File: \(sidecarName)")
-                                .font(.system(size: 10, design: .monospaced))
+                                .uiFont(10, design: .monospaced)
                                 .foregroundColor(LightroomTheme.textSecondary)
                         } else if asset.xmp.isLoadedFromSidecar {
                             Text("File: \(asset.fileURL.deletingPathExtension().lastPathComponent).xmp")
-                                .font(.system(size: 10, design: .monospaced))
+                                .uiFont(10, design: .monospaced)
                                 .foregroundColor(LightroomTheme.textSecondary)
                         } else {
                             Text("No external .xmp")
-                                .font(.system(size: 10))
+                                .uiFont(10)
                                 .foregroundColor(LightroomTheme.textMuted)
                         }
                     }
@@ -68,11 +68,11 @@ public struct XMPMetadataEditorView: View {
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 9, weight: .semibold))
+                                .uiFont(9, weight: .semibold)
                                 .rotationEffect(.degrees(isReloading ? 360 : 0))
                                 .animation(isReloading ? Animation.linear(duration: 0.6) : .default, value: isReloading)
                             Text(isReloading ? "Reloaded" : "Reload XMP")
-                                .font(.system(size: 10, weight: .medium))
+                                .uiFont(10, weight: .medium)
                         }
                         .foregroundColor(isReloading ? LightroomTheme.accentYellow : LightroomTheme.textPrimary)
                         .padding(.horizontal, 7)
@@ -102,7 +102,7 @@ public struct XMPMetadataEditorView: View {
             // 1. Rating & Flag Row
             HStack {
                 Text("Rating & Flag")
-                    .font(.system(size: 11, weight: .semibold))
+                    .uiFont(11, weight: .semibold)
                     .foregroundColor(LightroomTheme.textSecondary)
                 Spacer()
                 
@@ -132,9 +132,9 @@ public struct XMPMetadataEditorView: View {
                     } label: {
                         HStack(spacing: 3) {
                             Image(systemName: "xmark")
-                                .font(.system(size: 8))
+                                .uiFont(8)
                             Text("Clear")
-                                .font(.system(size: 10, weight: .medium))
+                                .uiFont(10, weight: .medium)
                         }
                         .foregroundColor(LightroomTheme.textPrimary)
                         .padding(.horizontal, 6)
@@ -157,14 +157,14 @@ public struct XMPMetadataEditorView: View {
             // 2. Keywords / Tags
             VStack(alignment: .leading, spacing: 6) {
                 Text("Keywords")
-                    .font(.system(size: 11, weight: .semibold))
+                    .uiFont(11, weight: .semibold)
                     .foregroundColor(LightroomTheme.textSecondary)
                 
                 // Add keyword input
                 HStack(spacing: 6) {
                     TextField("Add keyword...", text: $newKeyword)
                         .textFieldStyle(.plain)
-                        .font(.system(size: 11))
+                        .uiFont(11)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 4)
                         .background(LightroomTheme.cardBackground)
@@ -176,7 +176,7 @@ public struct XMPMetadataEditorView: View {
                     Button("+") {
                         addKeyword()
                     }
-                    .font(.system(size: 12, weight: .bold))
+                    .uiFont(12, weight: .bold)
                     .foregroundColor(LightroomTheme.accentYellow)
                     .buttonStyle(.plain)
                     .help("Add Keyword (Return)")
@@ -188,13 +188,13 @@ public struct XMPMetadataEditorView: View {
                         ForEach(asset.xmp.keywords, id: \.self) { kw in
                             HStack(spacing: 4) {
                                 Text(kw)
-                                    .font(.system(size: 10))
+                                    .uiFont(10)
                                     .foregroundColor(LightroomTheme.textPrimary)
                                 Button {
                                     removeKeyword(kw)
                                 } label: {
                                     Image(systemName: "xmark")
-                                        .font(.system(size: 8))
+                                        .uiFont(8)
                                         .foregroundColor(LightroomTheme.textMuted)
                                 }
                                 .buttonStyle(.plain)
@@ -215,12 +215,12 @@ public struct XMPMetadataEditorView: View {
             // 4. Title & Caption
             VStack(alignment: .leading, spacing: 6) {
                 Text("Title & Caption")
-                    .font(.system(size: 11, weight: .semibold))
+                    .uiFont(11, weight: .semibold)
                     .foregroundColor(LightroomTheme.textSecondary)
                 
                 TextField("Photo Title", text: $titleText)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 11))
+                    .uiFont(11)
                     .padding(5)
                     .background(LightroomTheme.cardBackground)
                     .cornerRadius(3)
@@ -234,7 +234,7 @@ public struct XMPMetadataEditorView: View {
                 
                 TextField("Caption / Description", text: $captionText)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 11))
+                    .uiFont(11)
                     .padding(5)
                     .background(LightroomTheme.cardBackground)
                     .cornerRadius(3)
@@ -256,9 +256,9 @@ public struct XMPMetadataEditorView: View {
                     HStack {
                         Image(systemName: "slider.horizontal.3")
                             .foregroundColor(LightroomTheme.accentYellow)
-                            .font(.system(size: 10))
+                            .uiFont(10)
                         Text("Camera RAW Adjustments (XMP)")
-                            .font(.system(size: 11, weight: .semibold))
+                            .uiFont(11, weight: .semibold)
                             .foregroundColor(LightroomTheme.textSecondary)
                         Spacer()
                     }
@@ -312,15 +312,15 @@ public struct XMPMetadataEditorView: View {
     private func developRow(title: String, value: String, icon: String) -> some View {
         HStack {
             Image(systemName: icon)
-                .font(.system(size: 9))
+                .uiFont(9)
                 .foregroundColor(LightroomTheme.textMuted)
                 .frame(width: 14)
             Text(title)
-                .font(.system(size: 10))
+                .uiFont(10)
                 .foregroundColor(LightroomTheme.textSecondary)
             Spacer()
             Text(value)
-                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .uiFont(10, weight: .medium, design: .monospaced)
                 .foregroundColor(LightroomTheme.textPrimary)
         }
         .padding(.vertical, 1)
@@ -331,7 +331,7 @@ public struct XMPMetadataEditorView: View {
             appState.setFlag(active ? .unflagged : flag)
         } label: {
             Text(title)
-                .font(.system(size: 11, weight: .bold))
+                .uiFont(11, weight: .bold)
                 .foregroundColor(active ? color : LightroomTheme.textMuted.opacity(0.4))
                 .frame(width: 22, height: 20)
                 .background(active ? LightroomTheme.cardSelectedBackground : Color.clear)

@@ -16,7 +16,7 @@ public struct RightInspectorView: View {
             // Panel Header with Tool Switcher
             HStack(spacing: 6) {
                 Text(appState.workspaceMode == .develop ? "DEVELOP & METADATA" : "METADATA")
-                    .font(.system(size: 11, weight: .bold))
+                    .uiFont(11, weight: .bold)
                     .foregroundColor(LightroomTheme.textSecondary)
                 
                 Spacer()
@@ -28,7 +28,7 @@ public struct RightInspectorView: View {
                             appState.activeDevelopTool = .edit
                         } label: {
                             Image(systemName: "slider.horizontal.3")
-                                .font(.system(size: 11))
+                                .uiFont(11)
                                 .foregroundColor(appState.activeDevelopTool == .edit ? LightroomTheme.accentYellow : LightroomTheme.textMuted)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 3)
@@ -42,7 +42,7 @@ public struct RightInspectorView: View {
                             appState.toggleCropMode()
                         } label: {
                             Image(systemName: "crop")
-                                .font(.system(size: 11))
+                                .uiFont(11)
                                 .foregroundColor(appState.activeDevelopTool == .crop ? LightroomTheme.accentYellow : LightroomTheme.textMuted)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 3)
@@ -51,6 +51,20 @@ public struct RightInspectorView: View {
                         }
                         .buttonStyle(.plain)
                         .help("Crop & Straighten (R)")
+
+                        Button {
+                            appState.toggleHealMode()
+                        } label: {
+                            Image(systemName: "bandage")
+                                .uiFont(11)
+                                .foregroundColor(appState.activeDevelopTool == .heal ? LightroomTheme.accentYellow : LightroomTheme.textMuted)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(appState.activeDevelopTool == .heal ? LightroomTheme.accentYellow.opacity(0.18) : Color.clear)
+                                .cornerRadius(3)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Spot Removal / Healing (Q)")
                     }
                     .padding(2)
                     .background(LightroomTheme.cardBackground)
@@ -79,7 +93,7 @@ public struct RightInspectorView: View {
                     
                     if appState.workspaceMode == .library {
                         Text("Camera preview (JPEG)\nDevelop edits are retained, not displayed.")
-                            .font(.system(size: 11)).padding(.horizontal, 10)
+                            .uiFont(11).padding(.horizontal, 10)
                         Button("Open Develop for editing") { appState.workspaceMode = .develop; appState.viewMode = .loupe }
                     }
                     if let asset = appState.primarySelectedAsset {
@@ -88,6 +102,11 @@ public struct RightInspectorView: View {
                                 // 2a. Crop & Rotate Tool Panel Section
                                 collapsibleSection(title: "CROP & STRAIGHTEN", isExpanded: $isDevelopExpanded, badge: asset.xmp.hasCrop ? "Active" : nil) {
                                     CropControlPanelView(asset: asset, appState: appState)
+                                }
+                            } else if appState.activeDevelopTool == .heal {
+                                // 2a-bis. Spot Removal / Healing Tool Panel Section
+                                collapsibleSection(title: "SPOT REMOVAL (HEAL)", isExpanded: $isDevelopExpanded, badge: !asset.xmp.spotHeals.isEmpty ? "\(asset.xmp.spotHeals.count)" : nil) {
+                                    HealControlPanelView(asset: asset, appState: appState)
                                 }
                             } else {
                                 // 2b. Develop (Basic) Panel Section
@@ -129,7 +148,7 @@ public struct RightInspectorView: View {
                             Image(systemName: "info.circle")
                                 .foregroundColor(LightroomTheme.textMuted)
                             Text("No photo selected")
-                                .font(.system(size: 11))
+                                .uiFont(11)
                                 .foregroundColor(LightroomTheme.textMuted)
                         }
                         .padding(.top, 40)
@@ -157,7 +176,7 @@ public struct RightInspectorView: View {
                     appState.showCopySettingsDialog = true
                 } label: {
                     Text("Copy")
-                        .font(.system(size: 11, weight: .medium))
+                        .uiFont(11, weight: .medium)
                         .foregroundColor(appState.primarySelectedAsset != nil ? LightroomTheme.textPrimary : LightroomTheme.textMuted)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
@@ -176,7 +195,7 @@ public struct RightInspectorView: View {
                     appState.pasteDevelopSettings()
                 } label: {
                     Text("Paste")
-                        .font(.system(size: 11, weight: .medium))
+                        .uiFont(11, weight: .medium)
                         .foregroundColor(appState.copiedDevelopSettings != nil ? LightroomTheme.textPrimary : LightroomTheme.textMuted)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
@@ -227,9 +246,9 @@ public struct RightInspectorView: View {
                         } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: "bolt.fill")
-                                    .font(.system(size: 9))
+                                    .uiFont(9)
                                 Text("Auto Sync")
-                                    .font(.system(size: 11, weight: .bold))
+                                    .uiFont(11, weight: .bold)
                             }
                             .foregroundColor(.black)
                             .padding(.horizontal, 10)
@@ -246,9 +265,9 @@ public struct RightInspectorView: View {
                         } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: "arrow.triangle.2.circlepath")
-                                    .font(.system(size: 9))
+                                    .uiFont(9)
                                 Text("Sync")
-                                    .font(.system(size: 11, weight: .semibold))
+                                    .uiFont(11, weight: .semibold)
                             }
                             .foregroundColor(LightroomTheme.textPrimary)
                             .padding(.horizontal, 10)
@@ -272,9 +291,9 @@ public struct RightInspectorView: View {
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.counterclockwise")
-                                .font(.system(size: 9))
+                                .uiFont(9)
                             Text("Reset")
-                                .font(.system(size: 11, weight: .medium))
+                                .uiFont(11, weight: .medium)
                         }
                         .foregroundColor(LightroomTheme.textPrimary)
                         .padding(.horizontal, 8)
@@ -310,16 +329,16 @@ public struct RightInspectorView: View {
             } label: {
                 HStack {
                     Image(systemName: isExpanded.wrappedValue ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 9, weight: .bold))
+                        .uiFont(9, weight: .bold)
                         .foregroundColor(LightroomTheme.textMuted)
                     
                     Text(title)
-                        .font(.system(size: 10, weight: .bold))
+                        .uiFont(10, weight: .bold)
                         .foregroundColor(LightroomTheme.textSecondary)
                     
                     if let badge = badge {
                         Text(badge)
-                            .font(.system(size: 9, weight: .bold))
+                            .uiFont(9, weight: .bold)
                             .foregroundColor(LightroomTheme.accentYellow)
                             .padding(.horizontal, 4)
                             .padding(.vertical, 1)
@@ -339,5 +358,205 @@ public struct RightInspectorView: View {
                 content()
             }
         }
+    }
+}
+
+/// Lightroom-style Spot Removal / Healing control panel
+public struct HealControlPanelView: View {
+    let asset: PhotoAsset
+    @ObservedObject var appState: AppState
+
+    private var selectedSpot: SpotHealEntry? {
+        guard let id = appState.selectedSpotHealID else { return nil }
+        return asset.xmp.spotHeals.first(where: { $0.id == id })
+    }
+
+    private var activeMode: SpotHealMode {
+        selectedSpot?.mode ?? appState.healBrushMode
+    }
+
+    private var activeSizeValue: Double {
+        (selectedSpot?.radius ?? appState.healBrushRadius) * 1000.0
+    }
+
+    private var activeFeatherValue: Double {
+        (selectedSpot?.feather ?? appState.healBrushFeather) * 100.0
+    }
+
+    private var activeOpacityValue: Double {
+        (selectedSpot?.opacity ?? appState.healBrushOpacity) * 100.0
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Mode Picker: Heal vs Clone
+            HStack(spacing: 6) {
+                ForEach(SpotHealMode.allCases, id: \.self) { mode in
+                    Button {
+                        appState.healBrushMode = mode
+                        if var spot = selectedSpot {
+                            spot.mode = mode
+                            appState.updateSpotHeal(spot, for: asset.id, isDragging: false)
+                        }
+                    } label: {
+                        Text(mode.displayName)
+                            .uiFont(11, weight: .semibold)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 5)
+                            .foregroundColor(activeMode == mode ? LightroomTheme.accentYellow : LightroomTheme.textSecondary)
+                            .background(activeMode == mode ? LightroomTheme.accentYellow.opacity(0.18) : LightroomTheme.cardBackground)
+                            .cornerRadius(4)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            Text(activeMode == .heal
+                 ? "Heal: Seamless gradient & texture match (ideal for sky dust spots)."
+                 : "Clone: Direct feathered copy from source.")
+                .uiFont(10)
+                .foregroundColor(LightroomTheme.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
+
+            // Size Slider
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("Size")
+                        .uiFont(11)
+                        .foregroundColor(LightroomTheme.textSecondary)
+                    Spacer()
+                    Text("\(Int(round(activeSizeValue)))")
+                        .uiFont(11, design: .monospaced)
+                        .foregroundColor(LightroomTheme.textPrimary)
+                }
+                Slider(
+                    value: Binding(
+                        get: { activeSizeValue },
+                        set: { val in
+                            let norm = max(0.003, min(0.10, val / 1000.0))
+                            appState.healBrushRadius = norm
+                            if var spot = selectedSpot {
+                                spot.radius = norm
+                                appState.updateSpotHeal(spot, for: asset.id, isDragging: true)
+                            }
+                        }
+                    ),
+                    in: 4...80
+                ) { editing in
+                    if !editing, let spot = selectedSpot {
+                        appState.updateSpotHeal(spot, for: asset.id, isDragging: false)
+                    }
+                }
+                .tint(LightroomTheme.accentYellow)
+            }
+
+            // Feather Slider
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("Feather")
+                        .uiFont(11)
+                        .foregroundColor(LightroomTheme.textSecondary)
+                    Spacer()
+                    Text("\(Int(round(activeFeatherValue)))")
+                        .uiFont(11, design: .monospaced)
+                        .foregroundColor(LightroomTheme.textPrimary)
+                }
+                Slider(
+                    value: Binding(
+                        get: { activeFeatherValue },
+                        set: { val in
+                            let norm = max(0.0, min(1.0, val / 100.0))
+                            appState.healBrushFeather = norm
+                            if var spot = selectedSpot {
+                                spot.feather = norm
+                                appState.updateSpotHeal(spot, for: asset.id, isDragging: true)
+                            }
+                        }
+                    ),
+                    in: 0...100
+                ) { editing in
+                    if !editing, let spot = selectedSpot {
+                        appState.updateSpotHeal(spot, for: asset.id, isDragging: false)
+                    }
+                }
+                .tint(LightroomTheme.accentYellow)
+            }
+
+            // Opacity Slider
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("Opacity")
+                        .uiFont(11)
+                        .foregroundColor(LightroomTheme.textSecondary)
+                    Spacer()
+                    Text("\(Int(round(activeOpacityValue)))%")
+                        .uiFont(11, design: .monospaced)
+                        .foregroundColor(LightroomTheme.textPrimary)
+                }
+                Slider(
+                    value: Binding(
+                        get: { activeOpacityValue },
+                        set: { val in
+                            let norm = max(0.0, min(1.0, val / 100.0))
+                            appState.healBrushOpacity = norm
+                            if var spot = selectedSpot {
+                                spot.opacity = norm
+                                appState.updateSpotHeal(spot, for: asset.id, isDragging: true)
+                            }
+                        }
+                    ),
+                    in: 10...100
+                ) { editing in
+                    if !editing, let spot = selectedSpot {
+                        appState.updateSpotHeal(spot, for: asset.id, isDragging: false)
+                    }
+                }
+                .tint(LightroomTheme.accentYellow)
+            }
+
+            Toggle("Show Pins & Overlay (H)", isOn: $appState.isHealOverlayVisible)
+                .uiFont(11)
+                .foregroundColor(LightroomTheme.textSecondary)
+
+            Divider().background(LightroomTheme.dividerColor)
+
+            Text("Click anywhere on the photo to heal a spot. Drag target or source circles to refine. Press Delete to remove selected spot.")
+                .uiFont(10)
+                .foregroundColor(LightroomTheme.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 8) {
+                if appState.selectedSpotHealID != nil {
+                    Button("Delete Spot") {
+                        appState.deleteSelectedSpotHeal(for: asset.id)
+                    }
+                    .uiFont(11)
+                    .foregroundColor(.red.opacity(0.9))
+                }
+
+                if !asset.xmp.spotHeals.isEmpty {
+                    Button("Reset All (\(asset.xmp.spotHeals.count))") {
+                        appState.resetAllSpotHeals(for: asset.id)
+                    }
+                    .uiFont(11)
+                    .foregroundColor(LightroomTheme.textSecondary)
+                }
+
+                Spacer()
+
+                Button("Done") {
+                    appState.completeHealEditing()
+                }
+                .uiFont(11, weight: .semibold)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(LightroomTheme.accentYellow)
+                .foregroundColor(.black)
+                .cornerRadius(4)
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.bottom, 6)
     }
 }

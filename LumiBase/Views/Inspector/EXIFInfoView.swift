@@ -94,12 +94,12 @@ public struct EXIFInfoView: View {
     private func exifRow(label: String, value: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Text(label)
-                .font(.system(size: 11))
+                .uiFont(11)
                 .foregroundColor(LightroomTheme.textMuted)
                 .frame(width: 85, alignment: .leading)
             
             Text(value)
-                .font(.system(size: 11))
+                .uiFont(11)
                 .foregroundColor(LightroomTheme.textPrimary)
                 .lineLimit(2)
             

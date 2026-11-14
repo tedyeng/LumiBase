@@ -4,6 +4,7 @@ import AppKit
 /// Main 3-column Lightroom-style desktop window layout with keyboard shortcuts
 public struct MainLayoutView: View {
     @StateObject private var appState = AppState(restoreSessionState: true)
+    @ObservedObject private var performanceSettings = PerformanceSettings.shared
     
     public init() {}
     
@@ -37,6 +38,7 @@ public struct MainLayoutView: View {
             }
         }
         .environmentObject(appState)
+        .environment(\.uiFontDelta, performanceSettings.uiFontScale.delta)
         .background(LightroomTheme.workspaceBackground)
         .navigationTitle("LumiBase v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.13.2")")
         .toolbar {
@@ -305,10 +307,10 @@ public struct MainLayoutView: View {
             HStack {
                 Image(systemName: "square.and.arrow.up.circle.fill")
                     .foregroundColor(LightroomTheme.accentYellow)
-                    .font(.system(size: 20))
+                    .uiFont(20)
                 
                 Text("Exporting to JPEG...")
-                    .font(.system(size: 13, weight: .semibold))
+                    .uiFont(13, weight: .semibold)
                     .foregroundColor(LightroomTheme.textPrimary)
                 
                 Spacer()
@@ -317,7 +319,7 @@ public struct MainLayoutView: View {
                     appState.cancelExport()
                 }
                 .buttonStyle(.plain)
-                .font(.system(size: 11))
+                .uiFont(11)
                 .foregroundColor(LightroomTheme.textMuted)
                 .help("Cancel Export")
             }
@@ -328,7 +330,7 @@ public struct MainLayoutView: View {
             
             HStack {
                 Text(appState.exportCurrentFilename)
-                    .font(.system(size: 11))
+                    .uiFont(11)
                     .foregroundColor(LightroomTheme.textSecondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -336,7 +338,7 @@ public struct MainLayoutView: View {
                 Spacer()
                 
                 Text("\(appState.exportCompletedCount) / \(appState.exportTotalCount)")
-                    .font(.system(size: 11, weight: .bold))
+                    .uiFont(11, weight: .bold)
                     .foregroundColor(LightroomTheme.accentYellow)
             }
         }

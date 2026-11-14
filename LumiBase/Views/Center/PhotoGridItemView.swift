@@ -42,7 +42,7 @@ public struct PhotoGridItemView: View {
                             .scaleEffect(0.7)
                     } else {
                         Image(systemName: "photo")
-                            .font(.system(size: 20))
+                            .uiFont(20)
                             .foregroundColor(LightroomTheme.textMuted)
                     }
                 }
@@ -53,7 +53,7 @@ public struct PhotoGridItemView: View {
                 HStack(spacing: 4) {
                     if asset.isRawPlusJPG {
                         Text("RAW+JPG")
-                            .font(.system(size: 8, weight: .bold))
+                            .uiFont(8, weight: .bold)
                             .foregroundColor(.white)
                             .padding(.horizontal, 4)
                             .padding(.vertical, 2)
@@ -62,7 +62,7 @@ public struct PhotoGridItemView: View {
                             .help("Paired RAW + JPEG photo")
                     } else if asset.isRaw {
                         Text(asset.fileExtension.uppercased())
-                            .font(.system(size: 8, weight: .bold))
+                            .uiFont(8, weight: .bold)
                             .foregroundColor(.white)
                             .padding(.horizontal, 4)
                             .padding(.vertical, 2)
@@ -73,11 +73,11 @@ public struct PhotoGridItemView: View {
                     if asset.xmp.isLoadedFromSidecar || asset.xmp.hasDevelopEdits {
                         HStack(spacing: 2) {
                             Text(asset.xmp.hasDevelopEdits ? "Edited" : "XMP")
-                                .font(.system(size: 8, weight: .bold))
+                                .uiFont(8, weight: .bold)
                                 .foregroundColor(.white)
                             if asset.xmp.hasDevelopEdits {
                                 Text("±")
-                                    .font(.system(size: 9, weight: .bold))
+                                    .uiFont(9, weight: .bold)
                                     .foregroundColor(LightroomTheme.accentYellow)
                             }
                         }
@@ -109,7 +109,7 @@ public struct PhotoGridItemView: View {
                 
                 // Filename
                 Text(asset.filename)
-                    .font(.system(size: 9))
+                    .uiFont(9)
                     .foregroundColor(isSelected ? LightroomTheme.textPrimary : LightroomTheme.textSecondary)
                     .lineLimit(1)
                     .truncationMode(.middle)

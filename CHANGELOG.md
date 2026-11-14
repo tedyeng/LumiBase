@@ -5,9 +5,29 @@ All notable changes to **LumiBase** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.15.5] - 2026-11-14
+
+### Added
+- **Lightroom-Style Spot Heal Tool (`SpotHealEntry`, `AdobeColorPipeline`, `CropOverlayView`, `RightInspectorView`, `XMPParser`, `XMPWriter`)**:
+  - Added interactive Spot Heal brush in Develop mode with Heal/Clone modes, Feather & Opacity controls, and full `.xmp` sidecar persistence.
+  - `[` and `]` shortcuts dynamically adjust Spot Heal brush size when Spot Heal mode is active (while continuing to adjust star ratings outside Spot Heal mode).
+- **Interface Font Size Setting (`UIFontScale`, `PerformanceSettingsView`, `Badges`, `LightroomSlider`)**:
+  - Added **Interface Font Size** selector (`Default 10–11 pt`, `Medium +2 pt`, `Large +4 pt`, `Extra Large +6 pt`) in Settings, propagating `uiFontDelta` across all views, toolbars, Grid/Filmstrip thumbnail badges & rating/flag icons, and dynamically scaling `LightroomSlider` title/value widths so larger values are never truncated.
+
+### Fixed
+- **Dehaze / Adaptive Contrast & Interactive Preview Responsiveness (`AdobeColorPipeline`, `NativeHighlightsService`, `RAWImageLoader`)**:
+  - Fixed Dehaze and Adaptive Contrast slider responsiveness and improved interactive preview update latency after slider adjustments.
+- **`E` Shortcut for Edit Adjustments (`AppState`, `MainLayoutView`)**:
+  - Fixed `E` shortcut switching to Edit Adjustments in Develop mode.
+
 ## [1.15.4] - 2026-11-14
 
 ### Added
+- **Zero-Halo Log-Luminance Local Shadow Recovery (`LocalShadowRecoveryKernel`, `AdobeColorPipeline`)**:
+  - Implemented edge-preserving log-luminance shadow decompression ($\log_2(Y / 0.18)$) with a peak-aware zone metric ($\max(Y, 0.68 \cdot \text{peak})$) that lifts deep linear RAW shadows (`-6 EV ... -1.5 EV`) by up to `+2.8 EV` without haloing sharp sunlit/shadow ridges or altering saturated blue sky and snow highlights.
+  - Added a bilateral micro-contrast restorer (`d * exp(-1.8 * d^2)`) and deep-shadow color-noise guard so recovered foliage and river boulders retain full 3D local texture.
+- **Scale-Invariant Log-Luminance Clarity & Texture (`LocalClarityKernel`, `AdobeColorPipeline`)**:
+  - Replaced fixed-pixel `CIUnsharpMask` / `CIDissolveTransition` clarity with a resolution-independent ($\sigma \approx 1.4\% \times \text{longEdge}$) bilateral log-luminance midtone contrast kernel, delivering consistent midtone punch (`> 0`) and smooth glow (`< 0`) across 1440px interactive proxies, 2560px display proxies, and 7000px+ full-resolution RAW exports.
 - **Non-Rated Filter & Smart Collection (`FilterCriteria`, `TopFilterBarView`, `LeftSidebarView`)**:
   - Added `Non-Rated` (`isUnratedOnly` / `ratingExact` at `0`) toggle button to the top filter bar and a **Non-Rated (0 Star)** smart collection in the left sidebar to isolate unrated photos.
 - **Draggable Filmstrip Resize & Session State Persistence (`AppState`, `MainLayoutView`, `FilmstripView`)**:
@@ -28,6 +48,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Crop & Straighten Preview Parity (`AdobeColorPipeline`, `RAWImageLoader`)**:
   - Fixed CoreImage rotation sign (`+angleDeg`) to match SwiftUI's `.rotationEffect(.degrees(-angle))` preview during interactive straightening.
   - Fixed `RAWImageLoader.renderProcessed` scale calculation in the `NativeHighlightsService` path and removed duplicate `applyCrop`, ensuring crop and angle previews match the committed result after clicking **Done**.
+- **Perceptual S-Curve Contrast & Blacks/Shadows Toe Decoupling (`AdaptiveContrastKernel`, `AdobeColorPipeline`, `NativeHighlightsService`)**:
+  - Replaced linear subtractive contrast (`(c - pivot) * k + pivot` and `CIColorControls`) with a perceptual gamma-domain S-curve that keeps black `(0, 0)` and white `(1, 1)` anchored, preventing positive `Contrast` or `Dehaze` from subtracting a linear constant and crushing deep linear shadows (`< 0.015`) to `0.0`.
+  - Decoupled negative `Blacks` from `CIToneCurve` quarter-tones (`x = 0.25`) when `Shadows > 0`, and cached prepared `LightcraftHighlightsKernel.Field` across non-WB slider edits for instant interactive slider response when `Highlights < 0`.
 
 ## [1.15.3] - 2026-11-08
 

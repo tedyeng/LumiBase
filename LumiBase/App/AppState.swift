@@ -148,7 +148,7 @@ public final class AppState: ObservableObject {
     @Published public var copiedSyncOptions: DevelopSyncOptions = .default
     @Published public var lastSyncOptions: DevelopSyncOptions = .default
     
-    // Active Develop Tool Mode (Edit vs Crop & Rotate)
+    // Active Develop Tool Mode (Edit vs Crop & Rotate vs Spot Heal)
     @Published public var activeDevelopTool: DevelopToolMode = .edit {
         didSet {
             if activeDevelopTool != .crop {
@@ -156,12 +156,21 @@ public final class AppState: ObservableObject {
             } else if oldValue != .crop {
                 isCropOverlayActive = true
             }
+            if activeDevelopTool != .heal {
+                selectedSpotHealID = nil
+            }
         }
     }
     @Published public var isCropOverlayActive: Bool = false
     public var isEditingCropOverlay: Bool {
         activeDevelopTool == .crop && isCropOverlayActive
     }
+    @Published public var healBrushMode: SpotHealMode = .heal
+    @Published public var healBrushRadius: Double = 0.018
+    @Published public var healBrushFeather: Double = 0.50
+    @Published public var healBrushOpacity: Double = 1.0
+    @Published public var selectedSpotHealID: UUID? = nil
+    @Published public var isHealOverlayVisible: Bool = true
     @Published public var cropAspectRatioPreset: CropAspectRatioPreset = .original
     @Published public var isCropAspectLocked: Bool = true
     @Published public var cropOverlayStyle: CropOverlayStyle = .grid
@@ -541,15 +550,53 @@ public final class AppState: ObservableObject {
             }
         }
         if chars == "]" {
-            self.increaseRating()
+            if self.activeDevelopTool == .heal {
+                self.adjustHealBrushSize(increase: true)
+            } else {
+                self.increaseRating()
+            }
             return true
         }
         if chars == "[" {
-            self.decreaseRating()
+            if self.activeDevelopTool == .heal {
+                self.adjustHealBrushSize(increase: false)
+            } else {
+                self.decreaseRating()
+            }
             return true
         }
+        if self.activeDevelopTool == .heal {
+            if chars == "}" {
+                self.adjustHealBrushFeather(increase: true)
+                return true
+            }
+            if chars == "{" {
+                self.adjustHealBrushFeather(increase: false)
+                return true
+            }
+        }
         
-        // 2. Crop, Flags, Navigation & Layout Shortcuts
+        // 2. Crop, Heal, Flags, Navigation & Layout Shortcuts
+        if chars == "q" || chars == "Q" {
+            self.toggleHealMode()
+            return true
+        }
+        if self.activeDevelopTool == .heal {
+            if chars == "h" || chars == "H" {
+                self.isHealOverlayVisible.toggle()
+                return true
+            }
+            if keyCode == 51 || keyCode == 117 { // Backspace / Forward Delete
+                if self.selectedSpotHealID != nil {
+                    self.deleteSelectedSpotHeal()
+                    return true
+                }
+            }
+            if keyCode == 36 || keyCode == 76 || keyCode == 53 { // Enter / Return / Esc
+                self.completeHealEditing()
+                return true
+            }
+        }
         if chars == "r" || chars == "R" {
             self.toggleCropMode()
             return true
@@ -591,7 +638,12 @@ public final class AppState: ObservableObject {
                 }
             }
             return true
-        case "e", "E": self.viewMode = .loupe; return true
+        case "e", "E":
+            self.viewMode = .loupe
+            if self.workspaceMode == .develop {
+                self.activeDevelopTool = .edit
+            }
+            return true
         case "z", "Z":
             NotificationCenter.default.post(name: NSNotification.Name("LumiBaseToggleZoom"), object: nil)
             return true
@@ -1634,7 +1686,7 @@ public final class AppState: ObservableObject {
     /// Cycles through Before/After comparison modes (Off -> Split -> Side-by-Side -> Top/Bottom -> Off)
     public func cycleComparisonMode(forward: Bool = true) {
         if workspaceMode != .develop { workspaceMode = .develop }
-        if activeDevelopTool == .crop {
+        if activeDevelopTool == .crop || activeDevelopTool == .heal {
             activeDevelopTool = .edit
         }
         isBeforeToggled = false
@@ -1688,6 +1740,125 @@ public final class AppState: ObservableObject {
     public func completeCropEditing() {
         guard activeDevelopTool == .crop else { return }
         isCropOverlayActive = false
+    }
+
+    // MARK: - Spot Removal / Healing Actions
+
+    /// Toggles Spot Removal / Healing mode (Q shortcut)
+    public func toggleHealMode() {
+        if workspaceMode != .develop { workspaceMode = .develop }
+        if let responder = NSApplication.shared.keyWindow?.firstResponder, (responder is NSTextView || responder is NSTextField) {
+            DispatchQueue.main.async {
+                NSApplication.shared.keyWindow?.makeFirstResponder(nil)
+            }
+        }
+        if activeDevelopTool == .heal {
+            activeDevelopTool = .edit
+        } else {
+            activeDevelopTool = .heal
+            isHealOverlayVisible = true
+            comparisonMode = .off
+            isBeforeToggled = false
+            if viewMode == .grid {
+                viewMode = .loupe
+            }
+        }
+    }
+
+    /// Exits Spot Removal / Healing mode back to Edit
+    public func completeHealEditing() {
+        guard activeDevelopTool == .heal else { return }
+        activeDevelopTool = .edit
+    }
+
+    /// Adds a new spot removal entry with smart auto-selected clean source offset
+    @discardableResult
+    public func addSpotHeal(targetX: Double, targetY: Double, for assetID: String? = nil) -> SpotHealEntry? {
+        let tx = max(0.005, min(0.995, targetX))
+        let ty = max(0.005, min(0.995, targetY))
+        let r = max(0.003, min(0.12, healBrushRadius))
+        let offset = max(0.025, r * 2.6)
+        let sx = (tx + offset <= 0.96) ? (tx + offset) : max(0.02, tx - offset)
+        let sy = ty
+        let entry = SpotHealEntry(
+            mode: healBrushMode,
+            targetX: tx,
+            targetY: ty,
+            sourceX: sx,
+            sourceY: sy,
+            radius: r,
+            feather: healBrushFeather,
+            opacity: healBrushOpacity
+        )
+        selectedSpotHealID = entry.id
+        updateDevelopSettings(for: assetID, isDragging: false) { xmp in
+            xmp.spotHeals.append(entry)
+        }
+        return entry
+    }
+
+    /// Updates an existing spot heal entry (e.g. moving target/source or adjusting radius/feather/mode)
+    public func updateSpotHeal(_ updated: SpotHealEntry, for assetID: String? = nil, isDragging: Bool = false) {
+        updateDevelopSettings(for: assetID, isDragging: isDragging) { xmp in
+            if let idx = xmp.spotHeals.firstIndex(where: { $0.id == updated.id }) {
+                xmp.spotHeals[idx] = updated
+            }
+        }
+    }
+
+    /// Deletes the currently selected spot heal entry
+    public func deleteSelectedSpotHeal(for assetID: String? = nil) {
+        guard let selectedID = selectedSpotHealID else { return }
+        selectedSpotHealID = nil
+        updateDevelopSettings(for: assetID, isDragging: false) { xmp in
+            xmp.spotHeals.removeAll { $0.id == selectedID }
+        }
+    }
+
+    /// Removes all spot heal entries on the active photo
+    public func resetAllSpotHeals(for assetID: String? = nil) {
+        selectedSpotHealID = nil
+        updateDevelopSettings(for: assetID, isDragging: false) { xmp in
+            xmp.spotHeals.removeAll()
+        }
+    }
+
+    /// Adjusts heal brush (and selected spot) size via [ / ] keys (matching Lightroom)
+    public func adjustHealBrushSize(increase: Bool, for assetID: String? = nil) {
+        let step = 0.004
+        let nextBrush = max(0.003, min(0.10, healBrushRadius + (increase ? step : -step)))
+        if let selectedID = selectedSpotHealID {
+            var updatedRadius: Double?
+            updateDevelopSettings(for: assetID, isDragging: false) { xmp in
+                if let idx = xmp.spotHeals.firstIndex(where: { $0.id == selectedID }) {
+                    let next = max(0.003, min(0.10, xmp.spotHeals[idx].radius + (increase ? step : -step)))
+                    xmp.spotHeals[idx].radius = next
+                    updatedRadius = next
+                }
+            }
+            healBrushRadius = updatedRadius ?? nextBrush
+        } else {
+            healBrushRadius = nextBrush
+        }
+    }
+
+    /// Adjusts heal brush (and selected spot) feather via Shift+[ / Shift+] ({ / }) keys
+    public func adjustHealBrushFeather(increase: Bool, for assetID: String? = nil) {
+        let step = 0.10
+        let nextFeather = max(0.0, min(1.0, healBrushFeather + (increase ? step : -step)))
+        if let selectedID = selectedSpotHealID {
+            var updatedFeather: Double?
+            updateDevelopSettings(for: assetID, isDragging: false) { xmp in
+                if let idx = xmp.spotHeals.firstIndex(where: { $0.id == selectedID }) {
+                    let next = max(0.0, min(1.0, xmp.spotHeals[idx].feather + (increase ? step : -step)))
+                    xmp.spotHeals[idx].feather = next
+                    updatedFeather = next
+                }
+            }
+            healBrushFeather = updatedFeather ?? nextFeather
+        } else {
+            healBrushFeather = nextFeather
+        }
     }
     
     /// Updates normalized crop geometry with live preview and catalog persistence

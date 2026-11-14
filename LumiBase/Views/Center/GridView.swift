@@ -183,28 +183,28 @@ public struct GridView: View {
     private var emptyStateView: some View {
         VStack(spacing: 12) {
             Image(systemName: "photo.on.rectangle.angled")
-                .font(.system(size: 48))
+                .uiFont(48)
                 .foregroundColor(LightroomTheme.textMuted.opacity(0.4))
             
             if appState.currentFolderURL == nil {
                 Text("No Folder Opened")
-                    .font(.system(size: 16, weight: .semibold))
+                    .uiFont(16, weight: .semibold)
                     .foregroundColor(LightroomTheme.textPrimary)
                 
                 Text("Select a folder containing RAW or image files from the left sidebar.")
-                    .font(.system(size: 12))
+                    .uiFont(12)
                     .foregroundColor(LightroomTheme.textSecondary)
             } else if appState.allAssets.isEmpty {
                 Text("No Compatible Photos Found")
-                    .font(.system(size: 16, weight: .semibold))
+                    .uiFont(16, weight: .semibold)
                     .foregroundColor(LightroomTheme.textPrimary)
                 
                 Text("Supported formats: .ARW, .CR2, .CR3, .NEF, .DNG, .RAF, .JPG, .TIFF")
-                    .font(.system(size: 12))
+                    .uiFont(12)
                     .foregroundColor(LightroomTheme.textSecondary)
             } else {
                 Text("No Photos Match Filter")
-                    .font(.system(size: 16, weight: .semibold))
+                    .uiFont(16, weight: .semibold)
                     .foregroundColor(LightroomTheme.textPrimary)
                 
                 Button("Clear Filter") {

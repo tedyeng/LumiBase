@@ -99,9 +99,9 @@ public struct ToneCurvePanelView: View {
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "slider.vertical.3")
-                            .font(.system(size: 9))
+                            .uiFont(9)
                         Text("Presets")
-                            .font(.system(size: 10, weight: .medium))
+                            .uiFont(10, weight: .medium)
                     }
                     .foregroundColor(LightroomTheme.textPrimary)
                     .padding(.horizontal, 8)

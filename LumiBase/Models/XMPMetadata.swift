@@ -1,5 +1,60 @@
 import Foundation
 
+/// Healing / Spot Removal mode matching Lightroom Classic (Heal = seamless frequency-separated blend, Clone = direct feathered copy)
+public enum SpotHealMode: String, Codable, CaseIterable, Sendable {
+    case heal = "heal"
+    case clone = "clone"
+
+    public var displayName: String {
+        switch self {
+        case .heal: return "Heal"
+        case .clone: return "Clone"
+        }
+    }
+}
+
+/// A single non-destructive spot removal / healing stamp in normalized full-image coordinates [0, 1] (top-left origin)
+public struct SpotHealEntry: Identifiable, Codable, Equatable, Sendable {
+    public let id: UUID
+    public var mode: SpotHealMode
+    public var targetX: Double
+    public var targetY: Double
+    public var sourceX: Double
+    public var sourceY: Double
+    /// Radius normalized to image width
+    public var radius: Double
+    /// Feather softness [0, 1]
+    public var feather: Double
+    /// Opacity [0, 1]
+    public var opacity: Double
+
+    public init(
+        id: UUID = UUID(),
+        mode: SpotHealMode = .heal,
+        targetX: Double,
+        targetY: Double,
+        sourceX: Double,
+        sourceY: Double,
+        radius: Double = 0.018,
+        feather: Double = 0.50,
+        opacity: Double = 1.0
+    ) {
+        self.id = id
+        self.mode = mode
+        self.targetX = targetX
+        self.targetY = targetY
+        self.sourceX = sourceX
+        self.sourceY = sourceY
+        self.radius = max(0.002, min(0.15, radius))
+        self.feather = max(0.0, min(1.0, feather))
+        self.opacity = max(0.0, min(1.0, opacity))
+    }
+
+    public var cacheIdentity: String {
+        "\(mode.rawValue):\(String(format: "%.5f", targetX)),\(String(format: "%.5f", targetY))->\(String(format: "%.5f", sourceX)),\(String(format: "%.5f", sourceY)):\(String(format: "%.5f", radius)):\(String(format: "%.2f", feather)):\(String(format: "%.2f", opacity))"
+    }
+}
+
 /// Represents the flag status of a photo (Pick, Reject, or None)
 public enum FlagStatus: String, Codable, CaseIterable, Sendable {
     case unflagged = "unflagged"
@@ -69,6 +124,7 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
     public var convertToGrayscale: Bool?
     public var toneCurve: ToneCurveData = .linear
     public var hsl: HSLAdjustments = .zero
+    public var spotHeals: [SpotHealEntry] = []
     private var _hasCrop: Bool = false
     
     public var hasCrop: Bool {
@@ -127,7 +183,8 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
         cameraProfile: String? = nil,
         convertToGrayscale: Bool? = nil,
         toneCurve: ToneCurveData = .linear,
-        hsl: HSLAdjustments = .zero
+        hsl: HSLAdjustments = .zero,
+        spotHeals: [SpotHealEntry] = []
     ) {
         self.isLoadedFromSidecar = isLoadedFromSidecar
         self.sidecarFilename = sidecarFilename
@@ -164,6 +221,7 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
         self.convertToGrayscale = convertToGrayscale
         self.toneCurve = toneCurve
         self.hsl = hsl
+        self.spotHeals = spotHeals
     }
     
     public var cropGeometry: CropGeometry {
@@ -222,6 +280,7 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
         (convertToGrayscale == true) ||
         !toneCurve.isLinear ||
         !hsl.isZero ||
+        !spotHeals.isEmpty ||
         hasCrop
     }
 
@@ -247,6 +306,7 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
         before.cameraProfile = nil
         before.toneCurve = .linear
         before.hsl = .zero
+        before.spotHeals = []
         if !preserveCrop {
             before.resetCrop()
         }
@@ -277,7 +337,8 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
             "texture=\(integer(texture))",
             "crop=\(hasCrop ? 1 : 0):\(decimal(cropTop)):\(decimal(cropLeft)):\(decimal(cropBottom)):\(decimal(cropRight)):\(decimal(cropAngle))",
             "profile=\(string(cameraProfile))", "grayscale=\(convertToGrayscale.map { $0 ? 1 : 0 } ?? -1)",
-            "toneCurve=\(toneCurve.cacheIdentity)", "hsl=\(hsl.cacheIdentity)"
+            "toneCurve=\(toneCurve.cacheIdentity)", "hsl=\(hsl.cacheIdentity)",
+            "spots=\(spotHeals.map(\.cacheIdentity).joined(separator: ";"))"
         ].joined(separator: "|")
     }
     
@@ -301,6 +362,7 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
         convertToGrayscale = nil
         toneCurve = .linear
         hsl = .zero
+        spotHeals = []
         resetCrop()
     }
     

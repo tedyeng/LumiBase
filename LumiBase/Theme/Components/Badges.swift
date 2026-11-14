@@ -34,7 +34,7 @@ public struct RatingStarsView: View {
                         }
                     } label: {
                         Image(systemName: starIndex <= rating ? "star.fill" : "star")
-                            .font(.system(size: starSize))
+                            .uiFont(starSize)
                             .foregroundColor(starIndex <= rating ? LightroomTheme.accentYellow : LightroomTheme.textMuted.opacity(0.5))
                             .contentShape(Rectangle())
                     }
@@ -42,7 +42,7 @@ public struct RatingStarsView: View {
                     .help("Set \(starIndex) Star\(starIndex > 1 ? "s" : "") (\(starIndex))")
                 } else {
                     Image(systemName: starIndex <= rating ? "star.fill" : "star")
-                        .font(.system(size: starSize))
+                        .uiFont(starSize)
                         .foregroundColor(starIndex <= rating ? LightroomTheme.accentYellow : LightroomTheme.textMuted.opacity(0.5))
                         .help("\(rating) Stars")
                 }
@@ -57,6 +57,7 @@ public struct ColorBadgeView: View {
     public var size: CGFloat = 10
     public var isInteractive: Bool = false
     public var onSelect: ((ColorLabel) -> Void)?
+    @Environment(\.uiFontDelta) private var uiFontDelta
     
     public init(label: ColorLabel, size: CGFloat = 10, isInteractive: Bool = false, onSelect: ((ColorLabel) -> Void)? = nil) {
         self.label = label
@@ -69,7 +70,7 @@ public struct ColorBadgeView: View {
         if label != .none {
             Circle()
                 .fill(LightroomTheme.color(for: label))
-                .frame(width: size, height: size)
+                .frame(width: size + uiFontDelta, height: size + uiFontDelta)
                 .overlay(
                     Circle().stroke(Color.white.opacity(0.3), lineWidth: 0.5)
                 )
@@ -131,6 +132,6 @@ public struct FlagBadgeView: View {
                     .foregroundColor(LightroomTheme.textMuted.opacity(0.4))
             }
         }
-        .font(.system(size: size))
+        .uiFont(size)
     }
 }

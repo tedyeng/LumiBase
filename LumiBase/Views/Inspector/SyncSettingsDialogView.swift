@@ -56,32 +56,32 @@ public struct SyncSettingsDialogView: View {
             // Header
             HStack(spacing: 10) {
                 Image(systemName: mode.iconName)
-                    .font(.system(size: 16, weight: .bold))
+                    .uiFont(16, weight: .bold)
                     .foregroundColor(LightroomTheme.accentYellow)
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(mode.title)
-                        .font(.system(size: 14, weight: .bold))
+                        .uiFont(14, weight: .bold)
                         .foregroundColor(LightroomTheme.textPrimary)
                     
                     if mode == .synchronize {
                         if let source = sourceAsset {
                             Text("From: \(source.filename) → \(targetCount) other selected photo\(targetCount > 1 ? "s" : "")")
-                                .font(.system(size: 11))
+                                .uiFont(11)
                                 .foregroundColor(LightroomTheme.textSecondary)
                         } else {
                             Text("Apply settings to \(targetCount) selected photos")
-                                .font(.system(size: 11))
+                                .uiFont(11)
                                 .foregroundColor(LightroomTheme.textSecondary)
                         }
                     } else {
                         if let source = sourceAsset {
                             Text("Copy adjustments from: \(source.filename)")
-                                .font(.system(size: 11))
+                                .uiFont(11)
                                 .foregroundColor(LightroomTheme.textSecondary)
                         } else {
                             Text("Select adjustments to copy")
-                                .font(.system(size: 11))
+                                .uiFont(11)
                                 .foregroundColor(LightroomTheme.textSecondary)
                         }
                     }
@@ -236,7 +236,7 @@ public struct SyncSettingsDialogView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(title)
-                    .font(.system(size: 10, weight: .bold))
+                    .uiFont(10, weight: .bold)
                     .foregroundColor(LightroomTheme.textSecondary)
                 Spacer()
                 headerTrailing()
@@ -259,7 +259,7 @@ public struct SyncSettingsDialogView: View {
     private func toggleAllButton(isOn: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(isOn ? "Deselect All" : "Select All")
-                .font(.system(size: 9, weight: .medium))
+                .uiFont(9, weight: .medium)
                 .foregroundColor(LightroomTheme.accentYellow)
         }
         .buttonStyle(.plain)
@@ -272,11 +272,11 @@ public struct SyncSettingsDialogView: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: isOn.wrappedValue ? "checkmark.square.fill" : "square")
-                    .font(.system(size: 13))
+                    .uiFont(13)
                     .foregroundColor(isOn.wrappedValue ? LightroomTheme.accentYellow : LightroomTheme.textMuted)
                 
                 Text(title)
-                    .font(.system(size: 11, weight: .regular))
+                    .uiFont(11, weight: .regular)
                     .foregroundColor(LightroomTheme.textPrimary)
                 
                 Spacer()
@@ -295,7 +295,7 @@ private struct ThemePrimaryButtonStyle: ButtonStyle {
     
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 11, weight: .semibold))
+            .uiFont(11, weight: .semibold)
             .foregroundColor(isEnabled ? .black : LightroomTheme.textMuted)
             .padding(.horizontal, 14)
             .padding(.vertical, 6)
@@ -307,7 +307,7 @@ private struct ThemePrimaryButtonStyle: ButtonStyle {
 private struct ThemeSecondaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 11, weight: .regular))
+            .uiFont(11, weight: .regular)
             .foregroundColor(LightroomTheme.textPrimary)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)

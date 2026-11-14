@@ -77,6 +77,7 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
     private var parsedConvertToGrayscale: Bool?
     private var parsedToneCurve: ToneCurveData = .linear
     private var parsedHSL: HSLAdjustments = .zero
+    private var parsedSpotHeals: [SpotHealEntry] = []
     
     private var inSubjectBag: Bool = false
     private var inTitleAlt: Bool = false
@@ -126,7 +127,8 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
                 cameraProfile: parsedCameraProfile,
                 convertToGrayscale: parsedConvertToGrayscale,
                 toneCurve: parsedToneCurve,
-                hsl: parsedHSL
+                hsl: parsedHSL,
+                spotHeals: parsedSpotHeals
             )
         }
         
@@ -173,6 +175,8 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
                 parsedHighlights = Int(val)
             } else if key == "lumibase:advancedrawhighlightrecovery" {
                 parsedAdvancedRAWHighlightRecovery = Self.parseBoolean(val)
+            } else if key == "lumibase:spotheals" {
+                parsedSpotHeals = Self.parseSpotHeals(val)
             } else if key.hasSuffix("shadows2012") {
                 parsedShadows = Int(val)
             } else if key.hasSuffix("whites2012") {
@@ -547,6 +551,11 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
             }
         }
         
+        var spotHeals: [SpotHealEntry] = []
+        if let spotMatch = matchFirst(pattern: #"SpotHeals="([^"]+)""#, in: content) {
+            spotHeals = Self.parseSpotHeals(spotMatch)
+        }
+        
         return XMPMetadata(
             isLoadedFromSidecar: true,
             rating: rating,
@@ -578,8 +587,30 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
             cameraProfile: cameraProfile,
             convertToGrayscale: convertToGrayscale,
             toneCurve: toneCurve,
-            hsl: hsl
+            hsl: hsl,
+            spotHeals: spotHeals
         )
+    }
+
+    private static func parseSpotHeals(_ raw: String) -> [SpotHealEntry] {
+        raw.split(separator: ";").compactMap { item in
+            let parts = item.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }
+            guard parts.count >= 6,
+                  let mode = SpotHealMode(rawValue: parts[0]),
+                  let tx = Double(parts[1]),
+                  let ty = Double(parts[2]),
+                  let sx = Double(parts[3]),
+                  let sy = Double(parts[4]),
+                  let r = Double(parts[5]) else { return nil }
+            let feather = parts.count > 6 ? (Double(parts[6]) ?? 0.5) : 0.5
+            let opacity = parts.count > 7 ? (Double(parts[7]) ?? 1.0) : 1.0
+            return SpotHealEntry(
+                mode: mode,
+                targetX: tx, targetY: ty,
+                sourceX: sx, sourceY: sy,
+                radius: r, feather: feather, opacity: opacity
+            )
+        }
     }
     
     private func matchFirst(pattern: String, in text: String) -> String? {

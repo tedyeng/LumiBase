@@ -263,7 +263,7 @@ struct FilmstripItemView: View {
                 if asset.xmp.isLoadedFromSidecar || asset.xmp.hasDevelopEdits {
                     let isEdited = asset.xmp.hasDevelopEdits
                     Text(isEdited ? "Edited" : "XMP")
-                        .font(.system(size: 6, weight: .bold))
+                        .uiFont(6, weight: .bold)
                         .foregroundColor(isEdited ? .green : .cyan)
                         .padding(.horizontal, 2)
                         .background(Color.black.opacity(0.6))
@@ -271,12 +271,12 @@ struct FilmstripItemView: View {
                 }
                 if asset.xmp.flag == .pick {
                     Image(systemName: "flag.fill")
-                        .font(.system(size: 7))
+                        .uiFont(7)
                         .foregroundColor(.white)
                 }
                 if asset.xmp.rating > 0 {
                     Text("\(asset.xmp.rating)★")
-                        .font(.system(size: 7, weight: .bold))
+                        .uiFont(7, weight: .bold)
                         .foregroundColor(LightroomTheme.accentYellow)
                 }
             }

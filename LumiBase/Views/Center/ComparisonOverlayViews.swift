@@ -15,17 +15,17 @@ public struct ComparisonBadge: View {
     public var body: some View {
         HStack(spacing: 5) {
             Image(systemName: isBefore ? "clock.arrow.circlepath" : "slider.horizontal.3")
-                .font(.system(size: 10, weight: .bold))
+                .uiFont(10, weight: .bold)
                 .foregroundColor(isBefore ? Color.white : LightroomTheme.accentYellow)
             
             Text(title)
-                .font(.system(size: 11, weight: .black))
+                .uiFont(11, weight: .black)
                 .tracking(1.2)
                 .foregroundColor(.white)
             
             if let subtitle = subtitle {
                 Text(subtitle)
-                    .font(.system(size: 9, weight: .medium))
+                    .uiFont(9, weight: .medium)
                     .foregroundColor(LightroomTheme.textSecondary)
             }
         }
@@ -79,7 +79,7 @@ public struct ComparisonSplitDividerView: View {
                     )
                     .overlay(
                         Image(systemName: "arrow.left.and.right")
-                            .font(.system(size: 11, weight: .bold))
+                            .uiFont(11, weight: .bold)
                             .foregroundColor(isDragging || isHovering ? LightroomTheme.accentYellow : Color.white)
                     )
                     .shadow(color: Color.black.opacity(0.5), radius: 4, x: 0, y: 1)
@@ -133,7 +133,7 @@ public struct ComparisonSplitDividerView: View {
                     )
                     .overlay(
                         Image(systemName: "arrow.up.and.down")
-                            .font(.system(size: 11, weight: .bold))
+                            .uiFont(11, weight: .bold)
                             .foregroundColor(isDragging || isHovering ? LightroomTheme.accentYellow : Color.white)
                     )
                     .shadow(color: Color.black.opacity(0.5), radius: 4, x: 0, y: 1)

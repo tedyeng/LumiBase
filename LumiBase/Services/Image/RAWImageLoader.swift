@@ -311,22 +311,17 @@ public final class RAWImageLoader: @unchecked Sendable {
             let processed: CIImage
             if NativeHighlightsService.applies(holder: baseHolder, xmp: xmp),
                let source = baseHolder.highlightsSource, let xmp {
-                let isFull = fullResolution || (PerformanceSettings.currentHighlightPreviewQuality == .full)
+                let isFull = fullResolution || (!interactive && PerformanceSettings.currentHighlightPreviewQuality == .full)
+                let maxTarget = fullResolution ? nil : max(targetExtent.width, targetExtent.height)
                 guard let native = NativeHighlightsService.shared.image(
                     source: source,
                     xmp: xmp,
                     cameraModel: cameraModel,
                     isFullRes: isFull,
+                    maxDimension: maxTarget,
                     isCurrent: isCurrent
                 ) else { return nil }
-                if fullResolution {
-                    processed = native
-                } else {
-                    let maxTarget = max(targetExtent.width, targetExtent.height)
-                    let maxNative = max(native.extent.width, native.extent.height)
-                    let scale = maxNative > maxTarget ? (maxTarget / maxNative) : 1.0
-                    processed = (abs(scale - 1.0) < 0.001) ? native : native.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
-                }
+                processed = native
             } else {
                 processed = AdobeColorPipeline.shared.process(image: targetBase, cameraModel: cameraModel, xmp: xmp, baseHolder: baseHolder)
             }

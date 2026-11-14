@@ -64,9 +64,9 @@ public struct ColorMixerPanelView: View {
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.counterclockwise")
-                                .font(.system(size: 9))
+                                .uiFont(9)
                             Text("Reset")
-                                .font(.system(size: 10, weight: .medium))
+                                .uiFont(10, weight: .medium)
                         }
                         .foregroundColor(LightroomTheme.textPrimary)
                         .padding(.horizontal, 8)
@@ -91,7 +91,7 @@ public struct ColorMixerPanelView: View {
                         // Hue Section
                         VStack(alignment: .leading, spacing: 4) {
                             Text("HUE")
-                                .font(.system(size: 9, weight: .bold))
+                                .uiFont(9, weight: .bold)
                                 .foregroundColor(LightroomTheme.textMuted)
                                 .padding(.horizontal, 2)
                                 .padding(.top, 2)
@@ -105,7 +105,7 @@ public struct ColorMixerPanelView: View {
                         // Saturation Section
                         VStack(alignment: .leading, spacing: 4) {
                             Text("SATURATION")
-                                .font(.system(size: 9, weight: .bold))
+                                .uiFont(9, weight: .bold)
                                 .foregroundColor(LightroomTheme.textMuted)
                                 .padding(.horizontal, 2)
                                 .padding(.top, 2)
@@ -119,7 +119,7 @@ public struct ColorMixerPanelView: View {
                         // Luminance Section
                         VStack(alignment: .leading, spacing: 4) {
                             Text("LUMINANCE")
-                                .font(.system(size: 9, weight: .bold))
+                                .uiFont(9, weight: .bold)
                                 .foregroundColor(LightroomTheme.textMuted)
                                 .padding(.horizontal, 2)
                                 .padding(.top, 2)

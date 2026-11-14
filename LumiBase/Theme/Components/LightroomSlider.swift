@@ -100,10 +100,15 @@ public struct LightroomSlider: View {
     public var onPreviousField: (() -> Void)? = nil
     
     @FocusState private var isLocalFocused: Bool
+    @Environment(\.uiFontDelta) private var uiFontDelta
     @State private var textInput: String = ""
     @State private var isHoveringValue: Bool = false
     @State private var isHovering: Bool = false
     @State private var localDragValue: Double? = nil
+
+    private var titleWidth: CGFloat { 72 + uiFontDelta * 3 }
+    private var valueWidth: CGFloat { 48 + uiFontDelta * 4 }
+    private var controlHeight: CGFloat { 18 + uiFontDelta }
     
     private var isEditing: Bool {
         if let focusedField = focusedField, let field = field {
@@ -170,11 +175,11 @@ public struct LightroomSlider: View {
                         .frame(width: 6, height: 6)
                 }
                 Text(title)
-                    .font(.system(size: 11, weight: .regular))
+                    .uiFont(11, weight: .regular)
                     .foregroundColor(isNonDefault ? LightroomTheme.textPrimary : LightroomTheme.textSecondary)
                     .lineLimit(1)
             }
-            .frame(width: 72, alignment: .leading)
+            .frame(width: titleWidth, alignment: .leading)
             .contentShape(Rectangle())
             .onTapGesture(count: 2) {
                 resetToDefault()
@@ -228,7 +233,7 @@ public struct LightroomSlider: View {
                         onEditingChanged?(false)
                     }, reset: { resetToDefault() }))
             }
-            .frame(height: 18)
+            .frame(height: controlHeight)
             
             // 3. Numeric Value Display / Editable Field
             ZStack(alignment: .trailing) {
@@ -240,11 +245,12 @@ public struct LightroomSlider: View {
                 // Static formatted display label - active when not editing
                 if !isEditing {
                     Text(valueFormatter(effectiveValue))
-                        .font(.system(size: 10, weight: isNonDefault ? .semibold : .regular, design: .monospaced))
+                        .uiFont(10, weight: isNonDefault ? .semibold : .regular, design: .monospaced)
                         .foregroundColor(isNonDefault ? LightroomTheme.textPrimary : LightroomTheme.textMuted)
+                        .lineLimit(1)
                         .padding(.horizontal, 3)
                         .padding(.vertical, 1)
-                        .frame(width: 48, height: 18, alignment: .trailing)
+                        .frame(width: valueWidth, height: controlHeight, alignment: .trailing)
                         .background(
                             RoundedRectangle(cornerRadius: 3)
                                 .fill(isHoveringValue ? Color.white.opacity(0.12) : Color.clear)
@@ -258,7 +264,7 @@ public struct LightroomSlider: View {
                         .help("Double-click to reset; click to edit (↑/↓ ±1, Shift+↑/↓ ±10, Tab next, Return apply)")
                 }
             }
-            .frame(width: 48, height: 18, alignment: .trailing)
+            .frame(width: valueWidth, height: controlHeight, alignment: .trailing)
         }
         .padding(.vertical, 1)
         .onHover { hover in
@@ -294,7 +300,7 @@ public struct LightroomSlider: View {
     private var editableTextField: some View {
         let fieldView = TextField("", text: $textInput)
             .textFieldStyle(.plain)
-            .font(.system(size: 10, weight: .medium, design: .monospaced))
+            .uiFont(10, weight: .medium, design: .monospaced)
             .foregroundColor(LightroomTheme.textPrimary)
             .multilineTextAlignment(.trailing)
             .padding(.horizontal, 3)
@@ -307,7 +313,7 @@ public struct LightroomSlider: View {
                 RoundedRectangle(cornerRadius: 3)
                     .stroke(LightroomTheme.accentYellow.opacity(0.85), lineWidth: 1)
             )
-            .frame(width: 48, height: 18, alignment: .trailing)
+            .frame(width: valueWidth, height: controlHeight, alignment: .trailing)
             .onSubmit {
                 commitTextInput()
                 exitFocus()

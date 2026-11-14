@@ -54,13 +54,13 @@ public struct HistogramView: View {
                     }
                     Spacer()
                 }
-                .font(.system(size: 10, weight: .medium))
+                .uiFont(10, weight: .medium)
                 .foregroundColor(LightroomTheme.textSecondary)
                 .padding(.horizontal, 10)
             }
             
             Text(histogram.label.isEmpty ? "Waiting for displayed bitmap" : histogram.label)
-                .font(.system(size: 10)).padding(.horizontal, 10)
+                .uiFont(10).padding(.horizontal, 10)
             // Histogram Curve Canvas
             ZStack {
                 Color.black.opacity(0.6)

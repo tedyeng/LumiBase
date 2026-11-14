@@ -5,6 +5,7 @@ import CoreGraphics
 public enum DevelopToolMode: String, CaseIterable, Sendable {
     case edit = "Edit"
     case crop = "Crop"
+    case heal = "Heal"
 }
 
 /// Crop overlay grid styles matching Lightroom Classic (cycled with O key)

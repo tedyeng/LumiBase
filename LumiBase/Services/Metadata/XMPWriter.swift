@@ -160,6 +160,13 @@ public final class XMPWriter: Sendable {
                     developAttrs += " crs:ToneCurvePV2012Blue=\"\(formatPoints(metadata.toneCurve.bluePoints))\""
                 }
             }
+            if !metadata.spotHeals.isEmpty {
+                let encoded = metadata.spotHeals.map { s in
+                    String(format: "%@,%.6f,%.6f,%.6f,%.6f,%.6f,%.3f,%.3f",
+                           s.mode.rawValue, s.targetX, s.targetY, s.sourceX, s.sourceY, s.radius, s.feather, s.opacity)
+                }.joined(separator: ";")
+                developAttrs += " lumibase:SpotHeals=\"\(encoded)\""
+            }
         }
         
         let xml = """

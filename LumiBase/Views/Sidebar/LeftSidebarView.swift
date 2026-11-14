@@ -83,7 +83,7 @@ public struct LeftSidebarView: View {
                 Image(systemName: "folder.badge.gearshape")
                     .foregroundColor(LightroomTheme.accentYellow)
                 Text("FILE EXPLORER")
-                    .font(.system(size: 11, weight: .bold))
+                    .uiFont(11, weight: .bold)
                     .foregroundColor(LightroomTheme.textSecondary)
                 Spacer()
                 Button {
@@ -93,7 +93,7 @@ public struct LeftSidebarView: View {
                         Image(systemName: "plus")
                         Text("Add")
                     }
-                    .font(.system(size: 11, weight: .semibold))
+                    .uiFont(11, weight: .semibold)
                     .foregroundColor(LightroomTheme.accentYellow)
                 }
                 .buttonStyle(.plain)
@@ -114,15 +114,15 @@ public struct LeftSidebarView: View {
                             HStack {
                                 Image(systemName: "clock.arrow.circlepath")
                                     .foregroundColor(LightroomTheme.accentYellow)
-                                    .font(.system(size: 10))
+                                    .uiFont(10)
                                 Text("RECENT FOLDERS")
-                                    .font(.system(size: 10, weight: .bold))
+                                    .uiFont(10, weight: .bold)
                                     .foregroundColor(LightroomTheme.textMuted)
                                 Spacer()
                                 Button("Clear") {
                                     clearRecentFolders()
                                 }
-                                .font(.system(size: 9))
+                                .uiFont(9)
                                 .foregroundColor(LightroomTheme.textMuted.opacity(0.8))
                                 .buttonStyle(.plain)
                                 .help("Clear Recent Folders List")
@@ -152,16 +152,16 @@ public struct LeftSidebarView: View {
                         HStack {
                             Image(systemName: "internaldrive")
                                 .foregroundColor(LightroomTheme.textMuted)
-                                .font(.system(size: 10))
+                                .uiFont(10)
                             Text("PLACES & DISKS")
-                                .font(.system(size: 10, weight: .bold))
+                                .uiFont(10, weight: .bold)
                                 .foregroundColor(LightroomTheme.textMuted)
                             Spacer()
                             Button {
                                 chooseFolder()
                             } label: {
                                 Image(systemName: "folder.badge.plus")
-                                    .font(.system(size: 11))
+                                    .uiFont(11)
                                     .foregroundColor(LightroomTheme.textSecondary)
                             }
                             .buttonStyle(.plain)
@@ -187,7 +187,7 @@ public struct LeftSidebarView: View {
                     // 3. Smart Collections (No Color Labels)
                     VStack(alignment: .leading, spacing: 4) {
                         Text("SMART COLLECTIONS")
-                            .font(.system(size: 10, weight: .bold))
+                            .uiFont(10, weight: .bold)
                             .foregroundColor(LightroomTheme.textMuted)
                             .padding(.horizontal, 12)
                         
@@ -329,15 +329,15 @@ public struct LeftSidebarView: View {
         Button(action: action) {
             HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.system(size: 11))
+                    .uiFont(11)
                     .foregroundColor(iconColor)
                     .frame(width: 16)
                 Text(title)
-                    .font(.system(size: 12))
+                    .uiFont(12)
                     .foregroundColor(isSelected ? LightroomTheme.textPrimary : LightroomTheme.textSecondary)
                 Spacer()
                 Text("\(count)")
-                    .font(.system(size: 11))
+                    .uiFont(11)
                     .foregroundColor(LightroomTheme.textMuted)
             }
             .padding(.horizontal, 12)
@@ -407,12 +407,12 @@ private struct FolderTreeRow: View {
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                            .font(.system(size: 9, weight: .bold))
+                            .uiFont(9, weight: .bold)
                             .foregroundColor(LightroomTheme.textMuted)
                             .frame(width: 14, height: 20)
                         
                         Image(systemName: isExpanded ? "folder.fill" : icon)
-                            .font(.system(size: 11))
+                            .uiFont(11)
                             .foregroundColor(isCurrent ? LightroomTheme.accentYellow : LightroomTheme.textSecondary)
                             .frame(width: 16, height: 20)
                     }
@@ -430,14 +430,14 @@ private struct FolderTreeRow: View {
                 } label: {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(customName ?? url.lastPathComponent)
-                            .font(.system(size: 11, weight: isCurrent ? .semibold : .regular))
+                            .uiFont(11, weight: isCurrent ? .semibold : .regular)
                             .foregroundColor(isCurrent ? LightroomTheme.textPrimary : LightroomTheme.textSecondary)
                             .lineLimit(1)
                             .truncationMode(.middle)
                         
                         if showFullPath {
                             Text(url.path)
-                                .font(.system(size: 9))
+                                .uiFont(9)
                                 .foregroundColor(isCurrent ? LightroomTheme.textSecondary.opacity(0.85) : LightroomTheme.textMuted)
                                 .lineLimit(1)
                                 .truncationMode(.middle)

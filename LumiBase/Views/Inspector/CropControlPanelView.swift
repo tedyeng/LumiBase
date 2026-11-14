@@ -24,7 +24,7 @@ public struct CropControlPanelView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Text("Aspect Ratio:")
-                        .font(.system(size: 10, weight: .medium))
+                        .uiFont(10, weight: .medium)
                         .foregroundColor(LightroomTheme.textSecondary)
                     
                     Spacer()
@@ -35,10 +35,10 @@ public struct CropControlPanelView: View {
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: appState.isCropAspectLocked ? "lock.fill" : "lock.open.fill")
-                                .font(.system(size: 10))
+                                .uiFont(10)
                                 .foregroundColor(appState.isCropAspectLocked ? LightroomTheme.accentYellow : LightroomTheme.textMuted)
                             Text(appState.isCropAspectLocked ? "Locked" : "Unlocked")
-                                .font(.system(size: 10))
+                                .uiFont(10)
                                 .foregroundColor(appState.isCropAspectLocked ? LightroomTheme.accentYellow : LightroomTheme.textMuted)
                         }
                         .padding(.horizontal, 6)
@@ -61,11 +61,11 @@ public struct CropControlPanelView: View {
                     } label: {
                         HStack {
                             Text(appState.cropAspectRatioPreset.displayName)
-                                .font(.system(size: 11, weight: .semibold))
+                                .uiFont(11, weight: .semibold)
                                 .foregroundColor(LightroomTheme.textPrimary)
                             Spacer()
                             Image(systemName: "chevron.up.chevron.down")
-                                .font(.system(size: 8))
+                                .uiFont(8)
                                 .foregroundColor(LightroomTheme.textMuted)
                         }
                         .padding(.horizontal, 8)
@@ -86,7 +86,7 @@ public struct CropControlPanelView: View {
                         appState.flipCropOrientation()
                     } label: {
                         Image(systemName: "arrow.triangle.swap")
-                            .font(.system(size: 11))
+                            .uiFont(11)
                             .foregroundColor(LightroomTheme.textPrimary)
                             .padding(6)
                             .background(LightroomTheme.cardBackground)
@@ -133,7 +133,7 @@ public struct CropControlPanelView: View {
             // 3. Tool Overlay Guide Style Row (Grid vs Thirds, Shortcut: O)
             HStack {
                 Text("Tool Overlay:")
-                    .font(.system(size: 10, weight: .medium))
+                    .uiFont(10, weight: .medium)
                     .foregroundColor(LightroomTheme.textSecondary)
                 
                 Spacer()
@@ -143,9 +143,9 @@ public struct CropControlPanelView: View {
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: appState.cropOverlayStyle == .grid ? "grid" : "square.split.3x3")
-                            .font(.system(size: 10))
+                            .uiFont(10)
                         Text(appState.cropOverlayStyle.displayName)
-                            .font(.system(size: 10, weight: .medium))
+                            .uiFont(10, weight: .medium)
                     }
                     .foregroundColor(LightroomTheme.textPrimary)
                     .padding(.horizontal, 6)
@@ -172,9 +172,9 @@ public struct CropControlPanelView: View {
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.counterclockwise")
-                                .font(.system(size: 9))
+                                .uiFont(9)
                             Text("Reset Crop")
-                                .font(.system(size: 10, weight: .medium))
+                                .uiFont(10, weight: .medium)
                         }
                         .foregroundColor(LightroomTheme.textPrimary)
                         .padding(.horizontal, 8)
@@ -201,9 +201,9 @@ public struct CropControlPanelView: View {
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: appState.isCropOverlayActive ? "checkmark" : "crop")
-                            .font(.system(size: 9, weight: .bold))
+                            .uiFont(9, weight: .bold)
                         Text(appState.isCropOverlayActive ? "Done" : "Edit Crop")
-                            .font(.system(size: 10, weight: .bold))
+                            .uiFont(10, weight: .bold)
                     }
                     .foregroundColor(.black)
                     .padding(.horizontal, 12)

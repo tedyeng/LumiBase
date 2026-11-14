@@ -902,12 +902,21 @@ public struct LoupeView: View {
                                 : selectedHandoff?.provenance == "current-preview-native-pending"
                                     ? "Preview shown · loading native 100% for \(appState.primarySelectedAsset?.filename ?? "image")"
                                     : "Loading \(appState.primarySelectedAsset?.filename ?? "image")"))
-                                .font(.system(size: 11)).foregroundColor(.white)
+                                .uiFont(11).foregroundColor(.white)
                                 .padding(8).background(Color.black.opacity(0.7)).cornerRadius(4)
                         }.padding(12).allowsHitTesting(false)
                     }
                     if appState.isEditingCropOverlay && !is100PercentZoom {
                         CropOverlayView(imageSize: size, containerSize: viewportSize, appState: appState)
+                    } else if appState.activeDevelopTool == .heal, let asset = appState.primarySelectedAsset {
+                        let healImgPos = layout.imagePosition(viewport: viewportSize, center: clamped.center, sourceRect: nil)
+                        HealOverlayView(
+                            imageSize: clampSize,
+                            crop: activeXMP(for: asset).cropGeometry,
+                            spots: activeXMP(for: asset).spotHeals,
+                            appState: appState
+                        )
+                        .position(healImgPos)
                     } else {
                         InspectionSurface(
                             down: { point, count in
@@ -957,7 +966,7 @@ public struct LoupeView: View {
                                 appState.selectPreviousPhoto()
                             } label: {
                                 Image(systemName: "chevron.left")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .uiFont(16, weight: .semibold)
                                     .foregroundColor(.white.opacity(0.85))
                                     .frame(width: 32, height: 60)
                                     .background(Color.black.opacity(0.35))
@@ -972,7 +981,7 @@ public struct LoupeView: View {
                                 appState.selectNextPhoto()
                             } label: {
                                 Image(systemName: "chevron.right")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .uiFont(16, weight: .semibold)
                                     .foregroundColor(.white.opacity(0.85))
                                     .frame(width: 32, height: 60)
                                     .background(Color.black.opacity(0.35))
@@ -995,12 +1004,12 @@ public struct LoupeView: View {
                         VStack(alignment: .leading, spacing: 3) {
                             HStack(spacing: 6) {
                                 Text(asset.filename)
-                                    .font(.system(size: 12, weight: .bold))
+                                    .uiFont(12, weight: .bold)
                                     .foregroundColor(.white)
                                 
                                 if asset.isRawPlusJPG {
                                     Text("RAW+JPG")
-                                        .font(.system(size: 8, weight: .bold))
+                                        .uiFont(8, weight: .bold)
                                         .foregroundColor(.white)
                                         .padding(.horizontal, 4)
                                         .padding(.vertical, 1.5)
@@ -1008,7 +1017,7 @@ public struct LoupeView: View {
                                         .cornerRadius(2)
                                 } else if asset.isRaw {
                                     Text(asset.fileExtension.uppercased())
-                                        .font(.system(size: 8, weight: .bold))
+                                        .uiFont(8, weight: .bold)
                                         .foregroundColor(.white)
                                         .padding(.horizontal, 4)
                                         .padding(.vertical, 1.5)
@@ -1019,11 +1028,11 @@ public struct LoupeView: View {
                                 if asset.xmp.isLoadedFromSidecar {
                                     HStack(spacing: 2) {
                                         Text("XMP")
-                                            .font(.system(size: 8, weight: .bold))
+                                            .uiFont(8, weight: .bold)
                                             .foregroundColor(.white)
                                         if asset.xmp.hasDevelopEdits {
                                             Text("±")
-                                                .font(.system(size: 9, weight: .bold))
+                                                .uiFont(9, weight: .bold)
                                                 .foregroundColor(LightroomTheme.accentYellow)
                                         }
                                     }
@@ -1036,22 +1045,22 @@ public struct LoupeView: View {
                             
                             if !asset.cameraMetadata.exposureSummary.isEmpty {
                                 Text(asset.cameraMetadata.exposureSummary)
-                                    .font(.system(size: 10))
+                                    .uiFont(10)
                                     .foregroundColor(LightroomTheme.textSecondary)
                             }
                             
                             if let model = asset.cameraMetadata.model {
                                 Text(model)
-                                    .font(.system(size: 10))
+                                    .uiFont(10)
                                     .foregroundColor(LightroomTheme.textMuted)
                             }
                             
                             if asset.xmp.hasDevelopEdits {
                                 HStack(spacing: 4) {
                                     Image(systemName: "slider.horizontal.2.square")
-                                        .font(.system(size: 9))
+                                        .uiFont(9)
                                     Text(developSummary(for: asset))
-                                        .font(.system(size: 9, weight: .medium))
+                                        .uiFont(9, weight: .medium)
                                 }
                                 .foregroundColor(LightroomTheme.accentYellow)
                                 .padding(.top, 1)
@@ -1079,13 +1088,13 @@ public struct LoupeView: View {
                         } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: is100PercentZoom ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
-                                    .font(.system(size: 9))
+                                    .uiFont(9)
                                 if let selected = appState.primarySelectedAsset {
                                     Text(!visibleDisplay.accurate && !displayIsCamera ? (is100PercentZoom ? "Preview • preparing native 100%" : "Preview • preparing accurate display") : (appState.workspaceMode == .library && nativeRAWFallbackIdentity == nativeFallbackIdentity(selected) && is100PercentZoom ? "Native RAW 100% • on demand" : appState.previewLabel(for: selected, native: is100PercentZoom)))
-                                        .font(.system(size: 10))
+                                        .uiFont(10)
                                 }
                                 Text(showingHandoffProxy ? "Cached Preview" : (is100PercentZoom ? (visibleDisplay.native && !isLoading && imageError == nil ? (visibleDisplay.sourceRect == nil ? "100%" : "ROI 100%") : (roiPrototypeEnabled ? "Preparing ROI 100%" : "Preparing native 100%")) : "FIT"))
-                                    .font(.system(size: 10, weight: .bold))
+                                    .uiFont(10, weight: .bold)
                             }
                             .foregroundColor(LightroomTheme.accentYellow)
                             .padding(.horizontal, 8)
@@ -1103,7 +1112,7 @@ public struct LoupeView: View {
                                 if let asset = appState.primarySelectedAsset { updateProcessedImage(with: activeXMP(for: asset)) }
                             } label: {
                                 Text(roiPrototypeEnabled ? "ROI ON · EXP" : "ROI OFF · EXP")
-                                    .font(.system(size: 9, weight: .bold))
+                                    .uiFont(9, weight: .bold)
                                     .foregroundColor(roiPrototypeEnabled ? .black : LightroomTheme.accentYellow)
                                     .padding(.horizontal, 7).padding(.vertical, 4)
                                     .background(roiPrototypeEnabled ? LightroomTheme.accentYellow : Color.black.opacity(0.6))
@@ -1154,9 +1163,9 @@ public struct LoupeView: View {
                             } label: {
                                 HStack(spacing: 3) {
                                     Image(systemName: appState.comparisonMode == .off ? (appState.isBeforeToggled ? "clock.arrow.circlepath" : "rectangle.split.2x1") : appState.comparisonMode.iconName)
-                                        .font(.system(size: 10))
+                                        .uiFont(10)
                                     Text(appState.comparisonMode == .off ? (appState.isBeforeToggled ? "BEFORE" : "B/A") : (appState.comparisonMode == .splitLeftRight ? "SPLIT" : (appState.comparisonMode == .sideBySide ? "2-UP" : "TOP/BOT")))
-                                        .font(.system(size: 9, weight: .bold))
+                                        .uiFont(9, weight: .bold)
                                 }
                                 .foregroundColor((appState.comparisonMode != .off || appState.isBeforeToggled) ? .black : LightroomTheme.accentYellow)
                                 .padding(.horizontal, 7)
@@ -1175,7 +1184,7 @@ public struct LoupeView: View {
                             }
                         } label: {
                             Image(systemName: showInfoOverlay ? "info.circle.fill" : "info.circle")
-                                .font(.system(size: 11))
+                                .uiFont(11)
                                 .foregroundColor(showInfoOverlay ? LightroomTheme.accentYellow : LightroomTheme.textMuted)
                                 .padding(4)
                                 .background(Color.black.opacity(0.6))
@@ -1189,7 +1198,7 @@ public struct LoupeView: View {
                             appState.viewMode = .grid
                         } label: {
                             Image(systemName: "square.grid.3x3")
-                                .font(.system(size: 11))
+                                .uiFont(11)
                                 .foregroundColor(LightroomTheme.textSecondary)
                                 .padding(4)
                                 .background(Color.black.opacity(0.6))
@@ -1293,6 +1302,20 @@ public struct LoupeView: View {
             }
             return .ignored
         }
+        .onKeyPress(KeyEquivalent("q")) {
+            if !NSEvent.modifierFlags.contains(.command) {
+                appState.toggleHealMode()
+                return .handled
+            }
+            return .ignored
+        }
+        .onKeyPress(KeyEquivalent("h")) {
+            if appState.activeDevelopTool == .heal && !NSEvent.modifierFlags.contains(.command) {
+                appState.isHealOverlayVisible.toggle()
+                return .handled
+            }
+            return .ignored
+        }
         .onKeyPress(KeyEquivalent("x")) {
             if appState.activeDevelopTool == .crop && !NSEvent.modifierFlags.contains(.command) {
                 appState.flipCropOrientation()
@@ -1314,6 +1337,10 @@ public struct LoupeView: View {
                 appState.completeCropEditing()
                 return .handled
             }
+            if appState.activeDevelopTool == .heal {
+                appState.completeHealEditing()
+                return .handled
+            }
             return .ignored
         }
         .onKeyPress(.escape) {
@@ -1321,11 +1348,19 @@ public struct LoupeView: View {
                 appState.completeCropEditing()
                 return .handled
             }
+            if appState.activeDevelopTool == .heal {
+                appState.completeHealEditing()
+                return .handled
+            }
             return .ignored
         }
         .onKeyPress(.delete) {
             if NSEvent.modifierFlags.contains(.command) {
                 appState.requestDeleteSelectedPhotos()
+                return .handled
+            }
+            if appState.activeDevelopTool == .heal && appState.selectedSpotHealID != nil {
+                appState.deleteSelectedSpotHeal()
                 return .handled
             }
             return .ignored
@@ -1845,7 +1880,9 @@ public struct LoupeView: View {
         Task { await PreviewPreloader.shared.foregroundSelectionStarted(targetID) }
         let roiOwner = ticket.uuidString
         startROIForeground(owner: roiOwner)
-        isLoading = true
+        if native || display.image == nil {
+            isLoading = true
+        }
         // Preserve the existing fast slider path in Fit; refine only after idle.
         if !native {
             LiveDevelopPreviewEngine.shared.requestRender(
@@ -2045,16 +2082,16 @@ public struct LoupeView: View {
     private var emptyLoupeView: some View {
         VStack(spacing: 16) {
             Image(systemName: "photo.on.rectangle.angled")
-                .font(.system(size: 48))
+                .uiFont(48)
                 .foregroundColor(LightroomTheme.textMuted.opacity(0.6))
             
             if appState.currentFolderURL == nil {
                 Text("No Folder Opened")
-                    .font(.system(size: 16, weight: .semibold))
+                    .uiFont(16, weight: .semibold)
                     .foregroundColor(LightroomTheme.textPrimary)
                 
                 Text("Select a folder containing RAW or image files to view and develop photos.")
-                    .font(.system(size: 12))
+                    .uiFont(12)
                     .foregroundColor(LightroomTheme.textSecondary)
                 
                 Button {
@@ -2064,7 +2101,7 @@ public struct LoupeView: View {
                         Image(systemName: "folder.badge.plus")
                         Text("Open Folder (⌘O)")
                     }
-                    .font(.system(size: 11, weight: .medium))
+                    .uiFont(11, weight: .medium)
                     .foregroundColor(.black)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 6)
@@ -2074,11 +2111,11 @@ public struct LoupeView: View {
                 .buttonStyle(.plain)
             } else if appState.allAssets.isEmpty {
                 Text("No Compatible Photos Found")
-                    .font(.system(size: 16, weight: .semibold))
+                    .uiFont(16, weight: .semibold)
                     .foregroundColor(LightroomTheme.textPrimary)
                 
                 Text("Supported formats: .ARW, .CR2, .CR3, .NEF, .DNG, .RAF, .JPG, .TIFF")
-                    .font(.system(size: 12))
+                    .uiFont(12)
                     .foregroundColor(LightroomTheme.textSecondary)
                 
                 Button {
@@ -2088,7 +2125,7 @@ public struct LoupeView: View {
                         Image(systemName: "square.grid.3x3")
                         Text("Return to Library (G)")
                     }
-                    .font(.system(size: 11, weight: .medium))
+                    .uiFont(11, weight: .medium)
                     .foregroundColor(LightroomTheme.textPrimary)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 5)
@@ -2102,14 +2139,14 @@ public struct LoupeView: View {
                 .buttonStyle(.plain)
             } else if appState.displayedAssets.isEmpty {
                 Text("No Photos Match Filter")
-                    .font(.system(size: 16, weight: .semibold))
+                    .uiFont(16, weight: .semibold)
                     .foregroundColor(LightroomTheme.textPrimary)
                 
                 Button {
                     appState.filterCriteria.reset()
                 } label: {
                     Text("Clear Filter")
-                        .font(.system(size: 11, weight: .medium))
+                        .uiFont(11, weight: .medium)
                         .foregroundColor(.black)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 5)
@@ -2119,11 +2156,11 @@ public struct LoupeView: View {
                 .buttonStyle(.plain)
             } else {
                 Text("No Photo Selected")
-                    .font(.system(size: 16, weight: .semibold))
+                    .uiFont(16, weight: .semibold)
                     .foregroundColor(LightroomTheme.textPrimary)
                 
                 Text("Select a photo from the library to view or edit.")
-                    .font(.system(size: 12))
+                    .uiFont(12)
                     .foregroundColor(LightroomTheme.textSecondary)
                 
                 Button {
@@ -2133,7 +2170,7 @@ public struct LoupeView: View {
                         Image(systemName: "square.grid.3x3")
                         Text("Return to Library (G)")
                     }
-                    .font(.system(size: 11, weight: .medium))
+                    .uiFont(11, weight: .medium)
                     .foregroundColor(LightroomTheme.textPrimary)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 5)

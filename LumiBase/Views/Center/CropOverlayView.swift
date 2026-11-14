@@ -407,3 +407,162 @@ public struct CropOverlayView: View {
         isDragging = false
     }
 }
+
+/// Interactive Lightroom-style Spot Removal / Healing overlay
+public struct HealOverlayView: View {
+    let imageSize: CGSize
+    let crop: CropGeometry
+    let spots: [SpotHealEntry]
+    @ObservedObject var appState: AppState
+
+    enum DragRole {
+        case target(SpotHealEntry)
+        case source(SpotHealEntry)
+    }
+
+    @State private var hoverLocation: CGPoint? = nil
+    @State private var activeDrag: DragRole? = nil
+    @State private var liveDragSpot: SpotHealEntry? = nil
+
+    private var cropW: Double { max(0.001, crop.right - crop.left) }
+    private var cropH: Double { max(0.001, crop.bottom - crop.top) }
+    private var fullWidthPt: Double { Double(max(imageSize.width, 1)) / cropW }
+
+    private func toLocal(_ nx: Double, _ ny: Double) -> CGPoint {
+        let u = (nx - crop.left) / cropW
+        let v = (ny - crop.top) / cropH
+        return CGPoint(x: u * Double(imageSize.width), y: v * Double(imageSize.height))
+    }
+
+    private func toNormalized(_ pt: CGPoint) -> (Double, Double) {
+        let u = Double(pt.x) / Double(max(imageSize.width, 1))
+        let v = Double(pt.y) / Double(max(imageSize.height, 1))
+        let nx = max(0.002, min(0.998, crop.left + u * cropW))
+        let ny = max(0.002, min(0.998, crop.top + v * cropH))
+        return (nx, ny)
+    }
+
+    public var body: some View {
+        ZStack {
+            Color.clear
+                .contentShape(Rectangle())
+
+            if appState.isHealOverlayVisible {
+                // Draw all spots
+                ForEach(spots) { baseSpot in
+                    let spot = (liveDragSpot?.id == baseSpot.id) ? (liveDragSpot ?? baseSpot) : baseSpot
+                    let isSelected = (appState.selectedSpotHealID == spot.id)
+                    let targetPt = toLocal(spot.targetX, spot.targetY)
+                    let sourcePt = toLocal(spot.sourceX, spot.sourceY)
+                    let rPt = max(6.0, spot.radius * fullWidthPt)
+
+                    if isSelected {
+                        // Connecting line from source to target
+                        Path { path in
+                            path.move(to: sourcePt)
+                            path.addLine(to: targetPt)
+                        }
+                        .stroke(Color.white.opacity(0.75), style: StrokeStyle(lineWidth: 1.2))
+
+                        // Source circle (dashed)
+                        Circle()
+                            .stroke(Color.white.opacity(0.9), style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+                            .frame(width: rPt * 2, height: rPt * 2)
+                            .position(sourcePt)
+                    }
+
+                    // Target circle
+                    Circle()
+                        .stroke(isSelected ? LightroomTheme.accentYellow : Color.white.opacity(0.75), lineWidth: isSelected ? 2.0 : 1.3)
+                        .background(Circle().fill(Color.white.opacity(isSelected ? 0.08 : 0.02)))
+                        .frame(width: rPt * 2, height: rPt * 2)
+                        .position(targetPt)
+                }
+            }
+
+            // Live brush hover ring
+            if let hover = hoverLocation, activeDrag == nil {
+                let brushR = max(6.0, appState.healBrushRadius * fullWidthPt)
+                Circle()
+                    .stroke(Color.white.opacity(0.85), lineWidth: 1.2)
+                    .frame(width: brushR * 2, height: brushR * 2)
+                    .position(hover)
+                    .allowsHitTesting(false)
+            }
+        }
+        .frame(width: imageSize.width, height: imageSize.height)
+        .onContinuousHover { phase in
+            switch phase {
+            case .active(let loc):
+                hoverLocation = loc
+            case .ended:
+                hoverLocation = nil
+            }
+        }
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { value in
+                    if activeDrag == nil {
+                        // Hit-test existing spots on initial press
+                        let loc = value.startLocation
+                        if let selectedID = appState.selectedSpotHealID,
+                           let selected = spots.first(where: { $0.id == selectedID }) {
+                            let sPt = toLocal(selected.sourceX, selected.sourceY)
+                            let rPt = max(12.0, selected.radius * fullWidthPt + 4.0)
+                            if hypot(loc.x - sPt.x, loc.y - sPt.y) <= rPt {
+                                activeDrag = .source(selected)
+                            }
+                        }
+                        if activeDrag == nil {
+                            for spot in spots.reversed() {
+                                let tPt = toLocal(spot.targetX, spot.targetY)
+                                let rPt = max(12.0, spot.radius * fullWidthPt + 4.0)
+                                if hypot(loc.x - tPt.x, loc.y - tPt.y) <= rPt {
+                                    appState.selectedSpotHealID = spot.id
+                                    activeDrag = .target(spot)
+                                    break
+                                }
+                            }
+                        }
+                    }
+
+                    if let drag = activeDrag {
+                        let (nx, ny) = toNormalized(value.location)
+                        switch drag {
+                        case .target(var spot):
+                            spot.targetX = nx
+                            spot.targetY = ny
+                            liveDragSpot = spot
+                            appState.updateSpotHeal(spot, isDragging: true)
+                        case .source(var spot):
+                            spot.sourceX = nx
+                            spot.sourceY = ny
+                            liveDragSpot = spot
+                            appState.updateSpotHeal(spot, isDragging: true)
+                        }
+                    }
+                }
+                .onEnded { value in
+                    if let drag = activeDrag {
+                        let (nx, ny) = toNormalized(value.location)
+                        switch drag {
+                        case .target(var spot):
+                            spot.targetX = nx
+                            spot.targetY = ny
+                            appState.updateSpotHeal(spot, isDragging: false)
+                        case .source(var spot):
+                            spot.sourceX = nx
+                            spot.sourceY = ny
+                            appState.updateSpotHeal(spot, isDragging: false)
+                        }
+                        activeDrag = nil
+                        liveDragSpot = nil
+                    } else {
+                        // Click on empty space -> create a new healed spot!
+                        let (nx, ny) = toNormalized(value.location)
+                        appState.addSpotHeal(targetX: nx, targetY: ny)
+                    }
+                }
+        )
+    }
+}

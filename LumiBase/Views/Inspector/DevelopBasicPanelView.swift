@@ -73,7 +73,7 @@ public struct DevelopBasicPanelView: View {
             // 2. Profile Selector Row
             HStack {
                 Text("Profile:")
-                    .font(.system(size: 10, weight: .medium))
+                    .uiFont(10, weight: .medium)
                     .foregroundColor(LightroomTheme.textSecondary)
                 
                 let profileName = currentXMP.cameraProfile ?? "Adobe Color"
@@ -106,10 +106,10 @@ public struct DevelopBasicPanelView: View {
                 } label: {
                     HStack(spacing: 4) {
                         Text(profileName)
-                            .font(.system(size: 10, weight: .semibold))
+                            .uiFont(10, weight: .semibold)
                             .foregroundColor(LightroomTheme.textPrimary)
                         Image(systemName: "chevron.up.chevron.down")
-                            .font(.system(size: 8))
+                            .uiFont(8)
                             .foregroundColor(LightroomTheme.textMuted)
                     }
                     .padding(.horizontal, 6)
@@ -123,7 +123,7 @@ public struct DevelopBasicPanelView: View {
                 Spacer()
                 
                 Image(systemName: "square.grid.2x2")
-                    .font(.system(size: 10))
+                    .uiFont(10)
                     .foregroundColor(LightroomTheme.textMuted)
                     .help("Browse Profiles")
             }
@@ -135,12 +135,12 @@ public struct DevelopBasicPanelView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
                     Image(systemName: "eyedropper")
-                        .font(.system(size: 10))
+                        .uiFont(10)
                         .foregroundColor(LightroomTheme.textMuted)
                         .help("White Balance Eyedropper / Selector")
                     
                     Text("WB :")
-                        .font(.system(size: 10, weight: .bold))
+                        .uiFont(10, weight: .bold)
                         .foregroundColor(LightroomTheme.textSecondary)
                     
                     Menu {
@@ -192,10 +192,10 @@ public struct DevelopBasicPanelView: View {
                     } label: {
                         HStack(spacing: 4) {
                             Text(wbModeTitle)
-                                .font(.system(size: 10))
+                                .uiFont(10)
                                 .foregroundColor(LightroomTheme.textPrimary)
                             Image(systemName: "chevron.up.chevron.down")
-                                .font(.system(size: 8))
+                                .uiFont(8)
                                 .foregroundColor(LightroomTheme.textMuted)
                         }
                     }
@@ -264,7 +264,7 @@ public struct DevelopBasicPanelView: View {
             // 4. Tone Section (Exposure, Contrast, Highlights, Shadows, Whites, Blacks)
             VStack(alignment: .leading, spacing: 6) {
                 Text("Tone")
-                    .font(.system(size: 10, weight: .bold))
+                    .uiFont(10, weight: .bold)
                     .foregroundColor(LightroomTheme.textSecondary)
                 
                 // Exposure
@@ -429,7 +429,7 @@ public struct DevelopBasicPanelView: View {
                     set: { appState.setAdvancedRAWHighlightRecovery($0, for: asset.id) }
                 ))
                     .toggleStyle(.checkbox)
-                    .font(.system(size: 11))
+                    .uiFont(11)
                     .foregroundColor(appState.advancedRAWHighlightRecovery(for: asset.id) ? LightroomTheme.accentYellow : LightroomTheme.textSecondary)
                     .help("Saved for this photo in its XMP sidecar (LumiBase-specific)")
                     .padding(.top, 4)
@@ -442,7 +442,7 @@ public struct DevelopBasicPanelView: View {
             // 5. Presence Section (Texture, Clarity, Dehaze, Vibrance, Saturation)
             VStack(alignment: .leading, spacing: 6) {
                 Text("Presence")
-                    .font(.system(size: 10, weight: .bold))
+                    .uiFont(10, weight: .bold)
                     .foregroundColor(LightroomTheme.textSecondary)
                 
                 // Texture
@@ -579,10 +579,10 @@ public struct DevelopBasicPanelView: View {
                 } else {
                     HStack(spacing: 4) {
                         Image(systemName: "circle.righthalf.filled")
-                            .font(.system(size: 9))
+                            .uiFont(9)
                             .foregroundColor(LightroomTheme.textMuted)
                         Text("Treatment is Black & White")
-                            .font(.system(size: 10))
+                            .uiFont(10)
                             .foregroundColor(LightroomTheme.textMuted)
                     }
                     .padding(.vertical, 2)
@@ -611,9 +611,9 @@ public struct DevelopBasicPanelView: View {
         Button(action: action) {
             HStack(spacing: 4) {
                 Image(systemName: icon)
-                    .font(.system(size: 9))
+                    .uiFont(9)
                 Text(title)
-                    .font(.system(size: 10, weight: .medium))
+                    .uiFont(10, weight: .medium)
             }
             .foregroundColor(isActive ? LightroomTheme.accentYellow : LightroomTheme.textPrimary)
             .padding(.horizontal, 8)

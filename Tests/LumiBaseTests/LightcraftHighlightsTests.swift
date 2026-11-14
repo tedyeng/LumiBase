@@ -229,4 +229,140 @@ final class LightcraftHighlightsTests: XCTestCase {
         // The pixels must NOT be identical: Blue Luminance +100 must alter the sky preview
         XCTAssertNotEqual(p0, pBlue, "Preview must change when Blue Luminance is set to 100")
     }
+    
+    func testLocalShadowRecoveryAndPerceptualContrastLiftDeepLinearShadowsWithoutCrushing() {
+        let pipeline = AdobeColorPipeline.shared
+        let linearSpace = CGColorSpace(name: CGColorSpace.linearSRGB)!
+        let srgbSpace = CGColorSpace(name: CGColorSpace.sRGB)!
+        let ctx = CIContext(options: [.workingColorSpace: linearSpace])
+        
+        // 1. Deep linear RAW shadow patch (linear RGB ~0.008, ~4.5 stops below 0.18 middle gray)
+        // Old linear contrast subtracted ~0.015 and crushed this to 0.0 (dead black)
+        let deepShadowColor = CIColor(red: 0.007, green: 0.009, blue: 0.006, colorSpace: linearSpace)!
+        let deepShadowImg = CIImage(color: deepShadowColor).cropped(to: CGRect(x: 0, y: 0, width: 32, height: 32))
+        
+        // 2. Saturated blue sky patch (peak = 0.65, should NOT be lifted as shadow)
+        let skyColor = CIColor(red: 0.15, green: 0.35, blue: 0.65, colorSpace: linearSpace)!
+        let skyImg = CIImage(color: skyColor).cropped(to: CGRect(x: 0, y: 0, width: 32, height: 32))
+        
+        func sampleSRGBLuma(_ img: CIImage) -> Double {
+            var pix = [UInt8](repeating: 0, count: 4)
+            ctx.render(img, toBitmap: &pix, rowBytes: 4, bounds: CGRect(x: 16, y: 16, width: 1, height: 1), format: .RGBA8, colorSpace: srgbSpace)
+            return 0.2126 * Double(pix[0]) + 0.7152 * Double(pix[1]) + 0.0722 * Double(pix[2])
+        }
+        
+        let baseShadowLuma = sampleSRGBLuma(deepShadowImg)
+        let baseSkyLuma = sampleSRGBLuma(skyImg)
+        
+        // Verify perceptual contrast alone never clips deep linear shadow to 0
+        let contrastedShadow = AdaptiveContrastKernel.apply(image: deepShadowImg, contrastFactor: 1.06, pivot: 0.50)
+        let contrastedShadowLuma = sampleSRGBLuma(contrastedShadow)
+        XCTAssertGreaterThan(contrastedShadowLuma, 10.0, "Positive contrast must not crush deep linear RAW shadows (< 0.015) to dead black")
+        
+        // Verify Shadows +100 with Blacks -19, Contrast +9, Dehaze +10 substantially opens up deep shadows
+        var xmp = XMPMetadata()
+        xmp.shadows2012 = 100
+        xmp.blacks2012 = -19
+        xmp.contrast2012 = 9
+        xmp.dehaze = 10
+        xmp.advancedRAWHighlightRecovery = true
+        
+        let processedShadowPV2012 = pipeline.process(image: deepShadowImg, cameraModel: "ILCE-7CM2", xmp: xmp, isRaw: true)
+        let processedShadowDarkroom = pipeline.processDarkroom(image: deepShadowImg, xmp: xmp)
+        
+        let liftedPV2012 = sampleSRGBLuma(processedShadowPV2012)
+        let liftedDarkroom = sampleSRGBLuma(processedShadowDarkroom)
+        
+        XCTAssertGreaterThan(liftedPV2012, baseShadowLuma + 28.0, "PV2012 pipeline must significantly lift deep linear shadows at Shadows +100 even with Blacks -19")
+        XCTAssertGreaterThan(liftedDarkroom, baseShadowLuma + 28.0, "Darkroom pipeline must significantly lift deep linear shadows at Shadows +100 even with Blacks -19")
+        
+        // Verify saturated blue sky is protected from shadow lift
+        var xmpShadowOnly = XMPMetadata()
+        xmpShadowOnly.shadows2012 = 100
+        let skyAfterShadow = LocalShadowRecoveryKernel.apply(image: skyImg, shadowFactor: 1.0, blacksFactor: 0.0)
+        let skyAfterLuma = sampleSRGBLuma(skyAfterShadow)
+        XCTAssertLessThanOrEqual(abs(skyAfterLuma - baseSkyLuma), 2.0, "Peak-aware shadow zone metric must protect saturated blue sky from being lifted by Shadows +100")
+    }
+    
+    func testScaleInvariantLocalClarityEnhancesAndSoftensMidtoneContrast() throws {
+        let linearSpace = CGColorSpace(name: CGColorSpace.linearSRGB)!
+        let srgbSpace = CGColorSpace(name: CGColorSpace.sRGB)!
+        let ctx = CIContext(options: [.workingColorSpace: linearSpace])
+        
+        // Create a 128x128 midtone checkerboard/stripe pattern (left half y=0.14, right half y=0.24)
+        let darkMid = CIImage(color: CIColor(red: 0.14, green: 0.14, blue: 0.14, colorSpace: linearSpace)!)
+            .cropped(to: CGRect(x: 0, y: 0, width: 64, height: 128))
+        let brightMid = CIImage(color: CIColor(red: 0.24, green: 0.24, blue: 0.24, colorSpace: linearSpace)!)
+            .cropped(to: CGRect(x: 64, y: 0, width: 64, height: 128))
+        let pattern = brightMid.composited(over: darkMid.composited(over: CIImage(color: .black).cropped(to: CGRect(x: 0, y: 0, width: 128, height: 128))))
+        
+        func edgeContrast(_ img: CIImage) -> Double {
+            var leftPix = [UInt8](repeating: 0, count: 4)
+            var rightPix = [UInt8](repeating: 0, count: 4)
+            ctx.render(img, toBitmap: &leftPix, rowBytes: 4, bounds: CGRect(x: 62, y: 64, width: 1, height: 1), format: .RGBA8, colorSpace: srgbSpace)
+            ctx.render(img, toBitmap: &rightPix, rowBytes: 4, bounds: CGRect(x: 65, y: 64, width: 1, height: 1), format: .RGBA8, colorSpace: srgbSpace)
+            return Double(rightPix[0]) - Double(leftPix[0])
+        }
+        
+        let baseDiff = edgeContrast(pattern)
+        let plusClarity = LocalClarityKernel.apply(image: pattern, clarityFactor: 1.0)
+        let minusClarity = LocalClarityKernel.apply(image: pattern, clarityFactor: -1.0)
+        
+        let plusDiff = edgeContrast(plusClarity)
+        let minusDiff = edgeContrast(minusClarity)
+        
+        XCTAssertGreaterThan(plusDiff, baseDiff + 12.0, "Clarity +100 must visibly boost midtone local contrast")
+        XCTAssertLessThan(minusDiff, baseDiff - 8.0, "Clarity -100 must visibly soften midtone local contrast")
+    }
+
+    func testSpotHealRemovesDustSpotAndRoundTripsInXMP() throws {
+        let linearSpace = CGColorSpace(name: CGColorSpace.linearSRGB)!
+        let srgbSpace = CGColorSpace(name: CGColorSpace.sRGB)!
+        let ctx = CIContext(options: [.workingColorSpace: linearSpace])
+
+        // 1. Create a 200x200 clean sky image with a dark dust spot at normalized (0.40, 0.30) -> CI (80, 140)
+        let sky = CIImage(color: CIColor(red: 0.25, green: 0.45, blue: 0.72, colorSpace: linearSpace)!)
+            .cropped(to: CGRect(x: 0, y: 0, width: 200, height: 200))
+        let spot = CIImage(color: CIColor(red: 0.05, green: 0.10, blue: 0.18, colorSpace: linearSpace)!)
+            .cropped(to: CGRect(x: 74, y: 134, width: 12, height: 12))
+        let dirtySky = spot.composited(over: sky)
+
+        func sampleRed(_ img: CIImage, x: Int, y: Int) -> UInt8 {
+            var pix = [UInt8](repeating: 0, count: 4)
+            ctx.render(img, toBitmap: &pix, rowBytes: 4, bounds: CGRect(x: x, y: y, width: 1, height: 1), format: .RGBA8, colorSpace: srgbSpace)
+            return pix[0]
+        }
+
+        let dirtyCenterR = sampleRed(dirtySky, x: 80, y: 140)
+        let cleanSurroundR = sampleRed(dirtySky, x: 120, y: 140)
+        XCTAssertLessThan(dirtyCenterR + 40, cleanSurroundR, "Precondition: dust spot center must be significantly darker than sky")
+
+        let entry = SpotHealEntry(
+            mode: .heal,
+            targetX: 0.40,
+            targetY: 0.30,
+            sourceX: 0.60,
+            sourceY: 0.30,
+            radius: 0.04,
+            feather: 0.50,
+            opacity: 1.0
+        )
+
+        let healed = SpotHealKernel.apply(image: dirtySky, spots: [entry])
+        let healedCenterR = sampleRed(healed, x: 80, y: 140)
+        XCTAssertLessThanOrEqual(abs(Int(healedCenterR) - Int(cleanSurroundR)), 6, "Heal mode must seamlessly match surrounding sky luminance")
+
+        // 2. Verify XMP round-trip
+        var xmp = XMPMetadata()
+        xmp.spotHeals = [entry]
+        XCTAssertTrue(xmp.hasDevelopEdits)
+        let xml = XMPWriter.generateXMPXML(metadata: xmp, originalFilename: "A7C02037.ARW")
+        let parsed = XMPParser.parse(data: xml.data(using: .utf8)!)
+        XCTAssertEqual(parsed.spotHeals.count, 1)
+        XCTAssertEqual(parsed.spotHeals[0].mode, .heal)
+        XCTAssertEqual(parsed.spotHeals[0].targetX, 0.40, accuracy: 0.0001)
+        XCTAssertEqual(parsed.spotHeals[0].targetY, 0.30, accuracy: 0.0001)
+        XCTAssertEqual(parsed.spotHeals[0].sourceX, 0.60, accuracy: 0.0001)
+        XCTAssertEqual(parsed.spotHeals[0].radius, 0.04, accuracy: 0.0001)
+    }
 }

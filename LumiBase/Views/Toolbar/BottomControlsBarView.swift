@@ -13,7 +13,7 @@ public struct BottomControlsBarView: View {
                     appState.viewMode = .grid
                 } label: {
                     Image(systemName: "square.grid.3x3.fill")
-                        .font(.system(size: 13))
+                        .uiFont(13)
                         .foregroundColor(appState.viewMode == .grid ? LightroomTheme.accentYellow : LightroomTheme.textMuted)
                         .padding(5)
                         .background(appState.viewMode == .grid ? LightroomTheme.cardSelectedBackground : Color.clear)
@@ -26,7 +26,7 @@ public struct BottomControlsBarView: View {
                     appState.viewMode = .loupe
                 } label: {
                     Image(systemName: "rectangle.inset.filled")
-                        .font(.system(size: 13))
+                        .uiFont(13)
                         .foregroundColor(appState.viewMode == .loupe ? LightroomTheme.accentYellow : LightroomTheme.textMuted)
                         .padding(5)
                         .background(appState.viewMode == .loupe ? LightroomTheme.cardSelectedBackground : Color.clear)
@@ -77,9 +77,9 @@ public struct BottomControlsBarView: View {
                     } label: {
                         HStack(spacing: 2) {
                             Image(systemName: appState.comparisonMode == .off ? (appState.isBeforeToggled ? "clock.arrow.circlepath" : "rectangle.split.2x1") : appState.comparisonMode.iconName)
-                                .font(.system(size: 12))
+                                .uiFont(12)
                             Image(systemName: "chevron.up.chevron.down")
-                                .font(.system(size: 8))
+                                .uiFont(8)
                         }
                         .foregroundColor((appState.comparisonMode != .off || appState.isBeforeToggled) ? LightroomTheme.accentYellow : LightroomTheme.textMuted)
                         .padding(5)
@@ -98,7 +98,7 @@ public struct BottomControlsBarView: View {
             // Sort Order Picker
             HStack(spacing: 6) {
                 Text("Sort:")
-                    .font(.system(size: 11))
+                    .uiFont(11)
                     .foregroundColor(LightroomTheme.textSecondary)
                 
                 Picker("", selection: $appState.sortOrder) {
@@ -121,11 +121,11 @@ public struct BottomControlsBarView: View {
                         .scaleEffect(0.6)
                         .frame(width: 14, height: 14)
                     Text(appState.scanProgressMessage)
-                        .font(.system(size: 11))
+                        .uiFont(11)
                         .foregroundColor(LightroomTheme.accentYellow)
                 } else {
                     Text(appState.photoPositionLabel)
-                        .font(.system(size: 11))
+                        .uiFont(11)
                         .foregroundColor(LightroomTheme.textSecondary)
                 }
             }
@@ -137,7 +137,7 @@ public struct BottomControlsBarView: View {
             // Thumbnail Zoom Slider
             HStack(spacing: 6) {
                 Image(systemName: "photo")
-                    .font(.system(size: 9))
+                    .uiFont(9)
                     .foregroundColor(LightroomTheme.textMuted)
                 
                 Slider(value: $appState.thumbnailSize, in: 120...420, step: 10)
@@ -146,7 +146,7 @@ public struct BottomControlsBarView: View {
                     .help("Adjust Grid Thumbnail Size")
                 
                 Image(systemName: "photo")
-                    .font(.system(size: 14))
+                    .uiFont(14)
                     .foregroundColor(LightroomTheme.textMuted)
             }
         }

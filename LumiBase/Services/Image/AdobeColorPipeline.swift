@@ -80,9 +80,9 @@ public final class AdobeColorPipeline: Sendable {
         
         // 3. Contrast & Dehaze Contrast (Lightroom PV2012 midtone punch with scene-adaptive pivot)
         let dehaze = Double(xmp.dehaze ?? 0)
-        let contrastVal = Double(xmp.contrast2012 ?? 0) + (dehaze * 0.40)
+        let contrastVal = Double(xmp.contrast2012 ?? 0) + (dehaze * 0.50)
         if contrastVal != 0 {
-            let contrastFactor = max(0.6, min(1.6, 1.0 + (contrastVal / 100.0 * 0.20)))
+            let contrastFactor = max(0.55, min(1.75, 1.0 + (contrastVal / 100.0 * 0.42)))
             let pivot = AutoToneService.estimateContrastPivot(from: baseHolder)
             current = AdaptiveContrastKernel.apply(
                 image: current,
@@ -130,8 +130,14 @@ public final class AdobeColorPipeline: Sendable {
         let isRawImage = baseHolder?.isRaw ?? false
         let isAdvancedRaw = isRawImage && NativeHighlightsService.isAdvancedEnabled(for: xmp)
         
-        // 5a. Tone curve highlight recovery
-        // (LocalHighlightsOperator bypassed to restore natural cloud 3D volume and prevent muddy flattening)
+        // 5a. Edge-preserving log-luminance local shadow recovery (Lightroom PV2012 / Camera Raw shadow decompression)
+        if sh != 0 {
+            current = LocalShadowRecoveryKernel.apply(
+                image: current,
+                shadowFactor: Float(shFactor),
+                blacksFactor: Float(bFactor)
+            )
+        }
         
         let hasToneEdits = (hl != 0) || (sh != 0) || (whites != 0) || (blacks != 0) || (dehaze != 0)
         if hasToneEdits {
@@ -164,9 +170,14 @@ public final class AdobeColorPipeline: Sendable {
                 }
             }
 
+            // Decouple negative Blacks from quarter-tones (x = 0.25) when Shadows > 0 so Blacks anchors the toe without cancelling shadow recovery
+            let effectiveBFactor = shFactor > 0 ? bFactor * (1.0 - 0.85 * shFactor) : bFactor
+            let shCurveP1 = shFactor > 0 ? (shFactor * 0.02) : (shFactor * 0.06)
+            let shCurveP2 = shFactor > 0 ? 0.0 : (shFactor * 0.03)
+
             let p0Y = max(0.0, min(0.04, 0.0 + (bFactor * 0.01)))
-            let p1Y = max(0.12, min(0.35, 0.24 + hlP1 + (shFactor * 0.06) + (bFactor * 0.20)))
-            let p2Y = max(0.40, min(0.65, 0.50 + hlP2 + (shFactor * 0.03)))
+            let p1Y = max(0.12, min(0.35, 0.24 + hlP1 + shCurveP1 + (effectiveBFactor * 0.20)))
+            let p2Y = max(0.40, min(0.65, 0.50 + hlP2 + shCurveP2))
             let p3Y = max(0.60, min(0.90, 0.75 + hlP3 + (wFactor * 0.06)))
             let p4Y = max(0.95, min(1.0, 1.0 + (wFactor * 0.03) + hlP4))
             
@@ -225,18 +236,20 @@ public final class AdobeColorPipeline: Sendable {
             current = ToneCurveKernel.apply(image: current, toneCurve: xmp.toneCurve)
         }
         
-        // 8. Texture (Fine Detail: >0 Sharpen, <0 Skin Soften)
+        // 8. Texture (Scale-invariant fine detail: >0 Sharpen, <0 Skin Soften)
         if let texture = xmp.texture, texture != 0 {
+            let longEdge = Double(max(current.extent.width, current.extent.height))
+            let texRadius = max(1.2, 0.0008 * longEdge)
             if texture > 0 {
-                let texIntensity = min(1.0, Double(texture) / 100.0 * 0.8)
+                let texIntensity = min(1.4, Double(texture) / 100.0 * 1.1)
                 current = current.applyingFilter("CIUnsharpMask", parameters: [
-                    kCIInputRadiusKey: 1.2,
+                    kCIInputRadiusKey: texRadius,
                     kCIInputIntensityKey: texIntensity
                 ])
             } else {
-                let softenFactor = Double(abs(texture)) / 100.0 * 0.45
-                let blurred = current.applyingFilter("CIGaussianBlur", parameters: [
-                    kCIInputRadiusKey: 1.5
+                let softenFactor = Double(abs(texture)) / 100.0 * 0.50
+                let blurred = current.clampedToExtent().applyingFilter("CIGaussianBlur", parameters: [
+                    kCIInputRadiusKey: texRadius * 1.25
                 ]).cropped(to: current.extent)
                 current = current.applyingFilter("CIDissolveTransition", parameters: [
                     "inputTargetImage": blurred,
@@ -245,26 +258,16 @@ public final class AdobeColorPipeline: Sendable {
             }
         }
         
-        // 8. Clarity (Midtone Local Contrast: >0 Punch, <0 Dreamy Glow)
+        // 8b. Clarity (Scale-invariant log-luminance midtone local contrast: >0 Punch, <0 Dreamy Glow)
         if let clarity = xmp.clarity2012, clarity != 0 {
-            if clarity > 0 {
-                let clarIntensity = min(0.8, Double(clarity) / 100.0 * 0.6)
-                current = current.applyingFilter("CIUnsharpMask", parameters: [
-                    kCIInputRadiusKey: 12.0,
-                    kCIInputIntensityKey: clarIntensity
-                ])
-            } else {
-                let glowFactor = Double(abs(clarity)) / 100.0 * 0.40
-                let blurred = current.applyingFilter("CIGaussianBlur", parameters: [
-                    kCIInputRadiusKey: 10.0
-                ]).cropped(to: current.extent)
-                current = current.applyingFilter("CIDissolveTransition", parameters: [
-                    "inputTargetImage": blurred,
-                    "inputTime": glowFactor
-                ])
-            }
+            current = LocalClarityKernel.apply(image: current, clarityFactor: Float(Double(clarity) / 100.0))
         }
         
+        // 8c. Spot Removal / Healing (in uncropped image space before Crop & Straighten)
+        if !xmp.spotHeals.isEmpty {
+            current = SpotHealKernel.apply(image: current, spots: xmp.spotHeals)
+        }
+
         // 9. Crop and Straighten (Rotation & Crop Box)
         if xmp.hasCrop {
             current = applyCrop(image: current, xmp: xmp)
@@ -291,23 +294,31 @@ public final class AdobeColorPipeline: Sendable {
         // 2. Highlights & Shadows
         let hl = Double(xmp.highlights2012 ?? 0)
         let sh = Double(xmp.shadows2012 ?? 0)
-        if hl != 0 || sh != 0 {
+        let whites = Double(xmp.whites2012 ?? 0)
+        let blacks = Double(xmp.blacks2012 ?? 0)
+        if hl != 0 {
             let highlightAmount = max(0.6, 1.0 + (hl / 100.0 * 0.35))
-            let shadowAmount = max(0.0, sh / 100.0 * 0.3)
             current = current.applyingFilter("CIHighlightShadowAdjust", parameters: [
                 "inputHighlightAmount": highlightAmount,
-                "inputShadowAmount": shadowAmount
+                "inputShadowAmount": 0.0
             ])
+        }
+        if sh != 0 {
+            current = LocalShadowRecoveryKernel.apply(
+                image: current,
+                shadowFactor: Float(sh / 100.0),
+                blacksFactor: Float(blacks / 100.0)
+            )
         }
         
         // 2b. Whites & Blacks (Dynamic Range Endpoints via CIToneCurve)
-        let whites = Double(xmp.whites2012 ?? 0)
-        let blacks = Double(xmp.blacks2012 ?? 0)
         if whites != 0 || blacks != 0 {
             let wFactor = whites / 100.0
             let bFactor = blacks / 100.0
+            let shFactor = max(0.0, sh / 100.0)
+            let effectiveBFactor = bFactor * (1.0 - 0.85 * shFactor)
             let p0Y = max(0.0, min(0.04, 0.0 + (bFactor * 0.01)))
-            let p1Y = max(0.12, min(0.35, 0.25 + (bFactor * 0.15)))
+            let p1Y = max(0.12, min(0.35, 0.25 + (effectiveBFactor * 0.15)))
             let p2Y = 0.50
             let p3Y = max(0.60, min(0.90, 0.75 + (wFactor * 0.10)))
             let p4Y = max(0.95, min(1.0, 1.0 + (wFactor * 0.03)))
@@ -320,15 +331,17 @@ public final class AdobeColorPipeline: Sendable {
             ])
         }
         
-        // 3. Contrast & Dehaze
+        // 3. Contrast & Dehaze (Perceptual S-curve contrast so positive Contrast/Dehaze never crushes linear shadows to 0)
         let contrast = Double(xmp.contrast2012 ?? 0)
         let dehaze = Double(xmp.dehaze ?? 0)
         let contrastVal = contrast + (dehaze * 0.6)
         if contrastVal != 0 {
-            let contrastFactor = max(0.7, min(1.4, 1.0 + (contrastVal / 100.0 * 0.2)))
-            current = current.applyingFilter("CIColorControls", parameters: [
-                kCIInputContrastKey: contrastFactor
-            ])
+            let contrastFactor = max(0.55, min(1.75, 1.0 + (contrastVal / 100.0 * 0.42)))
+            current = AdaptiveContrastKernel.apply(
+                image: current,
+                contrastFactor: Float(contrastFactor),
+                pivot: 0.50
+            )
         }
         
         // 4. Saturation & Vibrance
@@ -347,23 +360,29 @@ public final class AdobeColorPipeline: Sendable {
             current = ColorMixerKernel.apply(image: current, hsl: xmp.hsl)
         }
         
-        // 5. Clarity & Texture
-        let clarity = Double(xmp.clarity2012 ?? 0) + Double(xmp.texture ?? 0)
-        if clarity > 5 {
-            let intensity = min(0.4, clarity / 100.0 * 0.3)
-            current = current.applyingFilter("CIUnsharpMask", parameters: [
-                kCIInputRadiusKey: 1.5,
-                kCIInputIntensityKey: intensity
-            ])
-        } else if clarity < -5 {
-            let glowFactor = min(0.35, abs(clarity) / 100.0 * 0.30)
-            let blurred = current.applyingFilter("CIGaussianBlur", parameters: [
-                kCIInputRadiusKey: 6.0
-            ]).cropped(to: current.extent)
-            current = current.applyingFilter("CIDissolveTransition", parameters: [
-                "inputTargetImage": blurred,
-                "inputTime": glowFactor
-            ])
+        // 5. Texture & Clarity (Scale-invariant fine detail and midtone local contrast)
+        if let texture = xmp.texture, texture != 0 {
+            let longEdge = Double(max(current.extent.width, current.extent.height))
+            let texRadius = max(1.2, 0.0008 * longEdge)
+            if texture > 0 {
+                let texIntensity = min(1.4, Double(texture) / 100.0 * 1.1)
+                current = current.applyingFilter("CIUnsharpMask", parameters: [
+                    kCIInputRadiusKey: texRadius,
+                    kCIInputIntensityKey: texIntensity
+                ])
+            } else {
+                let softenFactor = Double(abs(texture)) / 100.0 * 0.50
+                let blurred = current.clampedToExtent().applyingFilter("CIGaussianBlur", parameters: [
+                    kCIInputRadiusKey: texRadius * 1.25
+                ]).cropped(to: current.extent)
+                current = current.applyingFilter("CIDissolveTransition", parameters: [
+                    "inputTargetImage": blurred,
+                    "inputTime": softenFactor
+                ])
+            }
+        }
+        if let clarity = xmp.clarity2012, clarity != 0 {
+            current = LocalClarityKernel.apply(image: current, clarityFactor: Float(Double(clarity) / 100.0))
         }
         
         // 6. Black & White
@@ -377,6 +396,11 @@ public final class AdobeColorPipeline: Sendable {
             current = ToneCurveKernel.apply(image: current, toneCurve: xmp.toneCurve)
         }
         
+        // 7b. Spot Removal / Healing (in uncropped image space before Crop & Straighten)
+        if !xmp.spotHeals.isEmpty {
+            current = SpotHealKernel.apply(image: current, spots: xmp.spotHeals)
+        }
+
         // 8. Crop and Straighten
         if xmp.hasCrop {
             current = applyCrop(image: current, xmp: xmp)
@@ -442,12 +466,33 @@ public final class AdobeColorPipeline: Sendable {
 }
 
 
-/// Scene-adaptive contrast kernel that pivots around an image-dependent midtone pivot [0.35, 0.65]
+/// Scene-adaptive perceptual S-curve contrast kernel that pivots around an image-dependent midtone pivot [0.35, 0.65]
+/// without subtracting a linear constant that would clip deep linear-sRGB shadows (< 0.015) to dead black.
 public enum AdaptiveContrastKernel {
     private static let kernel = CIColorKernel(source: """
         kernel vec4 adaptiveContrast(__sample s, float contrastFactor, float pivot) {
-            vec3 c = s.rgb;
-            vec3 outRgb = (c - vec3(pivot)) * contrastFactor + vec3(pivot);
+            vec3 c = max(s.rgb, vec3(0.0));
+            if (abs(contrastFactor - 1.0) < 0.001) { return s; }
+            
+            float y = max(dot(c, vec3(0.2126, 0.7152, 0.0722)), 1e-6);
+            float peak = max(c.r, max(c.g, c.b));
+            float yMetric = max(y, 0.75 * peak);
+            float yp = clamp(pow(yMetric, 1.0 / 2.2), 0.0, 1.0);
+            float p = clamp(pivot * 0.75, 0.28, 0.50);
+            
+            float ypOut;
+            if (yp <= p) {
+                ypOut = p * pow(max(yp / p, 1e-6), contrastFactor);
+            } else {
+                ypOut = 1.0 - (1.0 - p) * pow(max((1.0 - yp) / (1.0 - p), 1e-6), contrastFactor);
+            }
+            
+            float yMetricOut = pow(max(ypOut, 0.0), 2.2);
+            vec3 outRgb = c * (yMetricOut / yMetric);
+            
+            float satLink = 1.0 + (contrastFactor - 1.0) * 0.35;
+            float yOut = dot(outRgb, vec3(0.2126, 0.7152, 0.0722));
+            outRgb = max(vec3(yOut) + (outRgb - vec3(yOut)) * satLink, vec3(0.0));
             return vec4(clamp(outRgb, 0.0, 1.0), s.a);
         }
     """)
@@ -456,6 +501,319 @@ public enum AdaptiveContrastKernel {
         guard let kernel, !image.extent.isInfinite else { return image }
         let clampedPivot = max(0.35, min(0.65, pivot))
         return kernel.apply(extent: image.extent, arguments: [image, contrastFactor, clampedPivot]) ?? image
+    }
+}
+
+/// Edge-preserving log-luminance local shadow recovery kernel (Adobe Camera Raw PV2012 shadow decompression)
+/// Uses a peak-aware log-luminance zone mask (zero halo across sharp sunlit/shadow ridges) paired with
+/// a robust bilateral detail restorer so lifted RAW shadows retain full foliage and rock texture.
+public enum LocalShadowRecoveryKernel {
+    private static let packKernel = CIColorKernel(source: """
+        kernel vec4 lsPackLogLuma(__sample s) {
+            float y = max(dot(max(s.rgb, vec3(0.0)), vec3(0.2126, 0.7152, 0.0722)), 1e-6);
+            float l = log2(y / 0.18);
+            return vec4(l, 0.0, 0.0, 1.0);
+        }
+    """)
+
+    private static let applyKernel = CIColorKernel(source: """
+        kernel vec4 localShadowRecovery(__sample s, __sample meanLog, float sh, float blacks) {
+            vec3 c = max(s.rgb, vec3(0.0));
+            if (abs(sh) < 0.001) { return s; }
+            
+            float y = max(dot(c, vec3(0.2126, 0.7152, 0.0722)), 1e-6);
+            float peak = max(c.r, max(c.g, c.b));
+            // Peak-aware shadow zone metric (protects saturated blue sky and warm sunlit highlights)
+            float yZone = max(y, 0.68 * peak);
+            float lZone = log2(yZone / 0.18);
+            
+            float l = log2(y / 0.18);
+            float mu = meanLog.r;
+            
+            // Robust bilateral detail: restores local micro-contrast compressed by the shadow curve
+            // for fine/medium textures (|d| < 0.7 stops) while vanishing to 0 across hard shadow boundaries
+            float d = l - mu;
+            float bilateralDetail = d * exp(-1.8 * d * d);
+            
+            float lNew;
+            if (sh > 0.0) {
+                // Strictly below middle gray (lZone < -0.18) so sky & highlights remain 100% untouched
+                float ws = 1.0 - smoothstep(-1.65, -0.18, lZone);
+                
+                // Deep black floor guard modulated by negative Blacks to maintain a rich black anchor
+                float toeFloor = -10.8 - min(0.0, blacks) * 1.6;
+                float toeKnee  = -6.8  - min(0.0, blacks) * 1.4;
+                float wToe = smoothstep(toeFloor, toeKnee, l);
+                
+                // Smooth log-domain shadow decompression evaluated on pixel lZone (zero spatial halo)
+                float negL = min(lZone + 0.18, 0.0);
+                float liftEV = sh * (-negL * 0.50 + 0.38) * ws * wToe;
+                
+                // Restore local contrast slope compressed by the shadow lift
+                float detailRestore = sh * ws * wToe * 0.78 * bilateralDetail;
+                lNew = l + liftEV + detailRestore;
+            } else {
+                float ws = 1.0 - smoothstep(-2.2, -0.18, lZone);
+                lNew = l + sh * 1.15 * ws;
+            }
+            
+            float gain = exp2(lNew - l);
+            vec3 lifted = c * gain;
+            
+            // Natural shadow chroma preservation with deep-shadow color-noise guard
+            if (sh > 0.0 && gain > 1.05) {
+                float yOut = dot(lifted, vec3(0.2126, 0.7152, 0.0722));
+                float deepNoiseGuard = smoothstep(-8.2, -5.2, l);
+                float midShadowMask = 1.0 - smoothstep(-1.65, -0.18, lZone);
+                float satScale = mix(0.88, 1.0 + 0.20 * sh * midShadowMask, deepNoiseGuard);
+                lifted = max(vec3(yOut) + (lifted - vec3(yOut)) * satScale, vec3(0.0));
+            }
+            
+            return vec4(clamp(lifted, 0.0, 1.0), s.a);
+        }
+    """)
+
+    public static func apply(image: CIImage, shadowFactor: Float, blacksFactor: Float = 0.0) -> CIImage {
+        let extent = image.extent
+        guard abs(shadowFactor) >= 0.001,
+              !extent.isEmpty, !extent.isInfinite,
+              let packKernel, let applyKernel,
+              let logLum = packKernel.apply(extent: extent, arguments: [image]) else {
+            return image
+        }
+        
+        let longEdge = max(extent.width, extent.height)
+        let scale = min(1.0, 768.0 / max(longEdge, 1.0))
+        let sigma = max(1.5, 0.008 * Double(longEdge * scale))
+        
+        let small = logLum.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+        let smallExtent = small.extent
+        let blurredSmall = small
+            .clampedToExtent()
+            .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: sigma])
+            .cropped(to: smallExtent)
+        let meanLog = blurredSmall
+            .clampedToExtent()
+            .transformed(by: CGAffineTransform(scaleX: 1.0 / scale, y: 1.0 / scale))
+            .cropped(to: extent)
+        
+        return applyKernel.apply(
+            extent: extent,
+            arguments: [image, meanLog, shadowFactor, blacksFactor]
+        ) ?? image
+    }
+}
+
+/// Resolution-independent, edge-preserving log-luminance midtone local contrast kernel (Lightroom PV2012 Clarity).
+/// Computes band-pass log-luminance detail at ~1.4% of the image long edge so Clarity behaves identically
+/// across 1440px interactive proxies, 2560px display proxies, and 7000px+ full-resolution RAW images.
+public enum LocalClarityKernel {
+    private static let packKernel = CIColorKernel(source: """
+        kernel vec4 lcPackLogLuma(__sample s) {
+            float y = max(dot(max(s.rgb, vec3(0.0)), vec3(0.2126, 0.7152, 0.0722)), 1e-6);
+            float l = log2(y / 0.18);
+            return vec4(l, 0.0, 0.0, 1.0);
+        }
+    """)
+
+    private static let applyKernel = CIColorKernel(source: """
+        kernel vec4 localClarity(__sample s, __sample meanLog, float clarity) {
+            vec3 c = max(s.rgb, vec3(0.0));
+            if (abs(clarity) < 0.001) { return s; }
+            
+            float y = max(dot(c, vec3(0.2126, 0.7152, 0.0722)), 1e-6);
+            float l = log2(y / 0.18);
+            float mu = meanLog.r;
+            
+            // Edge-preserving bilateral band-pass detail: strong on mid-frequency textures, tapers across hard macro edges
+            float d = l - mu;
+            float bilateralDetail = d * exp(-0.85 * d * d);
+            
+            // Midtone zone weighting (active from upper shadows through upper midtones, tapering at extreme blacks & specular whites)
+            float wMid = smoothstep(-6.2, -2.2, l) * (1.0 - 0.50 * smoothstep(0.8, 2.5, l));
+            
+            float strength = clarity > 0.0 ? (clarity * 1.45) : (clarity * 1.05);
+            float deltaL = strength * wMid * bilateralDetail;
+            float gain = clamp(exp2(deltaL), 0.25, 4.0);
+            vec3 outRgb = c * gain;
+            return vec4(clamp(outRgb, 0.0, 1.0), s.a);
+        }
+    """)
+
+    public static func apply(image: CIImage, clarityFactor: Float) -> CIImage {
+        let extent = image.extent
+        guard abs(clarityFactor) >= 0.001,
+              !extent.isEmpty, !extent.isInfinite,
+              let packKernel, let applyKernel,
+              let logLum = packKernel.apply(extent: extent, arguments: [image]) else {
+            return image
+        }
+        
+        let longEdge = max(extent.width, extent.height)
+        let scale = min(1.0, 768.0 / max(longEdge, 1.0))
+        let sigma = max(2.0, 0.014 * Double(longEdge * scale))
+        
+        let small = logLum.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+        let smallExtent = small.extent
+        let blurredSmall = small
+            .clampedToExtent()
+            .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: sigma])
+            .cropped(to: smallExtent)
+        let meanLog = blurredSmall
+            .clampedToExtent()
+            .transformed(by: CGAffineTransform(scaleX: 1.0 / scale, y: 1.0 / scale))
+            .cropped(to: extent)
+        
+        return applyKernel.apply(
+            extent: extent,
+            arguments: [image, meanLog, clarityFactor]
+        ) ?? image
+    }
+}
+
+/// Non-destructive Lightroom-style Spot Removal / Healing kernel (Heal = frequency-separated hole-masked
+/// gradient interpolation + clean source texture; Clone = direct feathered copy).
+/// Evaluates only a tight bounding patch per spot on Metal GPU for sub-millisecond 120fps interactivity.
+public enum SpotHealKernel {
+    private static let ringMaskKernel = CIColorKernel(source: """
+        kernel vec4 shRingMask(__sample s, float cx, float cy, float radiusPx) {
+            vec2 p = destCoord();
+            float dist = distance(p, vec2(cx, cy));
+            float w = smoothstep(radiusPx * 0.85, radiusPx * 1.15, dist);
+            return vec4(s.rgb * w, w);
+        }
+    """)
+
+    private static let healBlendKernel = CIColorKernel(source: """
+        kernel vec4 shHealBlend(
+            __sample target,
+            __sample targetRingBlur,
+            __sample source,
+            __sample sourceBlur,
+            float cx,
+            float cy,
+            float radiusPx,
+            float feather,
+            float opacity
+        ) {
+            vec2 p = destCoord();
+            float dist = distance(p, vec2(cx, cy));
+            float innerR = radiusPx * max(0.05, 1.0 - 0.55 * feather);
+            float outerR = radiusPx * (1.0 + 0.45 * feather);
+            float mask = (1.0 - smoothstep(innerR, outerR, dist)) * opacity;
+            if (mask <= 0.0005) { return target; }
+            
+            vec3 bgColor = targetRingBlur.a > 1e-4 ? (targetRingBlur.rgb / targetRingBlur.a) : target.rgb;
+            vec3 sourceHigh = source.rgb - sourceBlur.rgb;
+            vec3 healed = clamp(bgColor + sourceHigh, 0.0, 1.0);
+            vec3 outRgb = mix(target.rgb, healed, mask);
+            return vec4(outRgb, target.a);
+        }
+    """)
+
+    private static let cloneBlendKernel = CIColorKernel(source: """
+        kernel vec4 shCloneBlend(
+            __sample target,
+            __sample source,
+            float cx,
+            float cy,
+            float radiusPx,
+            float feather,
+            float opacity
+        ) {
+            vec2 p = destCoord();
+            float dist = distance(p, vec2(cx, cy));
+            float innerR = radiusPx * max(0.05, 1.0 - 0.55 * feather);
+            float outerR = radiusPx * (1.0 + 0.45 * feather);
+            float mask = (1.0 - smoothstep(innerR, outerR, dist)) * opacity;
+            if (mask <= 0.0005) { return target; }
+            return vec4(mix(target.rgb, source.rgb, mask), target.a);
+        }
+    """)
+
+    public static func apply(image: CIImage, spots: [SpotHealEntry]) -> CIImage {
+        let extent = image.extent
+        guard !spots.isEmpty, !extent.isEmpty, !extent.isInfinite else { return image }
+
+        var current = image
+        for spot in spots {
+            let radiusPx = max(2.0, Float(spot.radius * Double(extent.width)))
+            let cx = Float(extent.origin.x + spot.targetX * Double(extent.width))
+            let cy = Float(extent.origin.y + (1.0 - spot.targetY) * Double(extent.height))
+            let sx = Float(extent.origin.x + spot.sourceX * Double(extent.width))
+            let sy = Float(extent.origin.y + (1.0 - spot.sourceY) * Double(extent.height))
+
+            let dx = CGFloat(cx - sx)
+            let dy = CGFloat(cy - sy)
+
+            let pad = ceil(CGFloat(radiusPx) * (1.5 + 0.5 * CGFloat(spot.feather)) + 16.0)
+            let patchRect = CGRect(
+                x: CGFloat(cx) - pad,
+                y: CGFloat(cy) - pad,
+                width: pad * 2.0,
+                height: pad * 2.0
+            ).intersection(extent)
+            guard !patchRect.isEmpty else { continue }
+
+            let targetPatch = current.cropped(to: patchRect)
+            let sourcePatch = current
+                .clampedToExtent()
+                .transformed(by: CGAffineTransform(translationX: dx, y: dy))
+                .cropped(to: patchRect)
+
+            let healedPatch: CIImage?
+            switch spot.mode {
+            case .clone:
+                healedPatch = cloneBlendKernel?.apply(
+                    extent: patchRect,
+                    arguments: [
+                        targetPatch,
+                        sourcePatch,
+                        cx,
+                        cy,
+                        radiusPx,
+                        Float(spot.feather),
+                        Float(spot.opacity)
+                    ]
+                )
+            case .heal:
+                let sigma = max(2.0, Double(radiusPx) * 0.65)
+                if let ringMasked = ringMaskKernel?.apply(
+                    extent: patchRect,
+                    arguments: [targetPatch, cx, cy, radiusPx]
+                ) {
+                    let targetRingBlur = ringMasked
+                        .clampedToExtent()
+                        .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: sigma])
+                        .cropped(to: patchRect)
+                    let sourceBlur = sourcePatch
+                        .clampedToExtent()
+                        .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: sigma])
+                        .cropped(to: patchRect)
+                    healedPatch = healBlendKernel?.apply(
+                        extent: patchRect,
+                        arguments: [
+                            targetPatch,
+                            targetRingBlur,
+                            sourcePatch,
+                            sourceBlur,
+                            cx,
+                            cy,
+                            radiusPx,
+                            Float(spot.feather),
+                            Float(spot.opacity)
+                        ]
+                    )
+                } else {
+                    healedPatch = nil
+                }
+            }
+
+            if let healedPatch {
+                current = healedPatch.composited(over: current).cropped(to: extent)
+            }
+        }
+        return current
     }
 }
 

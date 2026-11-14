@@ -50,8 +50,15 @@ final class NativeHighlightsService: @unchecked Sendable {
         let baseHolder: BaseImageHolder
         let cameraModel: String?
         
-        func image(xmp: XMPMetadata, strength: Float, hlFactor: Float) -> CIImage? {
-            guard let recovered = LightcraftHighlightsKernel.apply(field: field, hlFactor: hlFactor) else { return nil }
+        func image(xmp: XMPMetadata, strength: Float, hlFactor: Float, maxDimension: CGFloat? = nil) -> CIImage? {
+            guard var recovered = LightcraftHighlightsKernel.apply(field: field, hlFactor: hlFactor) else { return nil }
+            if let maxDimension, maxDimension > 0 {
+                let currentMax = max(recovered.extent.width, recovered.extent.height)
+                if currentMax > maxDimension + 1.0 {
+                    let scale = maxDimension / currentMax
+                    recovered = recovered.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+                }
+            }
             return AdobeColorPipeline.shared.process(image: recovered, cameraModel: cameraModel, xmp: xmp, baseHolder: baseHolder)
         }
     }
@@ -70,9 +77,15 @@ final class NativeHighlightsService: @unchecked Sendable {
         let metadataExposure: Float
         let isFullRes: Bool
     }
+    private struct FieldKey: Equatable {
+        let source: HighlightsSourceRecipe
+        let wb: RAWDecodeSettings
+        let isFullRes: Bool
+    }
     // At most one source/WB pair and four immutable endpoint graphs (EV0/EV-2 full/draft).
     // Never cache reduced/quantized endpoint pixels.
     private var endpoints: [(EndpointKey, BaseImageHolder)] = []
+    private var cachedFields: [(FieldKey, LightcraftHighlightsKernel.Field, BaseImageHolder)] = []
     let renderContext = CIContext(options: [.useSoftwareRenderer: false, .workingFormat: CIFormat.RGBAh,
         .workingColorSpace: CGColorSpace(name: CGColorSpace.linearSRGB)!])
 
@@ -90,6 +103,7 @@ final class NativeHighlightsService: @unchecked Sendable {
         generation &+= 1
         entry = nil
         endpoints.removeAll()
+        cachedFields.removeAll()
         stateLock.unlock()
     }
     var statistics: Statistics {
@@ -100,7 +114,7 @@ final class NativeHighlightsService: @unchecked Sendable {
 
 
     /// A main-thread caller must arrange an asynchronous render rather than block the UI.
-    func image(source: HighlightsSourceRecipe, xmp: XMPMetadata, cameraModel: String?, isFullRes: Bool = true, neutralDomain: NeutralDomain = .preview, isCurrent: () -> Bool = { true }) -> CIImage? {
+    func image(source: HighlightsSourceRecipe, xmp: XMPMetadata, cameraModel: String?, isFullRes: Bool = true, maxDimension: CGFloat? = nil, neutralDomain: NeutralDomain = .preview, isCurrent: () -> Bool = { true }) -> CIImage? {
         guard isCurrent(), !Thread.isMainThread, !Task.isCancelled, source.isCurrent else { return nil }
         var anchorSettings = xmp
         anchorSettings.highlights2012 = -80
@@ -113,15 +127,22 @@ final class NativeHighlightsService: @unchecked Sendable {
         if let ready = entry, ready.key == key {
             hits += 1
             stateLock.unlock()
-            return ready.image(xmp: xmp, strength: amount, hlFactor: hlFactor)
+            return ready.image(xmp: xmp, strength: amount, hlFactor: hlFactor, maxDimension: maxDimension)
         }
         // Evict the previous source/settings graph before preparing a replacement;
         // completed UI bitmaps have their own existing ROI/Fit ownership.
         entry = nil
         let ticket = generation
+        let fieldKey = FieldKey(source: source, wb: RAWDecodeSettings(xmp), isFullRes: isFullRes)
+        // If a full-res field is already prepared for this source & WB, reuse it for draft previews too!
+        let existingField = cachedFields.first(where: { $0.0 == fieldKey })
+            ?? (!isFullRes ? cachedFields.first(where: { $0.0.source == source && $0.0.wb == fieldKey.wb && $0.0.isFullRes }) : nil)
         stateLock.unlock()
         let start = ProcessInfo.processInfo.systemUptime
         let prepared: Entry? = autoreleasepool { () -> Entry? in
+            if let existingField {
+                return Entry(key: key, field: existingField.1, baseHolder: existingField.2, cameraModel: cameraModel)
+            }
             // Reconstruct unclipped linear highlights by blending baseline EV0 and underexposed RAW EV-2.
             guard let baselineHolder = endpoint(source: source, xmp: xmp, rawExposure: 0, metadataExposure: 0, isFullRes: isFullRes, generation: ticket),
                   let targetHolder = endpoint(source: source, xmp: xmp, rawExposure: -2, metadataExposure: 0, isFullRes: isFullRes, generation: ticket),
@@ -129,6 +150,16 @@ final class NativeHighlightsService: @unchecked Sendable {
                   isCurrent(), !Task.isCancelled else { return nil }
             guard let field = LightcraftHighlightsKernel.prepare(ev0: baselineHolder.full, ev2: targetHolder.full),
                   isCurrent(), !Task.isCancelled else { return nil }
+            stateLock.lock()
+            if ticket == generation {
+                if cachedFields.contains(where: { $0.0.source != source || $0.0.wb != fieldKey.wb }) {
+                    cachedFields.removeAll()
+                }
+                if !cachedFields.contains(where: { $0.0 == fieldKey }) {
+                    cachedFields.append((fieldKey, field, baselineHolder))
+                }
+            }
+            stateLock.unlock()
             return Entry(key: key, field: field, baseHolder: baselineHolder, cameraModel: cameraModel)
         }
         guard let prepared, isCurrent(), !Task.isCancelled, source.isCurrent else { return nil }
@@ -137,7 +168,7 @@ final class NativeHighlightsService: @unchecked Sendable {
         preparationMilliseconds = (ProcessInfo.processInfo.systemUptime - start) * 1000
         preparations += 1
         entry = prepared
-        return prepared.image(xmp: xmp, strength: amount, hlFactor: hlFactor)
+        return prepared.image(xmp: xmp, strength: amount, hlFactor: hlFactor, maxDimension: maxDimension)
     }
 
     private static let strengthKernel = CIColorKernel(source: """

@@ -22,11 +22,11 @@ public struct TopFilterBarView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(isSearchFocused ? LightroomTheme.accentYellow : LightroomTheme.textMuted)
-                        .font(.system(size: 11))
+                        .uiFont(11)
                 
                     TextField("Search (Filename, Camera, Keyword...)", text: $appState.filterCriteria.searchText)
                         .textFieldStyle(.plain)
-                        .font(.system(size: 11))
+                        .uiFont(11)
                         .foregroundColor(LightroomTheme.textPrimary)
                         .focused($isSearchFocused)
                         .help("Search Photos by Filename, Camera, or Keyword (⌘F)")
@@ -53,7 +53,7 @@ public struct TopFilterBarView: View {
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundColor(LightroomTheme.textMuted)
-                                .font(.system(size: 10))
+                                .uiFont(10)
                         }
                         .buttonStyle(.plain)
                         .help("Clear Search (Esc)")
@@ -94,7 +94,7 @@ public struct TopFilterBarView: View {
                 // Rating Filter Buttons (Non-Rated + >= 1 to 5)
                 HStack(spacing: 4) {
                     Text("Rating:")
-                        .font(.system(size: 11))
+                        .uiFont(11)
                         .foregroundColor(LightroomTheme.textSecondary)
 
                     Button {
@@ -107,9 +107,9 @@ public struct TopFilterBarView: View {
                     } label: {
                         HStack(spacing: 2) {
                             Image(systemName: "star.slash")
-                                .font(.system(size: 10))
+                                .uiFont(10)
                             Text("Non-Rated")
-                                .font(.system(size: 10, weight: .medium))
+                                .uiFont(10, weight: .medium)
                         }
                         .foregroundColor(appState.filterCriteria.isUnratedOnly ? .black : LightroomTheme.textSecondary)
                         .padding(.horizontal, 6)
@@ -130,7 +130,7 @@ public struct TopFilterBarView: View {
                             }
                         } label: {
                             Image(systemName: star <= appState.filterCriteria.minimumRating ? "star.fill" : "star")
-                                .font(.system(size: 11))
+                                .uiFont(11)
                                 .foregroundColor(star <= appState.filterCriteria.minimumRating ? LightroomTheme.accentYellow : LightroomTheme.textMuted)
                         }
                         .buttonStyle(.plain)
@@ -139,7 +139,7 @@ public struct TopFilterBarView: View {
                 
                     if appState.filterCriteria.minimumRating > 0 {
                         Text(appState.filterCriteria.ratingExact ? "\(appState.filterCriteria.minimumRating)★" : "≥ \(appState.filterCriteria.minimumRating)★")
-                            .font(.system(size: 10, weight: .bold))
+                            .uiFont(10, weight: .bold)
                             .foregroundColor(LightroomTheme.accentYellow)
                     }
                 }
@@ -151,7 +151,7 @@ public struct TopFilterBarView: View {
                 // Flag Filters (Pick, Reject, Unflagged)
                 HStack(spacing: 8) {
                     Text("Flag:")
-                        .font(.system(size: 11))
+                        .uiFont(11)
                         .foregroundColor(LightroomTheme.textSecondary)
                 
                     flagFilterButton(flag: .pick, icon: "flag.fill", color: .white, title: "Filter Flagged / Picked (P)")
@@ -161,7 +161,7 @@ public struct TopFilterBarView: View {
             
                 if !appState.deletingAssetIDs.isEmpty {
                     Text("Trash: \(appState.deletingAssetIDs.count) pending")
-                        .font(.system(size: 10)).foregroundColor(.orange)
+                        .uiFont(10).foregroundColor(.orange)
                 }
                 Spacer()
             
@@ -172,9 +172,9 @@ public struct TopFilterBarView: View {
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.counterclockwise")
-                                .font(.system(size: 10, weight: .semibold))
+                                .uiFont(10, weight: .semibold)
                             Text("Reset Filter")
-                                .font(.system(size: 10, weight: .medium))
+                                .uiFont(10, weight: .medium)
                         }
                         .foregroundColor(LightroomTheme.accentYellow)
                         .padding(.horizontal, 7)
@@ -193,7 +193,7 @@ public struct TopFilterBarView: View {
                 // App Settings Link
                 SettingsLink {
                     Image(systemName: "gearshape")
-                        .font(.system(size: 11))
+                        .uiFont(11)
                         .foregroundColor(LightroomTheme.textSecondary)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3.5)
@@ -223,7 +223,7 @@ public struct TopFilterBarView: View {
             }
         } label: {
             Image(systemName: icon)
-                .font(.system(size: 10, weight: .bold))
+                .uiFont(10, weight: .bold)
                 .foregroundColor(isSelected ? color : LightroomTheme.textMuted.opacity(0.4))
                 .padding(3)
                 .background(isSelected ? LightroomTheme.cardSelectedBackground : Color.clear)
