@@ -78,9 +78,9 @@ public final class AdobeColorPipeline: Sendable {
             }
         }
         
-        // 3. Contrast & Dehaze Contrast (Lightroom PV2012 midtone punch with scene-adaptive pivot)
+        // 3. Contrast (Lightroom PV2012 midtone punch with scene-adaptive pivot)
         let dehaze = Double(xmp.dehaze ?? 0)
-        let contrastVal = Double(xmp.contrast2012 ?? 0) + (dehaze * 0.50)
+        let contrastVal = Double(xmp.contrast2012 ?? 0)
         if contrastVal != 0 {
             let contrastFactor = max(0.55, min(1.75, 1.0 + (contrastVal / 100.0 * 0.42)))
             let pivot = AutoToneService.estimateContrastPivot(from: baseHolder)
@@ -88,6 +88,14 @@ public final class AdobeColorPipeline: Sendable {
                 image: current,
                 contrastFactor: Float(contrastFactor),
                 pivot: Float(pivot)
+            )
+        }
+        
+        // 3b. Dehaze (Scale-invariant dark-channel atmospheric veil removal / mist)
+        if dehaze != 0 {
+            current = LocalDehazeKernel.apply(
+                image: current,
+                dehazeFactor: Float(dehaze / 100.0)
             )
         }
         
@@ -100,7 +108,7 @@ public final class AdobeColorPipeline: Sendable {
         
         if !isBW {
             let vib = Double(xmp.vibrance ?? 0)
-            let totalVib = ((vib / 100.0 * 0.80) + (dehaze / 100.0 * 0.20)) * hlDesatScale
+            let totalVib = (vib / 100.0 * 0.80) * hlDesatScale
             if abs(totalVib) > 0.01 {
                 current = current.applyingFilter("CIVibrance", parameters: [
                     "inputAmount": totalVib
@@ -109,8 +117,7 @@ public final class AdobeColorPipeline: Sendable {
             
             // Saturation (-100 = 0.0 / Mono, 0 = 1.0 / Neutral, +100 = 2.0 / Vivid)
             let sat = Double(xmp.saturation ?? 0)
-            let dehazeSatBoost = dehaze / 100.0 * 0.10
-            let rawSat = 1.0 + (((sat / 100.0 * 0.40) + dehazeSatBoost) * hlDesatScale)
+            let rawSat = 1.0 + ((sat / 100.0 * 0.40) * hlDesatScale)
             let saturationFactor = max(0.0, min(2.0, rawSat))
             if abs(saturationFactor - 1.0) > 0.005 {
                 current = current.applyingFilter("CIColorControls", parameters: [
@@ -331,12 +338,11 @@ public final class AdobeColorPipeline: Sendable {
             ])
         }
         
-        // 3. Contrast & Dehaze (Perceptual S-curve contrast so positive Contrast/Dehaze never crushes linear shadows to 0)
+        // 3. Contrast (Perceptual S-curve contrast so positive Contrast never crushes linear shadows to 0)
         let contrast = Double(xmp.contrast2012 ?? 0)
         let dehaze = Double(xmp.dehaze ?? 0)
-        let contrastVal = contrast + (dehaze * 0.6)
-        if contrastVal != 0 {
-            let contrastFactor = max(0.55, min(1.75, 1.0 + (contrastVal / 100.0 * 0.42)))
+        if contrast != 0 {
+            let contrastFactor = max(0.55, min(1.75, 1.0 + (contrast / 100.0 * 0.42)))
             current = AdaptiveContrastKernel.apply(
                 image: current,
                 contrastFactor: Float(contrastFactor),
@@ -344,10 +350,18 @@ public final class AdobeColorPipeline: Sendable {
             )
         }
         
+        // 3b. Dehaze (Scale-invariant dark-channel atmospheric veil removal / mist)
+        if dehaze != 0 {
+            current = LocalDehazeKernel.apply(
+                image: current,
+                dehazeFactor: Float(dehaze / 100.0)
+            )
+        }
+        
         // 4. Saturation & Vibrance
         let sat = Double(xmp.saturation ?? 0)
         let vib = Double(xmp.vibrance ?? 0)
-        let totalSatDelta = (sat / 100.0 * 0.2) + (vib / 100.0 * 0.12) + (dehaze / 100.0 * 0.08)
+        let totalSatDelta = (sat / 100.0 * 0.2) + (vib / 100.0 * 0.12)
         if abs(totalSatDelta) > 0.005 {
             let satFactor = max(0.0, min(1.6, 1.0 + totalSatDelta))
             current = current.applyingFilter("CIColorControls", parameters: [
@@ -667,6 +681,89 @@ public enum LocalClarityKernel {
         return applyKernel.apply(
             extent: extent,
             arguments: [image, meanLog, clarityFactor]
+        ) ?? image
+    }
+}
+
+/// Resolution-independent dark-channel atmospheric Dehaze kernel (Lightroom PV2012 Dehaze).
+/// Positive Dehaze removes the washed-out atmospheric veil proportional to the local dark channel
+/// (`min(R, G, B)` in perceptual space) and restores midtone contrast & color purity without
+/// crushing clean foreground shadows; negative Dehaze adds soft atmospheric mist.
+public enum LocalDehazeKernel {
+    private static let packKernel = CIColorKernel(source: """
+        kernel vec4 ldPackDarkChannel(__sample s) {
+            vec3 c = clamp(max(s.rgb, vec3(0.0)), 0.0, 1.0);
+            vec3 cp = pow(c, vec3(1.0 / 2.2));
+            float dark = min(cp.r, min(cp.g, cp.b));
+            return vec4(dark, 0.0, 0.0, 1.0);
+        }
+    """)
+
+    private static let applyKernel = CIColorKernel(source: """
+        kernel vec4 localDehaze(__sample s, __sample hazeSample, float dehaze) {
+            vec3 c = clamp(max(s.rgb, vec3(0.0)), 0.0, 1.0);
+            if (abs(dehaze) < 0.001) { return s; }
+            
+            vec3 cp = pow(c, vec3(1.0 / 2.2));
+            float dark = min(cp.r, min(cp.g, cp.b));
+            float hazeMap = hazeSample.r;
+            
+            vec3 jP;
+            if (dehaze > 0.0) {
+                float d = clamp(dehaze, 0.0, 1.0);
+                // Clamp blurred dark channel near pixel dark channel to prevent halos on dark/sky edges
+                float veil = clamp(min(hazeMap, dark + 0.12), 0.0, 0.90);
+                float t = max(1.0 - d * 0.72 * veil, 0.25);
+                float airlight = 0.94;
+                jP = clamp((cp - vec3(airlight * (1.0 - t))) / t, 0.0, 1.0);
+                
+                // Gentle perceptual S-curve punch & color purity restoration
+                float y = dot(jP, vec3(0.2126, 0.7152, 0.0722));
+                float yOut = clamp(0.5 + (y - 0.5) * (1.0 + d * 0.18), 0.0, 1.0);
+                if (y > 1e-5) {
+                    jP = clamp(jP * (yOut / y), 0.0, 1.0);
+                }
+                float yFinal = dot(jP, vec3(0.2126, 0.7152, 0.0722));
+                jP = clamp(vec3(yFinal) + (jP - vec3(yFinal)) * (1.0 + d * 0.24), 0.0, 1.0);
+            } else {
+                float d = clamp(-dehaze, 0.0, 1.0);
+                float mist = d * 0.55 * (0.45 + 0.55 * hazeMap);
+                jP = mix(cp, vec3(0.92, 0.94, 0.97), mist);
+                float yFinal = dot(jP, vec3(0.2126, 0.7152, 0.0722));
+                jP = clamp(vec3(yFinal) + (jP - vec3(yFinal)) * (1.0 - d * 0.20), 0.0, 1.0);
+            }
+            
+            vec3 outRgb = pow(clamp(jP, 0.0, 1.0), vec3(2.2));
+            return vec4(outRgb, s.a);
+        }
+    """)
+
+    public static func apply(image: CIImage, dehazeFactor: Float) -> CIImage {
+        let extent = image.extent
+        guard abs(dehazeFactor) >= 0.001,
+              !extent.isEmpty, !extent.isInfinite,
+              let packKernel, let applyKernel,
+              let darkImg = packKernel.apply(extent: extent, arguments: [image]) else {
+            return image
+        }
+        
+        let longEdge = max(extent.width, extent.height)
+        let scale = min(1.0, 768.0 / max(longEdge, 1.0))
+        let sigma = max(3.0, 0.018 * Double(longEdge * scale))
+        
+        let smallDark = darkImg.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+        let blurredSmall = smallDark
+            .clampedToExtent()
+            .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: sigma])
+            .cropped(to: smallDark.extent)
+        let hazeMap = blurredSmall
+            .clampedToExtent()
+            .transformed(by: CGAffineTransform(scaleX: 1.0 / scale, y: 1.0 / scale))
+            .cropped(to: extent)
+        
+        return applyKernel.apply(
+            extent: extent,
+            arguments: [image, hazeMap, dehazeFactor]
         ) ?? image
     }
 }

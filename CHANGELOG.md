@@ -5,6 +5,23 @@ All notable changes to **LumiBase** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.15.6] - 2026-11-14
+
+### Added
+- **16-Bit Linear DNG Panorama Merge (`PanoramaService`, `LinearDNGWriter`, `PanoramaMergeDialogView`, `AppState`, `GridView`, `FilmstripView`, `MainLayoutView`, `LumiBaseApp`)**:
+  - Added **Merge to Panorama (DNG)...** (`⌃⌘M` / `Control+Command+M`, top menu `Develop -> Merge to Panorama (DNG)...`, and Grid/Filmstrip context menus when 2 or more photos are selected).
+  - Implemented horizon-leveled cylindrical projection (`panoCylWarp`), horizon-weighted seam-corridor 2D gradient NCC registration, radial lens vignette compensation (`panoVignette`), and Voronoi-bounded dynamic-programming minimum-error seam cutting with gradient-adaptive feathering.
+  - Decodes unboosted linear RAW (`boostAmount = 0.0`, `shadowBias = 0.0`, `boostShadowAmount = 0.0`) with locked white balance to write standard 16-bit `LinearRaw` `.dng` files without double-tonemapping highlight blowout.
+  - Automatically syncs and honors each source photo's `.xmp` sidecar settings (`crs:CropAngle` horizon leveling without overriding user-leveled angles, relative `crs:Exposure2012` offsets, and `SpotHeal` dust removal) and writes inherited global develop settings to `<Panorama>.xmp`.
+- **Filmstrip Thumbnail Filename Badge (`FilmstripView`)**:
+  - Displayed each photo's filename in a top-left translucent badge on Filmstrip thumbnails (matching Grid View) with `uiFontDelta` font scaling support.
+- **Crop Header Reset Action (`CropControlPanelView`)**:
+  - Added a direct **Reset** button in the `CROP & STRAIGHTEN` section header and made **Reset Crop** always accessible whenever the Crop panel is open.
+
+### Improved
+- **Dark-Channel Atmospheric Scattering Dehaze (`LocalDehazeKernel`, `AdobeColorPipeline`)**:
+  - Replaced scalar `CIColorControls` contrast/saturation dehaze approximation with a resolution-invariant local dark-channel atmospheric veil transmission kernel (`LocalDehazeKernel`), delivering authentic atmospheric haze removal (`> 0`) and mist synthesis (`< 0`) across both PV2012 and Darkroom pipelines.
+
 ## [1.15.5] - 2026-11-14
 
 ### Added

@@ -165,30 +165,31 @@ public struct CropControlPanelView: View {
             Divider().background(LightroomTheme.dividerColor)
             
             // 4. Quick Action Buttons: Reset & Done
+            let canResetCrop = currentXMP.hasCrop || appState.cropAspectRatioPreset != .original
             HStack(spacing: 8) {
-                if currentXMP.hasCrop {
-                    Button {
-                        appState.resetCrop(for: asset.id)
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "arrow.counterclockwise")
-                                .uiFont(9)
-                            Text("Reset Crop")
-                                .uiFont(10, weight: .medium)
-                        }
-                        .foregroundColor(LightroomTheme.textPrimary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(LightroomTheme.cardBackground)
-                        .cornerRadius(3)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 3)
-                                .stroke(LightroomTheme.cardBorder, lineWidth: 1)
-                        )
+                Button {
+                    appState.resetCrop(for: asset.id)
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.counterclockwise")
+                            .uiFont(9)
+                        Text("Reset")
+                            .uiFont(10, weight: .medium)
                     }
-                    .buttonStyle(.plain)
-                    .help("Reset Crop to Full Frame")
+                    .foregroundColor(canResetCrop ? LightroomTheme.textPrimary : LightroomTheme.textMuted)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(LightroomTheme.cardBackground)
+                    .cornerRadius(3)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 3)
+                            .stroke(LightroomTheme.cardBorder, lineWidth: 1)
+                    )
                 }
+                .buttonStyle(.plain)
+                .disabled(!canResetCrop)
+                .opacity(canResetCrop ? 1.0 : 0.5)
+                .help("Reset Crop, Angle & Aspect Ratio to Original")
                 
                 Spacer()
                 

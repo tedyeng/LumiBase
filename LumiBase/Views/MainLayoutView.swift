@@ -36,6 +36,9 @@ public struct MainLayoutView: View {
             if appState.isExporting {
                 exportProgressHUD
             }
+            if appState.isMergingPanorama {
+                panoramaProgressHUD
+            }
         }
         .environmentObject(appState)
         .environment(\.uiFontDelta, performanceSettings.uiFontScale.delta)
@@ -141,6 +144,11 @@ public struct MainLayoutView: View {
                 appState.showSyncDialog = true
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseMergePanorama"))) { _ in
+            if appState.selectedAssetIDs.count >= 2 {
+                appState.showPanoramaDialog = true
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseCopySettings"))) { _ in
             if appState.primarySelectedAsset != nil {
                 appState.showCopySettingsDialog = true
@@ -224,6 +232,9 @@ public struct MainLayoutView: View {
                 onDismiss: { appState.showCopySettingsDialog = false }
             )
         }
+        .sheet(isPresented: $appState.showPanoramaDialog) {
+            PanoramaMergeDialogView(appState: appState)
+        }
         .alert(
             deleteAlertTitle,
             isPresented: $appState.showDeleteConfirmation
@@ -302,6 +313,37 @@ public struct MainLayoutView: View {
         }
     }
     
+    private var panoramaProgressHUD: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "pano.fill")
+                    .foregroundColor(LightroomTheme.accentYellow)
+                    .uiFont(18)
+                Text("Merging Panorama (DNG)...")
+                    .uiFont(13, weight: .semibold)
+                    .foregroundColor(LightroomTheme.textPrimary)
+                Spacer()
+                ProgressView()
+                    .scaleEffect(0.75)
+            }
+            Text(appState.panoramaProgressMessage)
+                .uiFont(11)
+                .foregroundColor(LightroomTheme.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .lineLimit(1)
+                .truncationMode(.middle)
+        }
+        .padding(16)
+        .frame(width: 340)
+        .background(LightroomTheme.panelBackground.opacity(0.96))
+        .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(LightroomTheme.cardBorder, lineWidth: 1)
+        )
+        .shadow(radius: 16)
+    }
+
     private var exportProgressHUD: some View {
         VStack(spacing: 12) {
             HStack {

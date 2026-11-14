@@ -212,6 +212,11 @@ struct LumiBaseApp: App {
                     NotificationCenter.default.post(name: NSNotification.Name("LumiBaseSyncSettings"), object: nil)
                 }
                 .keyboardShortcut("s", modifiers: [.command, .shift])
+
+                Button("Merge to Panorama (DNG)...") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseMergePanorama"), object: nil)
+                }
+                .keyboardShortcut("p", modifiers: [.command, .control])
                 
                 Button("Toggle Auto Sync") {
                     NotificationCenter.default.post(name: NSNotification.Name("LumiBaseToggleAutoSync"), object: nil)

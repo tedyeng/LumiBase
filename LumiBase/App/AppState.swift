@@ -262,6 +262,11 @@ public final class AppState: ObservableObject {
     @Published public var exportErrorMessage: String?
     @Published public var xmpSaveError: String?
     private var exportTask: Task<Void, Never>?
+
+    // Panorama Merge State
+    @Published public var showPanoramaDialog: Bool = false
+    @Published public var isMergingPanorama: Bool = false
+    @Published public var panoramaProgressMessage: String = ""
     
     // Deletion State
     @Published public var showDeleteConfirmation: Bool = false
@@ -451,7 +456,7 @@ public final class AppState: ObservableObject {
         if keyCode == 51 && !flags.contains(.command) && !flags.contains(.control)
             && !flags.contains(.option) && !flags.contains(.shift) && photoBrowserHasKeyboardFocus {
             let window = event.window ?? NSApplication.shared.keyWindow
-            guard window?.attachedSheet == nil, !showSyncDialog, !showCopySettingsDialog,
+            guard window?.attachedSheet == nil, !showSyncDialog, !showCopySettingsDialog, !showPanoramaDialog,
                   !(window?.firstResponder is NSControl) else { return false }
             requestDeleteSelectedPhotos()
             return true
@@ -1882,8 +1887,9 @@ public final class AppState: ObservableObject {
         }
     }
     
-    /// Resets crop box to full uncropped photo and angle to 0°
+    /// Resets crop box to full uncropped photo, angle to 0°, and aspect preset to Original
     public func resetCrop(for assetID: String? = nil) {
+        cropAspectRatioPreset = .original
         updateDevelopSettings(for: assetID, isDragging: false) { xmp in
             xmp.resetCrop()
         }
@@ -2151,6 +2157,57 @@ public final class AppState: ObservableObject {
                 self?.isExporting = false
                 self?.exportTask = nil
                 if !(error is CancellationError) {
+                    self?.exportErrorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    // MARK: - Panorama Merge (DNG)
+
+    public func mergeSelectedPhotosToPanorama(options: PanoramaMergeOptions) {
+        let targets: [PhotoAsset] = selectedAssets.map { asset in
+            if liveDevelopAssetID == asset.id, let liveXMP = liveDevelopXMP {
+                var copy = asset
+                copy.xmp = liveXMP
+                syncXMP(for: copy)
+                return copy
+            }
+            return asset
+        }
+        guard targets.count >= 2, !isMergingPanorama else { return }
+        let outputDir = currentFolderURL ?? targets[0].fileURL.deletingLastPathComponent()
+
+        isMergingPanorama = true
+        panoramaProgressMessage = "Preparing panorama merge..."
+        exportErrorMessage = nil
+
+        Task.detached(priority: .userInitiated) { [weak self] in
+            do {
+                let outputURL = try await PanoramaService.mergeToDNG(
+                    assets: targets,
+                    outputDirectory: outputDir,
+                    options: options
+                ) { message in
+                    Task { @MainActor in
+                        self?.panoramaProgressMessage = message
+                    }
+                }
+
+                let newAsset = FolderScanner.parseAsset(fileURL: outputURL)
+                await MainActor.run {
+                    guard let self else { return }
+                    self.isMergingPanorama = false
+                    self.panoramaProgressMessage = ""
+                    if let newAsset {
+                        self.allAssets.append(newAsset)
+                        self.selectAsset(newAsset)
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self?.isMergingPanorama = false
+                    self?.panoramaProgressMessage = ""
                     self?.exportErrorMessage = error.localizedDescription
                 }
             }

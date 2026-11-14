@@ -365,4 +365,69 @@ final class LightcraftHighlightsTests: XCTestCase {
         XCTAssertEqual(parsed.spotHeals[0].sourceX, 0.60, accuracy: 0.0001)
         XCTAssertEqual(parsed.spotHeals[0].radius, 0.04, accuracy: 0.0001)
     }
+
+    func testLocalDehazeRemovesAtmosphericVeilAndAddsMist() {
+        let context = CIContext(options: [.workingColorSpace: CGColorSpace(name: CGColorSpace.linearSRGB)!])
+        let extent = CGRect(x: 0, y: 0, width: 64, height: 64)
+        // Hazy sky/mountain color (lifted dark channel ~0.36 linear)
+        let hazy = CIImage(color: CIColor(red: 0.36, green: 0.42, blue: 0.52, alpha: 1.0)).cropped(to: extent)
+
+        func meanRGB(_ img: CIImage) -> (r: Double, g: Double, b: Double) {
+            var rgba = [UInt8](repeating: 0, count: 4)
+            let small = img.cropped(to: CGRect(x: 30, y: 30, width: 1, height: 1))
+            context.render(small, toBitmap: &rgba, rowBytes: 4, bounds: small.extent, format: .RGBA8, colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
+            return (Double(rgba[0]) / 255.0, Double(rgba[1]) / 255.0, Double(rgba[2]) / 255.0)
+        }
+
+        let base = meanRGB(hazy)
+        let dehazed = meanRGB(LocalDehazeKernel.apply(image: hazy, dehazeFactor: 0.8))
+        let misted = meanRGB(LocalDehazeKernel.apply(image: hazy, dehazeFactor: -0.8))
+
+        // Positive Dehaze must noticeably deepen the washed-out hazy veil and increase blue-vs-red separation
+        XCTAssertLessThan(dehazed.r, base.r - 0.12, "Positive Dehaze should remove washed-out atmospheric veil")
+        XCTAssertGreaterThan(dehazed.b - dehazed.r, base.b - base.r + 0.05, "Positive Dehaze should restore color purity")
+
+        // Negative Dehaze must add bright atmospheric mist
+        XCTAssertGreaterThan(misted.r, base.r + 0.08, "Negative Dehaze should add atmospheric mist")
+    }
+
+    func testPanoramaServiceMergesOverlappingImagesToValidDNG() async throws {
+        let tmpDir = FileManager.default.temporaryDirectory.appendingPathComponent("LumiBasePanoTest-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tmpDir) }
+
+        // Build a 640x240 wide synthetic scene with textured features and crop two overlapping 400x240 frames
+        let ctx = CIContext(options: [.workingColorSpace: CGColorSpace(name: CGColorSpace.linearSRGB)!])
+        let srgb = CGColorSpace(name: CGColorSpace.sRGB)!
+        let bg = CIImage(color: CIColor(red: 0.15, green: 0.35, blue: 0.65)).cropped(to: CGRect(x: 0, y: 0, width: 640, height: 240))
+        let f1 = CIImage(color: CIColor(red: 0.9, green: 0.8, blue: 0.2)).cropped(to: CGRect(x: 220, y: 50, width: 90, height: 100))
+        let f2 = CIImage(color: CIColor(red: 0.2, green: 0.85, blue: 0.4)).cropped(to: CGRect(x: 310, y: 120, width: 85, height: 70))
+        let f3 = CIImage(color: CIColor(red: 0.95, green: 0.3, blue: 0.3)).cropped(to: CGRect(x: 270, y: 25, width: 60, height: 60))
+        let scene = f3.composited(over: f2.composited(over: f1.composited(over: bg)))
+
+        let leftURL = tmpDir.appendingPathComponent("frame1.png")
+        let rightURL = tmpDir.appendingPathComponent("frame2.png")
+        try ctx.writePNGRepresentation(of: scene.cropped(to: CGRect(x: 0, y: 0, width: 400, height: 240)), to: leftURL, format: .RGBA8, colorSpace: srgb)
+        try ctx.writePNGRepresentation(of: scene.cropped(to: CGRect(x: 160, y: 0, width: 400, height: 240)), to: rightURL, format: .RGBA8, colorSpace: srgb)
+
+        let asset1 = try XCTUnwrap(FolderScanner.parseAsset(fileURL: leftURL))
+        let asset2 = try XCTUnwrap(FolderScanner.parseAsset(fileURL: rightURL))
+
+        let options = PanoramaMergeOptions(autoCrop: true, useHomography: false, maxFrameLongEdge: 1000, outputFilename: "TestPano.dng")
+        let dngURL = try await PanoramaService.mergeToDNG(assets: [asset1, asset2], outputDirectory: tmpDir, options: options) { _ in }
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: dngURL.path))
+        XCTAssertEqual(dngURL.pathExtension.lowercased(), "dng")
+
+        let rawFilter = try XCTUnwrap(CIRAWFilter(imageURL: dngURL))
+        XCTAssertGreaterThan(rawFilter.nativeSize.width, 420, "Stitched cylindrical panorama DNG should be wider than a single cylindrical-projected frame")
+        XCTAssertGreaterThan(rawFilter.nativeSize.height, 140)
+
+        let cgSrc = try XCTUnwrap(CGImageSourceCreateWithURL(dngURL as CFURL, nil))
+        let cgImg = try XCTUnwrap(CGImageSourceCreateImageAtIndex(cgSrc, 0, nil))
+        XCTAssertEqual(cgImg.bitsPerComponent, 16)
+
+        let parsedDNG = try XCTUnwrap(FolderScanner.parseAsset(fileURL: dngURL))
+        XCTAssertTrue(parsedDNG.isRaw)
+    }
 }

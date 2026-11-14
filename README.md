@@ -15,8 +15,9 @@ LumiBase 是一套專為 macOS (特別是 Apple Silicon M 系列晶片) 打造�
   - **白平衡 (WB)**：2000K ~ 50000K 色溫、-150 ~ +150 色調、完整色溫預設檔（As Shot、Auto、Daylight、Cloudy、Shade、Tungsten、Fluorescent、Flash、Custom）。
   - **處理模式 (Treatment)**：一鍵 Color / Black & White 切換，黑白模式下自動聯動 `crs:ConvertToGrayscale="True"` 並隱藏彩度滑桿。
   - **色調控制 (Tone)**：Lightcraft 級全畫面光學曝光（Optical Exposure Pipeline，-5.00 ~ +5.00 EV，擴展型 Reinhard 高光肩部滾降保護白點 1.0、鏡面高光泛白防色偏）、感知空間 S-Curve 對比度（零暗部死黑截斷）、雙曝光 HDR 導向濾波高光還原、零光暈對數域局部暗部救援（`LocalShadowRecoveryKernel`，完整保留樹林與溪谷微對比）、極致白色端點與黑色沉澱。
-  - **外觀控制 (Presence)**：跨解析度自適應紋理（正向微距銳利、負向人像柔膚）、對數域雙邊中間調清晰度（`LocalClarityKernel`，正向立體反差、負向自然柔焦）、去朦朧（大氣去霧/加霧）、自然飽和度（膚色保護）與標準線性飽和度。
+  - **外觀控制 (Presence)**：跨解析度自適應紋理（正向微距銳利、負向人像柔膚）、對數域雙邊中間調清晰度（`LocalClarityKernel`，正向立體反差、負向自然柔焦）、暗通道大氣透射去朦朧（`LocalDehazeKernel`，真實物理大氣去霧/加霧）、自然飽和度（膚色保護）與標準線性飽和度。
   - **污點修復 (Spot Heal)**：支援 Heal / Clone 模式、羽化與透明度調整、`[` / `]` 筆刷大小快捷鍵與 `.xmp` 側邊檔非破壞性寫回。
+  - **16-bit 線性 DNG 全景合併 (`PanoramaService`, `⌃⌘M`)**：選取 2 張以上重疊照片即可一鍵透過柱面投影、接縫走廊梯度對位、鏡頭暗角補償與動態規劃最佳接縫羽化，合成 16-bit `LinearRaw` `.dng` 全景圖，並自動參考每張來源照片 `.xmp` 的水平角度（`CropAngle`）、相對曝光與污點修復設定。
   - **介面字型大小設定 (Interface Font Size)**：可在設定頁面切換 `Default`、`Medium (+2 pt)`、`Large (+4 pt)`、`Extra Large (+6 pt)`，全面套用至面板、工具列、縮圖標籤與圖示。
   - **精緻滑桿組件 (`LightroomSlider`)**：0ms 本機跟手手感、雙擊標題/軌道復位、**點擊/雙擊數值標籤直接進入打字輸入，支援 `Tab` / `Shift+Tab` 在各修圖選項間連續跳轉切換，按 Enter 即刻套用**。
 - 🔄 **Lightroom 等級 Develop Sync 批次同步與修圖管理**：
@@ -107,6 +108,7 @@ LumiBase 是一套專為 macOS (特別是 Apple Silicon M 系列晶片) 打造�
 | **貼上修圖設定 (Paste Settings)** | `⇧⌘V` (Shift + Command + V) / `⌥⌘V` |
 | **同步修圖設定 (Sync Settings)** | `⇧⌘S` (Shift + Command + S) |
 | **開關自動同步 (Toggle Auto Sync)** | `⌥⇧⌘S` (Option + Shift + Command + S) |
+| **合併為 DNG 全景圖 (Merge to Panorama)** | `⌃⌘M` (Control + Command + M) |
 | **切換 Before/After 原圖對比** | `\` (反斜線) |
 | **循環切換對比模式 (Split/Side-by-Side)** | `Y` (前進) / `⇧Y` (後退) |
 

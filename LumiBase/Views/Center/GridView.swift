@@ -261,6 +261,12 @@ public struct GridView: View {
             }
         }
         
+        if selectedCount >= 2 {
+            Button("Merge \(selectedCount) Photos to Panorama (DNG)... (⌃⌘P)") {
+                appState.showPanoramaDialog = true
+            }
+        }
+        
         if !isAll && totalCount > 1 {
             Button("Export All (\(totalCount)) Images...") {
                 appState.selectAll()

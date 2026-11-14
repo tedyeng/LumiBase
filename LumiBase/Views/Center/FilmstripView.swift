@@ -46,6 +46,11 @@ public struct FilmstripView: View {
                             Button("Export All (\(appState.displayedAssets.count)) Images...") {
                                 appState.exportPhotos(assets: appState.displayedAssets)
                             }
+                            if appState.selectedAssetIDs.count >= 2 {
+                                Button("Merge \(appState.selectedAssetIDs.count) Photos to Panorama (DNG)... (⌃⌘P)") {
+                                    appState.showPanoramaDialog = true
+                                }
+                            }
                             Divider()
                             Button("Select All (⌘A)") {
                                 appState.selectAll()
@@ -257,6 +262,21 @@ struct FilmstripItemView: View {
             }
             .frame(width: itemWidth, height: itemHeight)
             .clipped()
+            
+            // Top-left filename overlay
+            .overlay(alignment: .topLeading) {
+                Text(asset.filename)
+                    .uiFont(7, weight: .medium)
+                    .foregroundColor(.white.opacity(0.95))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .padding(.horizontal, 3)
+                    .padding(.vertical, 1)
+                    .background(Color.black.opacity(0.6))
+                    .cornerRadius(2)
+                    .frame(maxWidth: max(20, itemWidth - 6), alignment: .leading)
+                    .padding(3)
+            }
             
             // Flags & ratings overlay
             HStack(spacing: 3) {
