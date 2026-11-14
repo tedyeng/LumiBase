@@ -159,4 +159,55 @@ final class MergedCropRenderTests: XCTestCase {
         XCTAssertTrue(appState.isCropOverlayActive)
         XCTAssertTrue(appState.isEditingCropOverlay)
     }
+
+    func testPositiveCropAngleRotatesCounterClockwiseMatchingSwiftUIOverlay() {
+        // Place a bright spot at top-center (x=50, y=80 in CoreImage Y-up 100x100)
+        // A positive angle (+15 deg) should rotate CCW on screen (top-center moves left: x < 50).
+        let black = CIImage(color: .black).cropped(to: CGRect(x: 0, y: 0, width: 100, height: 100))
+        let dot = CIImage(color: .white).cropped(to: CGRect(x: 47, y: 75, width: 6, height: 6))
+        let source = dot.composited(over: black)
+
+        var xmp = XMPMetadata.empty
+        xmp.cropAngle = 15.0
+        let rotated = AdobeColorPipeline.shared.applyCrop(image: source, xmp: xmp)
+
+        let ctx = CIContext(options: nil)
+        let outExtent = rotated.extent
+        guard let cg = ctx.createCGImage(rotated, from: outExtent) else {
+            return XCTFail("Failed to render rotated image")
+        }
+        let width = cg.width
+        let height = cg.height
+        let bytesPerRow = width * 4
+        var pixels = [UInt8](repeating: 0, count: bytesPerRow * height)
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        guard let bitmapCtx = CGContext(
+            data: &pixels,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: bytesPerRow,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            return XCTFail("Failed to create bitmap context")
+        }
+        bitmapCtx.draw(cg, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+        // Find brightest pixel in top half (CGContext top-left origin: y < height / 2)
+        var maxSum = -1
+        var maxX = -1
+        for y in 0..<(height / 2) {
+            for x in 0..<width {
+                let idx = y * bytesPerRow + x * 4
+                let lum = Int(pixels[idx]) + Int(pixels[idx + 1]) + Int(pixels[idx + 2])
+                if lum > maxSum {
+                    maxSum = lum
+                    maxX = x
+                }
+            }
+        }
+        XCTAssertGreaterThan(maxSum, 300)
+        XCTAssertLessThan(maxX, width / 2, "Positive cropAngle should rotate CCW so top-center moves left")
+    }
 }

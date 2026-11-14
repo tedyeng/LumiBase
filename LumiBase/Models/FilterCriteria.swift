@@ -1,7 +1,7 @@
 import Foundation
 
 /// Filter criteria for Library search, rating, flag, and color label filtering
-public struct FilterCriteria: Equatable, Sendable {
+public struct FilterCriteria: Equatable, Codable, Sendable {
     public var minimumRating: Int // 0 to 5
     public var ratingExact: Bool // If true, matches exact rating instead of >=
     public var selectedFlag: FlagStatus? // nil means all

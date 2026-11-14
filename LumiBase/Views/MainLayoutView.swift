@@ -3,7 +3,7 @@ import AppKit
 
 /// Main 3-column Lightroom-style desktop window layout with keyboard shortcuts
 public struct MainLayoutView: View {
-    @StateObject private var appState = AppState()
+    @StateObject private var appState = AppState(restoreSessionState: true)
     
     public init() {}
     

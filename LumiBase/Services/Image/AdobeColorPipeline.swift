@@ -393,10 +393,11 @@ public final class AdobeColorPipeline: Sendable {
             return current
         }
         
-        // Angle / Straighten Rotation around image center
+        // Angle / Straighten Rotation around image center.
+        // CoreImage is Y-up (positive radians = CCW on screen), matching SwiftUI's Y-down .rotationEffect(.degrees(-angle)).
         let angleDeg = xmp.cropAngle ?? 0.0
         if abs(angleDeg) > 0.01 {
-            let radians = CGFloat(-angleDeg * .pi / 180.0)
+            let radians = CGFloat(angleDeg * .pi / 180.0)
             let centerX = extent.midX
             let centerY = extent.midY
             

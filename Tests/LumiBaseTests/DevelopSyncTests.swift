@@ -226,4 +226,46 @@ final class DevelopSyncTests: XCTestCase {
         XCTAssertNil(appState.allAssets.first(where: { $0.id == asset1.id })?.xmp.exposure2012)
         XCTAssertNil(appState.allAssets.first(where: { $0.id == asset2.id })?.xmp.exposure2012)
     }
+
+    func testSyncDirectionUsesFirstSelectedPhotoForShiftAndCommandSelection() {
+        var sourceXMP = XMPMetadata.empty
+        sourceXMP.exposure2012 = 1.25
+        sourceXMP.contrast2012 = 15
+
+        var targetXMP = XMPMetadata.empty
+        targetXMP.exposure2012 = -0.50
+        targetXMP.contrast2012 = -10
+
+        var syncOptions = DevelopSyncOptions()
+        syncOptions.checkNone()
+        syncOptions.setAllTone(true)
+
+        // Case 1: Click first photo, then Shift-click second photo
+        let shiftState = AppState()
+        let s1 = makeTestAsset(filename: "s1.arw", xmp: sourceXMP)
+        let s2 = makeTestAsset(filename: "s2.arw", xmp: targetXMP)
+        shiftState.allAssets = [s1, s2]
+        shiftState.selectAsset(s1)
+        shiftState.selectAsset(s2, isRange: true)
+
+        XCTAssertEqual(shiftState.primarySelectedAssetID, s1.id)
+        shiftState.syncDevelopSettings(options: syncOptions)
+        XCTAssertEqual(shiftState.allAssets.first(where: { $0.id == s1.id })?.xmp.exposure2012, 1.25)
+        XCTAssertEqual(shiftState.allAssets.first(where: { $0.id == s2.id })?.xmp.exposure2012, 1.25)
+        XCTAssertEqual(shiftState.allAssets.first(where: { $0.id == s2.id })?.xmp.contrast2012, 15)
+
+        // Case 2: Click first photo, then Command-click second photo
+        let cmdState = AppState()
+        let c1 = makeTestAsset(filename: "c1.arw", xmp: sourceXMP)
+        let c2 = makeTestAsset(filename: "c2.arw", xmp: targetXMP)
+        cmdState.allAssets = [c1, c2]
+        cmdState.selectAsset(c1)
+        cmdState.selectAsset(c2, isToggle: true)
+
+        XCTAssertEqual(cmdState.primarySelectedAssetID, c1.id)
+        cmdState.syncDevelopSettings(options: syncOptions)
+        XCTAssertEqual(cmdState.allAssets.first(where: { $0.id == c1.id })?.xmp.exposure2012, 1.25)
+        XCTAssertEqual(cmdState.allAssets.first(where: { $0.id == c2.id })?.xmp.exposure2012, 1.25)
+        XCTAssertEqual(cmdState.allAssets.first(where: { $0.id == c2.id })?.xmp.contrast2012, 15)
+    }
 }

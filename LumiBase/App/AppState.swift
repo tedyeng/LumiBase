@@ -184,7 +184,17 @@ public final class AppState: ObservableObject {
             }
         }
     }
+    public static let defaultFilmstripHeight: CGFloat = 85
+    public static let minFilmstripHeight: CGFloat = 60
+    public static let maxFilmstripHeight: CGFloat = 220
+
     @Published public var thumbnailSize: CGFloat = 220
+    @Published public var filmstripHeight: CGFloat = AppState.defaultFilmstripHeight {
+        didSet {
+            let clamped = Self.clampFilmstripHeight(filmstripHeight)
+            if clamped != filmstripHeight { filmstripHeight = clamped }
+        }
+    }
     @Published public var gridColumnsCount: Int = 4
     @Published public var filterCriteria: FilterCriteria = FilterCriteria() { didSet { invalidateCollection() } }
     @Published public var sortOrder: AssetSortOrder = .captureDateAscending { didSet { invalidateCollection() } }
@@ -193,6 +203,29 @@ public final class AppState: ObservableObject {
     @Published public var isLeftSidebarVisible: Bool = true
     @Published public var isRightInspectorVisible: Bool = true
     @Published public var isFilmstripVisible: Bool = true
+
+    private enum SessionKeys {
+        static let filmstripHeight = "session.filmstripHeight"
+        static let workspaceMode = "session.workspaceMode"
+        static let viewMode = "session.viewMode"
+        static let thumbnailSize = "session.thumbnailSize"
+        static let isLeftSidebarVisible = "session.isLeftSidebarVisible"
+        static let isRightInspectorVisible = "session.isRightInspectorVisible"
+        static let isFilmstripVisible = "session.isFilmstripVisible"
+        static let sortOrder = "session.sortOrder"
+        static let filterCriteria = "session.filterCriteria"
+        static let lastFolderPath = "session.lastFolderPath"
+        static let lastFolderBookmark = "session.lastFolderBookmark"
+        static let lastSelectedAssetID = "session.lastSelectedAssetID"
+    }
+
+    private let sessionDefaults: UserDefaults?
+    private var isRestoringSession: Bool = false
+    private var pendingRestoreSelectedAssetID: String?
+
+    public static func clampFilmstripHeight(_ height: CGFloat) -> CGFloat {
+        min(maxFilmstripHeight, max(minFilmstripHeight, height))
+    }
     
     // Native Highlights (Accepted-B) toggle - default true
     @Published public private(set) var highlightsRenderRevision: UInt64 = 0
@@ -265,10 +298,13 @@ public final class AppState: ObservableObject {
                 },
                 fullFolderScan: @escaping @Sendable (URL) async -> [PhotoAsset] = { url in
                     await FolderScanner.scanDirectory(url: url)
-                }) {
+                },
+                restoreSessionState: Bool = false,
+                sessionDefaults: UserDefaults? = nil) {
         self.previewPreloader = preloader
         self.quickFolderScan = quickFolderScan
         self.fullFolderScan = fullFolderScan
+        self.sessionDefaults = restoreSessionState ? (sessionDefaults ?? .standard) : sessionDefaults
         directoryWatcher.onChange = { [weak self] in
             Task { @MainActor in
                 self?.scheduleFolderRefresh()
@@ -303,6 +339,11 @@ public final class AppState: ObservableObject {
         )
         .sink { [weak self] in self?.schedulePreviewRefresh() }
         .store(in: &previewSubscriptions)
+
+        if restoreSessionState {
+            restoreLastSession()
+        }
+        setupSessionPersistence()
     }
 
     deinit {
@@ -708,6 +749,10 @@ public final class AppState: ObservableObject {
         folderScanGeneration &+= 1
         let generation = folderScanGeneration
         folderScanTask?.cancel()
+        if !isRestoringSession {
+            pendingRestoreSelectedAssetID = nil
+            saveLastFolder(url)
+        }
         retainCurrentFolderAccess(for: url)
         currentFolderURL = url
         allAssets = []
@@ -739,9 +784,9 @@ public final class AppState: ObservableObject {
 
             let assets = await fullFolderScan(url)
             guard !Task.isCancelled, self.folderScanGeneration == generation else { return }
-            self.publishFolderAssets(assets)
             self.isScanning = false
             self.folderScanTask = nil
+            self.publishFolderAssets(assets)
         }
     }
 
@@ -776,6 +821,17 @@ public final class AppState: ObservableObject {
             invalidateDisplaySource()
         }
         let sorted = displayedAssets
+        if let pendingID = pendingRestoreSelectedAssetID {
+            if let restored = sorted.first(where: { $0.id == pendingID }) {
+                primarySelectedAssetID = restored.id
+                selectionAnchorAssetID = restored.id
+                selectedAssetIDs = [restored.id]
+                pendingRestoreSelectedAssetID = nil
+                return
+            } else if !isScanning {
+                pendingRestoreSelectedAssetID = nil
+            }
+        }
         if primarySelectedAssetID == nil || !safe.contains(where: { $0.id == primarySelectedAssetID }) {
             if let first = sorted.first {
                 primarySelectedAssetID = first.id
@@ -786,6 +842,130 @@ public final class AppState: ObservableObject {
                 selectionAnchorAssetID = nil
                 selectedAssetIDs = []
             }
+        }
+    }
+
+    // MARK: - Session Persistence
+
+    private func persistSessionValue(_ value: Any, forKey key: String) {
+        guard !isRestoringSession, let defaults = sessionDefaults else { return }
+        defaults.set(value, forKey: key)
+    }
+
+    private func setupSessionPersistence() {
+        guard sessionDefaults != nil else { return }
+        $filmstripHeight.dropFirst().sink { [weak self] val in
+            self?.persistSessionValue(Double(Self.clampFilmstripHeight(val)), forKey: SessionKeys.filmstripHeight)
+        }.store(in: &previewSubscriptions)
+        $workspaceMode.dropFirst().sink { [weak self] val in
+            self?.persistSessionValue(val.rawValue, forKey: SessionKeys.workspaceMode)
+        }.store(in: &previewSubscriptions)
+        $viewMode.dropFirst().sink { [weak self] val in
+            self?.persistSessionValue(val.rawValue, forKey: SessionKeys.viewMode)
+        }.store(in: &previewSubscriptions)
+        $thumbnailSize.dropFirst().sink { [weak self] val in
+            self?.persistSessionValue(Double(val), forKey: SessionKeys.thumbnailSize)
+        }.store(in: &previewSubscriptions)
+        $isLeftSidebarVisible.dropFirst().sink { [weak self] val in
+            self?.persistSessionValue(val, forKey: SessionKeys.isLeftSidebarVisible)
+        }.store(in: &previewSubscriptions)
+        $isRightInspectorVisible.dropFirst().sink { [weak self] val in
+            self?.persistSessionValue(val, forKey: SessionKeys.isRightInspectorVisible)
+        }.store(in: &previewSubscriptions)
+        $isFilmstripVisible.dropFirst().sink { [weak self] val in
+            self?.persistSessionValue(val, forKey: SessionKeys.isFilmstripVisible)
+        }.store(in: &previewSubscriptions)
+        $sortOrder.dropFirst().sink { [weak self] val in
+            self?.persistSessionValue(val.rawValue, forKey: SessionKeys.sortOrder)
+        }.store(in: &previewSubscriptions)
+        $filterCriteria.dropFirst().sink { [weak self] val in
+            if let encoded = try? JSONEncoder().encode(val) {
+                self?.persistSessionValue(encoded, forKey: SessionKeys.filterCriteria)
+            }
+        }.store(in: &previewSubscriptions)
+
+        $primarySelectedAssetID.dropFirst()
+            .sink { [weak self] newID in
+                guard let self, !self.isRestoringSession,
+                      self.pendingRestoreSelectedAssetID == nil,
+                      self.currentFolderURL != nil,
+                      let defaults = self.sessionDefaults else { return }
+                if let newID {
+                    defaults.set(newID, forKey: SessionKeys.lastSelectedAssetID)
+                } else {
+                    defaults.removeObject(forKey: SessionKeys.lastSelectedAssetID)
+                }
+            }
+            .store(in: &previewSubscriptions)
+    }
+
+    private func saveLastFolder(_ url: URL) {
+        guard let defaults = sessionDefaults else { return }
+        defaults.set(url.path, forKey: SessionKeys.lastFolderPath)
+        if let bookmark = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil) {
+            defaults.set(bookmark, forKey: SessionKeys.lastFolderBookmark)
+        }
+    }
+
+    private func restoreLastSession() {
+        guard let defaults = sessionDefaults else { return }
+        isRestoringSession = true
+        defer { isRestoringSession = false }
+
+        if let savedHeight = defaults.object(forKey: SessionKeys.filmstripHeight) as? Double {
+            filmstripHeight = Self.clampFilmstripHeight(CGFloat(savedHeight))
+        }
+        if let rawWorkspace = defaults.string(forKey: SessionKeys.workspaceMode),
+           let mode = WorkspaceMode(rawValue: rawWorkspace) {
+            workspaceMode = mode
+        }
+        if let rawView = defaults.string(forKey: SessionKeys.viewMode),
+           let mode = ViewMode(rawValue: rawView) {
+            viewMode = mode
+        }
+        if let savedThumbSize = defaults.object(forKey: SessionKeys.thumbnailSize) as? Double, savedThumbSize > 0 {
+            thumbnailSize = CGFloat(savedThumbSize)
+        }
+        if let leftVisible = defaults.object(forKey: SessionKeys.isLeftSidebarVisible) as? Bool {
+            isLeftSidebarVisible = leftVisible
+        }
+        if let rightVisible = defaults.object(forKey: SessionKeys.isRightInspectorVisible) as? Bool {
+            isRightInspectorVisible = rightVisible
+        }
+        if let filmstripVisible = defaults.object(forKey: SessionKeys.isFilmstripVisible) as? Bool {
+            isFilmstripVisible = filmstripVisible
+        }
+        if let rawSort = defaults.string(forKey: SessionKeys.sortOrder),
+           let order = AssetSortOrder(rawValue: rawSort) {
+            sortOrder = order
+        }
+        if let filterData = defaults.data(forKey: SessionKeys.filterCriteria),
+           let decoded = try? JSONDecoder().decode(FilterCriteria.self, from: filterData) {
+            filterCriteria = decoded
+        }
+
+        pendingRestoreSelectedAssetID = defaults.string(forKey: SessionKeys.lastSelectedAssetID)
+
+        if let bookmark = defaults.data(forKey: SessionKeys.lastFolderBookmark) {
+            var isStale = false
+            if let resolvedURL = try? URL(
+                resolvingBookmarkData: bookmark,
+                options: .withSecurityScope,
+                relativeTo: nil,
+                bookmarkDataIsStale: &isStale
+            ), FileManager.default.fileExists(atPath: resolvedURL.path) {
+                if isStale,
+                   let refreshed = try? resolvedURL.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil) {
+                    defaults.set(refreshed, forKey: SessionKeys.lastFolderBookmark)
+                }
+                openFolder(url: resolvedURL)
+                return
+            }
+        }
+
+        if let path = defaults.string(forKey: SessionKeys.lastFolderPath),
+           FileManager.default.fileExists(atPath: path) {
+            openFolder(url: URL(fileURLWithPath: path))
         }
     }
     
@@ -881,18 +1061,7 @@ public final class AppState: ObservableObject {
         }
         
         let currentList = displayedAssets
-        
-        // If primary selection changes, commit any pending live develop XMP and reset live cache
-        if primarySelectedAssetID != asset.id {
-            if let liveID = liveDevelopAssetID, let live = liveDevelopXMP, let index = allAssets.firstIndex(where: { $0.id == liveID }) {
-                allAssets[index].xmp = live
-                debouncedSyncXMP(for: allAssets[index])
-            }
-            liveDevelopAssetID = nil
-            liveDevelopXMP = nil
-            liveCommitTask?.cancel()
-            isBeforeToggled = false
-        }
+        let previousPrimaryID = primarySelectedAssetID
         
         if isRange {
             // Determine starting point (anchor)
@@ -903,6 +1072,7 @@ public final class AppState: ObservableObject {
                 selectedAssetIDs = [asset.id]
                 primarySelectedAssetID = asset.id
                 selectionAnchorAssetID = asset.id
+                commitLiveDevelopIfPrimaryChanged(from: previousPrimaryID)
                 return
             }
             
@@ -911,7 +1081,12 @@ public final class AppState: ObservableObject {
             let rangeIDs = currentList[startIndex...endIndex].map { $0.id }
             
             selectedAssetIDs = Set(rangeIDs)
-            primarySelectedAssetID = asset.id
+            // Keep the existing primary ("most-selected") photo if it stays in the range so Sync/Loupe target stays on the initial selection.
+            if let existingPrimary = primarySelectedAssetID, selectedAssetIDs.contains(existingPrimary) {
+                // Keep primarySelectedAssetID unchanged
+            } else {
+                primarySelectedAssetID = selectedAssetIDs.contains(anchorID) ? anchorID : asset.id
+            }
             // Note: In standard macOS / Lightroom, anchor remains at the original starting point during shift-click
             if selectionAnchorAssetID == nil {
                 selectionAnchorAssetID = anchorID
@@ -920,18 +1095,37 @@ public final class AppState: ObservableObject {
             if selectedAssetIDs.contains(asset.id) {
                 selectedAssetIDs.remove(asset.id)
                 if primarySelectedAssetID == asset.id {
-                    primarySelectedAssetID = selectedAssetIDs.first
+                    primarySelectedAssetID = currentList.first(where: { selectedAssetIDs.contains($0.id) })?.id ?? selectedAssetIDs.first
                 }
             } else {
                 selectedAssetIDs.insert(asset.id)
-                primarySelectedAssetID = asset.id
+                // Preserve the existing primary photo when adding more photos via Cmd/Ctrl+click.
+                if let existingPrimary = primarySelectedAssetID, selectedAssetIDs.contains(existingPrimary) {
+                    // Keep primarySelectedAssetID unchanged
+                } else {
+                    primarySelectedAssetID = asset.id
+                }
             }
-            selectionAnchorAssetID = asset.id
+            selectionAnchorAssetID = selectedAssetIDs.isEmpty ? nil : asset.id
         } else {
             selectedAssetIDs = [asset.id]
             primarySelectedAssetID = asset.id
             selectionAnchorAssetID = asset.id
         }
+        
+        commitLiveDevelopIfPrimaryChanged(from: previousPrimaryID)
+    }
+
+    private func commitLiveDevelopIfPrimaryChanged(from previousPrimaryID: String?) {
+        guard primarySelectedAssetID != previousPrimaryID else { return }
+        if let liveID = liveDevelopAssetID, let live = liveDevelopXMP, let index = allAssets.firstIndex(where: { $0.id == liveID }) {
+            allAssets[index].xmp = live
+            debouncedSyncXMP(for: allAssets[index])
+        }
+        liveDevelopAssetID = nil
+        liveDevelopXMP = nil
+        liveCommitTask?.cancel()
+        isBeforeToggled = false
     }
     
     /// Backward-compatibility overload for simple multiSelect boolean
@@ -996,11 +1190,19 @@ public final class AppState: ObservableObject {
         let targetAssets = selectedAssets.isEmpty ? (primarySelectedAsset != nil ? [primarySelectedAsset!] : []) : selectedAssets
         guard !targetAssets.isEmpty else { return }
         
+        let clamped = max(0, min(5, rating))
+        let beforeList = displayedAssets
+        let previousPrimaryID = primarySelectedAssetID
+        
         for asset in targetAssets {
             var updated = asset
-            updated.xmp.rating = max(0, min(5, rating))
+            updated.xmp.rating = clamped
             updateAsset(updated)
             syncXMP(for: updated)
+        }
+        
+        if clamped == 0 {
+            selectNextAfterZeroRating(from: beforeList, previousPrimaryID: previousPrimaryID)
         }
     }
     
@@ -1023,6 +1225,10 @@ public final class AppState: ObservableObject {
         let targetAssets = selectedAssets.isEmpty ? (primarySelectedAsset != nil ? [primarySelectedAsset!] : []) : selectedAssets
         guard !targetAssets.isEmpty else { return }
         
+        let beforeList = displayedAssets
+        let previousPrimaryID = primarySelectedAssetID
+        var reachedZero = false
+        
         for asset in targetAssets {
             var updated = asset
             let newRating = max(0, updated.xmp.rating - 1)
@@ -1030,6 +1236,29 @@ public final class AppState: ObservableObject {
                 updated.xmp.rating = newRating
                 updateAsset(updated)
                 syncXMP(for: updated)
+                if newRating == 0 {
+                    reachedZero = true
+                }
+            }
+        }
+        
+        if reachedZero {
+            selectNextAfterZeroRating(from: beforeList, previousPrimaryID: previousPrimaryID)
+        }
+    }
+
+    private func selectNextAfterZeroRating(from beforeList: [PhotoAsset], previousPrimaryID: String?) {
+        let afterList = displayedAssets
+        let afterIDs = Set(afterList.map(\.id))
+        let previousIndex = previousPrimaryID.flatMap { id in beforeList.firstIndex { $0.id == id } } ?? 0
+
+        if let next = beforeList.dropFirst(previousIndex + 1).first(where: { afterIDs.contains($0.id) }) {
+            selectAsset(next)
+        } else if let previousPrimaryID, !afterIDs.contains(previousPrimaryID) {
+            if let fallback = beforeList.prefix(previousIndex).reversed().first(where: { afterIDs.contains($0.id) }) ?? afterList.first {
+                selectAsset(fallback)
+            } else {
+                deselectAll()
             }
         }
     }

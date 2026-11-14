@@ -319,8 +319,14 @@ public final class RAWImageLoader: @unchecked Sendable {
                     isFullRes: isFull,
                     isCurrent: isCurrent
                 ) else { return nil }
-                let scale = targetExtent.width / native.extent.width
-                processed = (abs(scale - 1.0) < 0.001) ? native : native.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+                if fullResolution {
+                    processed = native
+                } else {
+                    let maxTarget = max(targetExtent.width, targetExtent.height)
+                    let maxNative = max(native.extent.width, native.extent.height)
+                    let scale = maxNative > maxTarget ? (maxTarget / maxNative) : 1.0
+                    processed = (abs(scale - 1.0) < 0.001) ? native : native.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+                }
             } else {
                 processed = AdobeColorPipeline.shared.process(image: targetBase, cameraModel: cameraModel, xmp: xmp, baseHolder: baseHolder)
             }

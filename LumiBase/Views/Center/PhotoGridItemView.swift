@@ -83,7 +83,7 @@ public struct PhotoGridItemView: View {
                         }
                         .padding(.horizontal, 4)
                         .padding(.vertical, 2)
-                        .background(Color.green.opacity(0.85))
+                        .background(asset.xmp.hasDevelopEdits ? Color.green.opacity(0.85) : Color.blue.opacity(0.85))
                         .cornerRadius(2)
                         .help("XMP Sidecar Loaded" + (asset.xmp.hasDevelopEdits ? " (with Camera Raw Adjustments)" : ""))
                     }

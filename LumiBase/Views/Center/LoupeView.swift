@@ -1029,7 +1029,7 @@ public struct LoupeView: View {
                                     }
                                     .padding(.horizontal, 4)
                                     .padding(.vertical, 1.5)
-                                    .background(Color.green.opacity(0.85))
+                                    .background(asset.xmp.hasDevelopEdits ? Color.green.opacity(0.85) : Color.blue.opacity(0.85))
                                     .cornerRadius(2)
                                 }
                             }
@@ -1266,7 +1266,7 @@ public struct LoupeView: View {
             
             // Bottom Filmstrip
             if appState.isFilmstripVisible && !appState.allAssets.isEmpty {
-                Divider().background(LightroomTheme.dividerColor)
+                FilmstripResizeHandle(appState: appState)
                 FilmstripView(appState: appState)
             }
         }

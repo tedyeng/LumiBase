@@ -179,22 +179,28 @@ final class LumiBaseEngineTests: XCTestCase {
         XCTAssertEqual(appState.primarySelectedAssetID, asset1.id)
         XCTAssertEqual(appState.selectionAnchorAssetID, asset1.id)
         
-        // 2. Control/Command click on photo 3 (toggle add)
+        // 2. Control/Command click on photo 3 (toggle add) keeps photo 1 as primary
         appState.selectAsset(asset3, isToggle: true)
         XCTAssertEqual(appState.selectedAssetIDs, [asset1.id, asset3.id])
-        XCTAssertEqual(appState.primarySelectedAssetID, asset3.id)
+        XCTAssertEqual(appState.primarySelectedAssetID, asset1.id)
         XCTAssertEqual(appState.selectionAnchorAssetID, asset3.id)
         
-        // 3. Control/Command click on photo 5 (toggle add)
+        // 3. Control/Command click on photo 5 (toggle add) still keeps photo 1 as primary
         appState.selectAsset(asset5, isToggle: true)
         XCTAssertEqual(appState.selectedAssetIDs, [asset1.id, asset3.id, asset5.id])
-        XCTAssertEqual(appState.primarySelectedAssetID, asset5.id)
+        XCTAssertEqual(appState.primarySelectedAssetID, asset1.id)
         XCTAssertEqual(appState.selectionAnchorAssetID, asset5.id)
         
         // 4. Control/Command click on photo 3 again (toggle remove)
         appState.selectAsset(asset3, isToggle: true)
         XCTAssertEqual(appState.selectedAssetIDs, [asset1.id, asset5.id])
         XCTAssertFalse(appState.selectedAssetIDs.contains(asset3.id))
+        XCTAssertEqual(appState.primarySelectedAssetID, asset1.id)
+
+        // 5. Control/Command click on primary photo 1 (toggle remove) promotes remaining selected photo
+        appState.selectAsset(asset1, isToggle: true)
+        XCTAssertEqual(appState.selectedAssetIDs, [asset5.id])
+        XCTAssertEqual(appState.primarySelectedAssetID, asset5.id)
     }
     
     @MainActor
@@ -213,28 +219,28 @@ final class LumiBaseEngineTests: XCTestCase {
         XCTAssertEqual(appState.selectedAssetIDs, [asset1.id])
         XCTAssertEqual(appState.selectionAnchorAssetID, asset1.id)
         
-        // 2. Shift-click on photo 4 -> should select photos 1, 2, 3, 4
+        // 2. Shift-click on photo 4 -> should select photos 1, 2, 3, 4 and keep photo 1 as primary
         appState.selectAsset(asset4, isRange: true)
         XCTAssertEqual(appState.selectedAssetIDs, [asset1.id, asset2.id, asset3.id, asset4.id])
-        XCTAssertEqual(appState.primarySelectedAssetID, asset4.id)
+        XCTAssertEqual(appState.primarySelectedAssetID, asset1.id)
         // Anchor remains at photo 1
         XCTAssertEqual(appState.selectionAnchorAssetID, asset1.id)
         
-        // 3. Shift-click on photo 2 -> range shrinks to 1, 2
+        // 3. Shift-click on photo 2 -> range shrinks to 1, 2, primary remains photo 1
         appState.selectAsset(asset2, isRange: true)
         XCTAssertEqual(appState.selectedAssetIDs, [asset1.id, asset2.id])
-        XCTAssertEqual(appState.primarySelectedAssetID, asset2.id)
+        XCTAssertEqual(appState.primarySelectedAssetID, asset1.id)
         XCTAssertEqual(appState.selectionAnchorAssetID, asset1.id)
         
-        // 4. Single click on photo 5 resets anchor to 5
+        // 4. Single click on photo 5 resets anchor and primary to 5
         appState.selectAsset(asset5)
         XCTAssertEqual(appState.selectedAssetIDs, [asset5.id])
         XCTAssertEqual(appState.selectionAnchorAssetID, asset5.id)
         
-        // 5. Shift-click backwards to photo 3 -> should select photos 3, 4, 5
+        // 5. Shift-click backwards to photo 3 -> should select photos 3, 4, 5 and keep photo 5 as primary
         appState.selectAsset(asset3, isRange: true)
         XCTAssertEqual(appState.selectedAssetIDs, [asset3.id, asset4.id, asset5.id])
-        XCTAssertEqual(appState.primarySelectedAssetID, asset3.id)
+        XCTAssertEqual(appState.primarySelectedAssetID, asset5.id)
         XCTAssertEqual(appState.selectionAnchorAssetID, asset5.id)
     }
     
@@ -499,6 +505,118 @@ final class LumiBaseEngineTests: XCTestCase {
         // Decrease: 5 -> 4
         appState.decreaseRating()
         XCTAssertEqual(appState.primarySelectedAsset?.xmp.rating, 4)
+    }
+
+    @MainActor
+    func testSettingRatingToZeroSelectsNextPhoto() {
+        var xmp1 = XMPMetadata.empty
+        xmp1.rating = 2
+        var xmp2 = XMPMetadata.empty
+        xmp2.rating = 1
+        var xmp3 = XMPMetadata.empty
+        xmp3.rating = 3
+
+        let a1 = PhotoAsset(fileURL: URL(fileURLWithPath: "/photos/DSC0001.ARW"), xmp: xmp1)
+        let a2 = PhotoAsset(fileURL: URL(fileURLWithPath: "/photos/DSC0002.ARW"), xmp: xmp2)
+        let a3 = PhotoAsset(fileURL: URL(fileURLWithPath: "/photos/DSC0003.ARW"), xmp: xmp3)
+
+        // 1. Unfiltered: setRating(0) on a2 selects next photo a3
+        let appState = AppState()
+        appState.allAssets = [a1, a2, a3]
+        appState.selectAsset(a2)
+        appState.setRating(0)
+        XCTAssertEqual(appState.allAssets.first(where: { $0.id == a2.id })?.xmp.rating, 0)
+        XCTAssertEqual(appState.primarySelectedAssetID, a3.id)
+        XCTAssertEqual(appState.selectedAssetIDs, [a3.id])
+
+        // 2. Filtered (>= 1★): decreaseRating() to 0 on a2 removes a2 from displayedAssets and selects next photo a3
+        let filteredState = AppState()
+        filteredState.allAssets = [a1, a2, a3]
+        filteredState.filterCriteria.minimumRating = 1
+        filteredState.selectAsset(a2)
+        filteredState.decreaseRating()
+        XCTAssertEqual(filteredState.allAssets.first(where: { $0.id == a2.id })?.xmp.rating, 0)
+        XCTAssertEqual(filteredState.displayedAssets.map(\.id), [a1.id, a3.id])
+        XCTAssertEqual(filteredState.primarySelectedAssetID, a3.id)
+        XCTAssertEqual(filteredState.selectedAssetIDs, [a3.id])
+
+        // 3. Filtered (>= 1★) on last photo a3: setRating(0) falls back to remaining previous photo a1
+        filteredState.setRating(0)
+        XCTAssertEqual(filteredState.displayedAssets.map(\.id), [a1.id])
+        XCTAssertEqual(filteredState.primarySelectedAssetID, a1.id)
+        XCTAssertEqual(filteredState.selectedAssetIDs, [a1.id])
+    }
+
+    @MainActor
+    func testFilmstripHeightClampingAndSessionStatePersistence() async throws {
+        let suiteName = "LumiBaseSessionTest.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let tempFolder = inspectionTestScratchURL(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempFolder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempFolder) }
+
+        let file1 = tempFolder.appendingPathComponent("DSC0010.ARW")
+        let file2 = tempFolder.appendingPathComponent("DSC0020.ARW")
+        var xmp1 = XMPMetadata.empty
+        xmp1.rating = 2
+        var xmp2 = XMPMetadata.empty
+        xmp2.rating = 4
+        let asset1 = PhotoAsset(fileURL: file1, xmp: xmp1)
+        let asset2 = PhotoAsset(fileURL: file2, xmp: xmp2)
+
+        let firstSession = AppState(
+            preloader: PreviewPreloader(observeMemoryPressure: false),
+            quickFolderScan: { _ in [asset1, asset2] },
+            fullFolderScan: { _ in [asset1, asset2] },
+            restoreSessionState: true,
+            sessionDefaults: defaults
+        )
+
+        // Clamping check
+        firstSession.filmstripHeight = 999
+        XCTAssertEqual(firstSession.filmstripHeight, AppState.maxFilmstripHeight)
+        firstSession.filmstripHeight = 10
+        XCTAssertEqual(firstSession.filmstripHeight, AppState.minFilmstripHeight)
+        firstSession.filmstripHeight = 148
+
+        firstSession.workspaceMode = .develop
+        firstSession.viewMode = .loupe
+        firstSession.thumbnailSize = 310
+        firstSession.isLeftSidebarVisible = false
+        firstSession.isRightInspectorVisible = false
+        firstSession.isFilmstripVisible = true
+        firstSession.sortOrder = .ratingDescending
+        var criteria = FilterCriteria()
+        criteria.minimumRating = 2
+        firstSession.filterCriteria = criteria
+
+        firstSession.openFolder(url: tempFolder)
+        try await Task.sleep(nanoseconds: 50_000_000)
+        firstSession.selectAsset(asset2)
+
+        // Relaunch with the same defaults
+        let restoredSession = AppState(
+            preloader: PreviewPreloader(observeMemoryPressure: false),
+            quickFolderScan: { _ in [asset1, asset2] },
+            fullFolderScan: { _ in [asset1, asset2] },
+            restoreSessionState: true,
+            sessionDefaults: defaults
+        )
+        try await Task.sleep(nanoseconds: 50_000_000)
+
+        XCTAssertEqual(restoredSession.filmstripHeight, 148)
+        XCTAssertEqual(restoredSession.workspaceMode, .develop)
+        XCTAssertEqual(restoredSession.viewMode, .loupe)
+        XCTAssertEqual(restoredSession.thumbnailSize, 310)
+        XCTAssertFalse(restoredSession.isLeftSidebarVisible)
+        XCTAssertFalse(restoredSession.isRightInspectorVisible)
+        XCTAssertTrue(restoredSession.isFilmstripVisible)
+        XCTAssertEqual(restoredSession.sortOrder, .ratingDescending)
+        XCTAssertEqual(restoredSession.filterCriteria, criteria)
+        XCTAssertEqual(restoredSession.currentFolderURL?.standardizedFileURL, tempFolder.standardizedFileURL)
+        XCTAssertEqual(restoredSession.primarySelectedAssetID, asset2.id)
     }
     
     func testAdobeColorPipelineEliminatesDoubleProcessing() {

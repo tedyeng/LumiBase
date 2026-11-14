@@ -29,6 +29,7 @@ public struct FilmstripView: View {
                         
                         FilmstripItemView(
                             asset: asset,
+                            itemHeight: max(40, appState.filmstripHeight - 20),
                             isSelected: isSelected,
                             isPrimary: isPrimary,
                             onSelect: { isToggle, isRange in
@@ -79,7 +80,7 @@ public struct FilmstripView: View {
                     restoreActivePhoto(using: proxy)
                 }
             }
-            .frame(height: 85)
+            .frame(height: appState.filmstripHeight)
             .background(PhotoKeyboardFocusSurface(appState: appState))
             .background(LightroomTheme.headerBackground)
             .onChange(of: activeScrollTargetID) { _, _ in
@@ -90,6 +91,15 @@ public struct FilmstripView: View {
             }
             .onChange(of: appState.isFilmstripVisible) { _, visible in
                 if visible { restoreActivePhoto(using: proxy) }
+            }
+            .onChange(of: appState.filterCriteria) { _, _ in
+                restoreActivePhoto(using: proxy)
+            }
+            .onChange(of: appState.sortOrder) { _, _ in
+                restoreActivePhoto(using: proxy)
+            }
+            .onChange(of: appState.isScanning) { _, scanning in
+                if !scanning { restoreActivePhoto(using: proxy) }
             }
         }
     }
@@ -138,8 +148,82 @@ final class FilmstripWheelView: NSView {
     }
 }
 
+/// Draggable divider above the bottom filmstrip to resize thumbnail height.
+public struct FilmstripResizeHandle: View {
+    @ObservedObject var appState: AppState
+    @State private var isHovering = false
+    @State private var isDragging = false
+    @State private var dragStartHeight: CGFloat?
+    @State private var hasPushedCursor = false
+
+    public init(appState: AppState) {
+        self.appState = appState
+    }
+
+    public var body: some View {
+        ZStack {
+            Rectangle()
+                .fill(isDragging || isHovering ? LightroomTheme.accentYellow.opacity(0.7) : LightroomTheme.dividerColor)
+                .frame(height: isDragging || isHovering ? 2 : 1)
+
+            if isDragging || isHovering {
+                Capsule()
+                    .fill(LightroomTheme.accentYellow)
+                    .frame(width: 36, height: 3)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 8)
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            isHovering = hovering
+            if hovering && !hasPushedCursor {
+                NSCursor.resizeUpDown.push()
+                hasPushedCursor = true
+            } else if !hovering && !isDragging && hasPushedCursor {
+                NSCursor.pop()
+                hasPushedCursor = false
+            }
+        }
+        .gesture(
+            DragGesture(minimumDistance: 1, coordinateSpace: .global)
+                .onChanged { value in
+                    if dragStartHeight == nil {
+                        dragStartHeight = appState.filmstripHeight
+                    }
+                    isDragging = true
+                    if !hasPushedCursor {
+                        NSCursor.resizeUpDown.push()
+                        hasPushedCursor = true
+                    }
+                    let base = dragStartHeight ?? appState.filmstripHeight
+                    appState.filmstripHeight = AppState.clampFilmstripHeight(base - value.translation.height)
+                }
+                .onEnded { _ in
+                    isDragging = false
+                    dragStartHeight = nil
+                    if !isHovering && hasPushedCursor {
+                        NSCursor.pop()
+                        hasPushedCursor = false
+                    }
+                }
+        )
+        .onTapGesture(count: 2) {
+            appState.filmstripHeight = AppState.defaultFilmstripHeight
+        }
+        .onDisappear {
+            if hasPushedCursor {
+                NSCursor.pop()
+                hasPushedCursor = false
+            }
+        }
+        .help("Drag to resize filmstrip thumbnails (Double-click to reset)")
+    }
+}
+
 struct FilmstripItemView: View {
     let asset: PhotoAsset
+    var itemHeight: CGFloat = 65
     let isSelected: Bool
     let isPrimary: Bool
     let onSelect: (_ isToggle: Bool, _ isRange: Bool) -> Void
@@ -147,7 +231,11 @@ struct FilmstripItemView: View {
     
     @State private var thumbnail: NSImage?
     @State private var thumbnailIdentity: String?
-    private var previewIdentity: String { ThumbnailLoader.cacheKey(for: asset, maxPixelSize: 180) }
+    private var itemWidth: CGFloat { round(itemHeight * (90.0 / 65.0)) }
+    private var requestedPixelSize: Int {
+        itemHeight <= 80 ? 180 : (itemHeight <= 130 ? 300 : 440)
+    }
+    private var previewIdentity: String { ThumbnailLoader.cacheKey(for: asset, maxPixelSize: requestedPixelSize) }
     
     var body: some View {
         ZStack(alignment: .bottomLeading) {
@@ -167,15 +255,16 @@ struct FilmstripItemView: View {
                     Color.white.opacity(0.18)
                 }
             }
-            .frame(width: 90, height: 65)
+            .frame(width: itemWidth, height: itemHeight)
             .clipped()
             
             // Flags & ratings overlay
             HStack(spacing: 3) {
                 if asset.xmp.isLoadedFromSidecar || asset.xmp.hasDevelopEdits {
-                    Text(asset.xmp.hasDevelopEdits ? "Edited" : "XMP")
+                    let isEdited = asset.xmp.hasDevelopEdits
+                    Text(isEdited ? "Edited" : "XMP")
                         .font(.system(size: 6, weight: .bold))
-                        .foregroundColor(.green)
+                        .foregroundColor(isEdited ? .green : .cyan)
                         .padding(.horizontal, 2)
                         .background(Color.black.opacity(0.6))
                         .cornerRadius(2)
@@ -210,8 +299,9 @@ struct FilmstripItemView: View {
             let isRange = flags.contains(.shift)
             onSelect(isToggle, isRange)
         }
-        .task(id: ThumbnailLoader.cacheKey(for: asset, maxPixelSize: 180)) {
-            if let cached = ThumbnailLoader.cachedMemoryThumbnail(for: asset, maxPixelSize: 180) {
+        .task(id: previewIdentity) {
+            let maxPixelSize = requestedPixelSize
+            if let cached = ThumbnailLoader.cachedMemoryThumbnail(for: asset, maxPixelSize: maxPixelSize) {
                 self.thumbnail = cached
                 self.thumbnailIdentity = previewIdentity
                 onPreview(cached)
@@ -220,8 +310,8 @@ struct FilmstripItemView: View {
                 onPreview(nil)
             }
             let loaded = asset.xmp.hasDevelopEdits
-                ? await ThumbnailLoader.shared.loadThumbnail(for: asset, maxPixelSize: 180)
-                : await ThumbnailLoader.shared.loadCameraPreview(for: asset, maxPixelSize: 180)
+                ? await ThumbnailLoader.shared.loadThumbnail(for: asset, maxPixelSize: maxPixelSize)
+                : await ThumbnailLoader.shared.loadCameraPreview(for: asset, maxPixelSize: maxPixelSize)
             guard !Task.isCancelled else { return }
             await MainActor.run {
                 self.thumbnail = loaded
