@@ -91,15 +91,38 @@ public struct TopFilterBarView: View {
                     .frame(height: 14)
                     .background(LightroomTheme.dividerColor)
             
-                // Rating Filter Buttons (>= 1 to 5)
+                // Rating Filter Buttons (Non-Rated + >= 1 to 5)
                 HStack(spacing: 4) {
                     Text("Rating:")
                         .font(.system(size: 11))
                         .foregroundColor(LightroomTheme.textSecondary)
+
+                    Button {
+                        if appState.filterCriteria.isUnratedOnly {
+                            appState.filterCriteria.ratingExact = false
+                        } else {
+                            appState.filterCriteria.minimumRating = 0
+                            appState.filterCriteria.ratingExact = true
+                        }
+                    } label: {
+                        HStack(spacing: 2) {
+                            Image(systemName: "star.slash")
+                                .font(.system(size: 10))
+                            Text("Non-Rated")
+                                .font(.system(size: 10, weight: .medium))
+                        }
+                        .foregroundColor(appState.filterCriteria.isUnratedOnly ? .black : LightroomTheme.textSecondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(appState.filterCriteria.isUnratedOnly ? LightroomTheme.accentYellow : Color.white.opacity(0.08))
+                        .cornerRadius(3)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Filter Non-Rated Photos (0★)")
                 
                     ForEach(1...5, id: \.self) { star in
                         Button {
-                            if appState.filterCriteria.minimumRating == star {
+                            if appState.filterCriteria.minimumRating == star && !appState.filterCriteria.ratingExact {
                                 appState.filterCriteria.minimumRating = 0
                             } else {
                                 appState.filterCriteria.minimumRating = star
@@ -115,7 +138,7 @@ public struct TopFilterBarView: View {
                     }
                 
                     if appState.filterCriteria.minimumRating > 0 {
-                        Text("≥ \(appState.filterCriteria.minimumRating)★")
+                        Text(appState.filterCriteria.ratingExact ? "\(appState.filterCriteria.minimumRating)★" : "≥ \(appState.filterCriteria.minimumRating)★")
                             .font(.system(size: 10, weight: .bold))
                             .foregroundColor(LightroomTheme.accentYellow)
                     }

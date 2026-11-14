@@ -238,6 +238,19 @@ public struct LeftSidebarView: View {
                             appState.filterCriteria.minimumRating = 1
                             appState.filterCriteria.ratingExact = false
                         }
+
+                        smartCollectionRow(
+                            title: "Non-Rated (0 Star)",
+                            icon: "star.slash",
+                            iconColor: LightroomTheme.textSecondary,
+                            count: appState.allAssets.filter { $0.xmp.rating == 0 }.count,
+                            isSelected: appState.filterCriteria.isUnratedOnly,
+                            helpText: "Show Non-Rated Photos (0 Star)"
+                        ) {
+                            appState.filterCriteria.reset()
+                            appState.filterCriteria.minimumRating = 0
+                            appState.filterCriteria.ratingExact = true
+                        }
                         
                         smartCollectionRow(
                             title: "RAW Files Only",

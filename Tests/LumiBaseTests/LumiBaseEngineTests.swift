@@ -618,6 +618,26 @@ final class LumiBaseEngineTests: XCTestCase {
         XCTAssertEqual(restoredSession.currentFolderURL?.standardizedFileURL, tempFolder.standardizedFileURL)
         XCTAssertEqual(restoredSession.primarySelectedAssetID, asset2.id)
     }
+
+    @MainActor
+    func testNonRatedFilterMatchesOnlyZeroRatingAssets() {
+        var xmp1 = XMPMetadata.empty
+        xmp1.rating = 1
+        let unrated = PhotoAsset(fileURL: URL(fileURLWithPath: "/photos/DSC0001.ARW"), xmp: .empty)
+        let rated = PhotoAsset(fileURL: URL(fileURLWithPath: "/photos/DSC0002.ARW"), xmp: xmp1)
+
+        var criteria = FilterCriteria(minimumRating: 0, ratingExact: true)
+        XCTAssertTrue(criteria.isUnratedOnly)
+        XCTAssertTrue(criteria.isActive)
+        XCTAssertTrue(criteria.matches(asset: unrated))
+        XCTAssertFalse(criteria.matches(asset: rated))
+
+        criteria.reset()
+        XCTAssertFalse(criteria.isUnratedOnly)
+        XCTAssertFalse(criteria.isActive)
+        XCTAssertTrue(criteria.matches(asset: unrated))
+        XCTAssertTrue(criteria.matches(asset: rated))
+    }
     
     func testAdobeColorPipelineEliminatesDoubleProcessing() {
         // Create a neutral test image

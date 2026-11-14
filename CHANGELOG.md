@@ -5,6 +5,30 @@ All notable changes to **LumiBase** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.15.4] - 2026-11-14
+
+### Added
+- **Non-Rated Filter & Smart Collection (`FilterCriteria`, `TopFilterBarView`, `LeftSidebarView`)**:
+  - Added `Non-Rated` (`isUnratedOnly` / `ratingExact` at `0`) toggle button to the top filter bar and a **Non-Rated (0 Star)** smart collection in the left sidebar to isolate unrated photos.
+- **Draggable Filmstrip Resize & Session State Persistence (`AppState`, `MainLayoutView`, `FilmstripView`)**:
+  - Added `FilmstripResizeHandle` with vertical resize cursor (`NSCursor.resizeUpDown`) and proportional `FilmstripItemView` scaling (`60...220` px, default `85` px).
+  - Enabled session state restoration (`restoreSessionState`) via `UserDefaults`, remembering the last opened folder, selected photo, filmstrip height, and view mode across relaunches.
+- **0-Rating Auto-Advance (`AppState`)**:
+  - Setting a photo's rating to `0` (via `0` key or `[` decreasing to `0`) now automatically advances selection to the next photo in the active list.
+
+### Changed
+- **Distinct Edited vs XMP Badge Colors (`FilmstripView`, `PhotoGridItemView`, `LoupeView`)**:
+  - Differentiated badge colors so photos with active develop edits (`hasDevelopEdits`) display a green `Edited` badge while unedited photos with an `.xmp` sidecar display a cyan/blue `XMP` badge.
+
+### Fixed
+- **Develop Sync Primary Selection Direction (`AppState`)**:
+  - Preserved `primarySelectedAssetID` during `Shift+Click` and `Cmd+Click` multi-selection so **Sync** copies settings from the first-selected source photo to subsequent targets.
+- **Filmstrip Scroll & Selection Stability (`FilmstripView`)**:
+  - Restored scroll-to-selection on `filterCriteria`, `sortOrder`, and `isScanning == false` changes so the active thumbnail stays visible after relaunch, scanning, or filtering.
+- **Crop & Straighten Preview Parity (`AdobeColorPipeline`, `RAWImageLoader`)**:
+  - Fixed CoreImage rotation sign (`+angleDeg`) to match SwiftUI's `.rotationEffect(.degrees(-angle))` preview during interactive straightening.
+  - Fixed `RAWImageLoader.renderProcessed` scale calculation in the `NativeHighlightsService` path and removed duplicate `applyCrop`, ensuring crop and angle previews match the committed result after clicking **Done**.
+
 ## [1.15.3] - 2026-11-08
 
 ### Fixed

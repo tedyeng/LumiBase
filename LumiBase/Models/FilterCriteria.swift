@@ -28,8 +28,13 @@ public struct FilterCriteria: Equatable, Codable, Sendable {
         self.dateRange = dateRange
     }
     
+    public var isUnratedOnly: Bool {
+        minimumRating == 0 && ratingExact
+    }
+
     public var isActive: Bool {
         minimumRating > 0 ||
+        ratingExact ||
         selectedFlag != nil ||
         !selectedColorLabels.isEmpty ||
         !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
@@ -44,12 +49,10 @@ public struct FilterCriteria: Equatable, Codable, Sendable {
     /// Evaluates whether a given PhotoAsset matches the filter
     public func matches(asset: PhotoAsset) -> Bool {
         // Rating check
-        if minimumRating > 0 {
-            if ratingExact {
-                if asset.xmp.rating != minimumRating { return false }
-            } else {
-                if asset.xmp.rating < minimumRating { return false }
-            }
+        if ratingExact {
+            if asset.xmp.rating != minimumRating { return false }
+        } else if minimumRating > 0 {
+            if asset.xmp.rating < minimumRating { return false }
         }
         
         // Flag check
