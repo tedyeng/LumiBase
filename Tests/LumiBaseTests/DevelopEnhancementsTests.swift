@@ -402,6 +402,87 @@ final class DevelopEnhancementsTests: XCTestCase {
         print("Blue100 sky color at (\(x), \(y)): R=\(cBlue.redComponent) G=\(cBlue.greenComponent) B=\(cBlue.blueComponent)")
         print("Reset sky color at (\(x), \(y)): R=\(cReset.redComponent) G=\(cReset.greenComponent) B=\(cReset.blueComponent)")
     }
+
+    func testRAWThumbnailOptionsNeverForceFullDecode() {
+        let rawOptions = ThumbnailLoader.thumbnailOptions(embeddedOnly: true, maxPixelSize: 800) as NSDictionary
+        XCTAssertEqual(rawOptions[kCGImageSourceCreateThumbnailFromImageAlways] as? Bool, false)
+        XCTAssertEqual(rawOptions[kCGImageSourceCreateThumbnailFromImageIfAbsent] as? Bool, false)
+        XCTAssertEqual(rawOptions[kCGImageSourceCreateThumbnailWithTransform] as? Bool, true)
+        XCTAssertEqual(rawOptions[kCGImageSourceThumbnailMaxPixelSize] as? Int, 800)
+
+        let jpegOptions = ThumbnailLoader.thumbnailOptions(embeddedOnly: false, maxPixelSize: 800) as NSDictionary
+        XCTAssertEqual(jpegOptions[kCGImageSourceCreateThumbnailFromImageAlways] as? Bool, true)
+        XCTAssertEqual(jpegOptions[kCGImageSourceCreateThumbnailFromImageIfAbsent] as? Bool, false)
+    }
+
+    @MainActor
+    func testSwitchingAwayFromCropAndBackResetsAspectRatioPresetToOriginal() {
+        let appState = AppState()
+        appState.activeDevelopTool = .crop
+        appState.setCropPreset(.ratio16x9)
+        XCTAssertEqual(appState.cropAspectRatioPreset, .ratio16x9)
+
+        // Completing crop editing within the Crop panel preserves the chosen preset.
+        appState.completeCropEditing()
+        XCTAssertEqual(appState.cropAspectRatioPreset, .ratio16x9)
+
+        // Switching to another tool and back to Crop resets the preset menu to Original.
+        appState.activeDevelopTool = .edit
+        XCTAssertEqual(appState.cropAspectRatioPreset, .original)
+        XCTAssertTrue(appState.isCropAspectLocked)
+
+        appState.activeDevelopTool = .crop
+        XCTAssertEqual(appState.cropAspectRatioPreset, .original)
+        XCTAssertTrue(appState.isCropAspectLocked)
+
+        // Also verify unlocked Custom preset resets to Original & Locked when no crop is applied.
+        appState.setCropPreset(.custom)
+        XCTAssertEqual(appState.cropAspectRatioPreset, .custom)
+        XCTAssertFalse(appState.isCropAspectLocked)
+        appState.activeDevelopTool = .heal
+        appState.activeDevelopTool = .crop
+        XCTAssertEqual(appState.cropAspectRatioPreset, .original)
+        XCTAssertTrue(appState.isCropAspectLocked)
+    }
+
+    @MainActor
+    func testSwitchingBackToCropRestoresExistingPhotoCropRatioPreset() {
+        let appState = AppState()
+        var metadata = CameraMetadata()
+        metadata.pixelWidth = 6000
+        metadata.pixelHeight = 4000
+        let asset = PhotoAsset(fileURL: URL(fileURLWithPath: "/tmp/crop-preset-test.jpg"), cameraMetadata: metadata)
+        appState.allAssets = [asset]
+        appState.primarySelectedAssetID = asset.id
+        appState.workspaceMode = .develop
+
+        // 1. Crop to 16:9, switch to Edit, then switch back to Crop -> restores .ratio16x9
+        appState.activeDevelopTool = .crop
+        appState.setCropPreset(.ratio16x9, for: asset.id)
+        XCTAssertEqual(appState.cropAspectRatioPreset, .ratio16x9)
+
+        appState.activeDevelopTool = .edit
+        XCTAssertEqual(appState.cropAspectRatioPreset, .original)
+
+        appState.activeDevelopTool = .crop
+        XCTAssertEqual(appState.cropAspectRatioPreset, .ratio16x9)
+        XCTAssertTrue(appState.isCropAspectLocked)
+
+        // 2. Custom freeform crop (2:1), switch to Heal, then back to Crop -> restores .custom (unlocked)
+        appState.setCropPreset(.custom, for: asset.id)
+        appState.updateCropGeometry(CropGeometry(top: 0.1, left: 0.1, bottom: 0.7, right: 0.9, angle: 0), for: asset.id, isDragging: false)
+        appState.activeDevelopTool = .heal
+        appState.activeDevelopTool = .crop
+        XCTAssertEqual(appState.cropAspectRatioPreset, .custom)
+        XCTAssertFalse(appState.isCropAspectLocked)
+
+        // 3. Reset crop -> switching away and back restores .original
+        appState.resetCrop(for: asset.id)
+        appState.activeDevelopTool = .edit
+        appState.activeDevelopTool = .crop
+        XCTAssertEqual(appState.cropAspectRatioPreset, .original)
+        XCTAssertTrue(appState.isCropAspectLocked)
+    }
     
     func testCachedMemoryThumbnailAfterLoading() async throws {
         let arwURL = URL(fileURLWithPath: "/Volumes/Super SSD/Photo/Temp/09-17_淡江大橋/A7C00904.ARW")

@@ -378,29 +378,35 @@ public actor ThumbnailLoader {
         return nil
     }
 
+    nonisolated static func thumbnailOptions(embeddedOnly: Bool, maxPixelSize: Int) -> CFDictionary {
+        [
+            kCGImageSourceShouldCache: false,
+            kCGImageSourceCreateThumbnailFromImageAlways: !embeddedOnly,
+            kCGImageSourceCreateThumbnailFromImageIfAbsent: false,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize
+        ] as CFDictionary
+    }
+
     /// Extract a pre-scaled base image via companion JPEG or fast ImageIO embedded RAW preview (2-5ms)
     /// without expensive 33MP demosaicing.
     private nonisolated static func extractBaseImage(for asset: PhotoAsset, targetMaxPixelSize: Int) -> CIImage? {
-        let options: [CFString: Any] = [
-            kCGImageSourceShouldCache: false,
-            kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceThumbnailMaxPixelSize: targetMaxPixelSize
-        ]
+        let companionOptions = thumbnailOptions(embeddedOnly: false, maxPixelSize: targetMaxPixelSize)
         
         // 1. Companion JPEG (e.g. RAW+JPG pair)
         for companion in asset.companionURLs where ["jpg", "jpeg"].contains(companion.pathExtension.lowercased()) &&
             companion.deletingPathExtension().lastPathComponent == asset.fileURL.deletingPathExtension().lastPathComponent &&
             companion.deletingLastPathComponent() == asset.fileURL.deletingLastPathComponent() {
             if let source = CGImageSourceCreateWithURL(companion as CFURL, nil),
-               let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) {
+               let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, companionOptions) {
                 return CIImage(cgImage: cg)
             }
         }
         
-        // 2. Embedded preview in RAW / fileURL via ImageIO
+        // 2. Embedded preview in RAW / fileURL via ImageIO (never force full RAW demosaicing here)
+        let fileOptions = thumbnailOptions(embeddedOnly: asset.isRaw, maxPixelSize: targetMaxPixelSize)
         if let source = CGImageSourceCreateWithURL(asset.fileURL as CFURL, nil),
-           let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) {
+           let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, fileOptions) {
             return CIImage(cgImage: cg)
         }
         
@@ -460,28 +466,30 @@ public actor ThumbnailLoader {
         }
         
         // 2. Standard fast path using ImageIO embedded preview
-        let options: [CFString: Any] = [
-            kCGImageSourceShouldCache: false,
-            kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize
-        ]
+        let companionOptions = thumbnailOptions(embeddedOnly: false, maxPixelSize: maxPixelSize)
         
         for companion in asset.companionURLs where ["jpg", "jpeg"].contains(companion.pathExtension.lowercased()) &&
             companion.deletingPathExtension().lastPathComponent == asset.fileURL.deletingPathExtension().lastPathComponent &&
             companion.deletingLastPathComponent() == asset.fileURL.deletingLastPathComponent() {
             if let source = CGImageSourceCreateWithURL(companion as CFURL, nil),
-               let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) {
+               let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, companionOptions) {
                 return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
             }
         }
         
-        guard let source = CGImageSourceCreateWithURL(asset.fileURL as CFURL, nil),
-              let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
-            return nil
+        let fileOptions = thumbnailOptions(embeddedOnly: asset.isRaw, maxPixelSize: maxPixelSize)
+        if let source = CGImageSourceCreateWithURL(asset.fileURL as CFURL, nil),
+           let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, fileOptions) {
+            return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
         }
         
-        let size = NSSize(width: cgImage.width, height: cgImage.height)
-        return NSImage(cgImage: cgImage, size: size)
+        if asset.isRaw,
+           let fallbackCI = extractBaseImage(for: asset, targetMaxPixelSize: maxPixelSize),
+           !fallbackCI.extent.isEmpty,
+           let renderedCG = Self.renderContext.createCGImage(fallbackCI, from: fallbackCI.extent) {
+            return NSImage(cgImage: renderedCG, size: NSSize(width: renderedCG.width, height: renderedCG.height))
+        }
+        
+        return nil
     }
 }

@@ -127,7 +127,14 @@ public final class AppState: ObservableObject {
     // Selection state
     @Published public var selectedAssetIDs: Set<String> = [] { didSet { selectedAssetsCache = nil } }
     @Published public var primarySelectedAssetID: String? {
-        didSet { if oldValue != primarySelectedAssetID { displayedBitmap = nil; displayHistogram.clear(); previewSharpness.clear() } }
+        didSet {
+            if oldValue != primarySelectedAssetID {
+                displayedBitmap = nil; displayHistogram.clear(); previewSharpness.clear()
+                if activeDevelopTool == .crop {
+                    syncCropAspectRatioPresetFromCurrentAsset()
+                }
+            }
+        }
     }
     @Published public var selectionAnchorAssetID: String?
     
@@ -153,8 +160,11 @@ public final class AppState: ObservableObject {
         didSet {
             if activeDevelopTool != .crop {
                 isCropOverlayActive = false
+                cropAspectRatioPreset = .original
+                isCropAspectLocked = true
             } else if oldValue != .crop {
                 isCropOverlayActive = true
+                syncCropAspectRatioPresetFromCurrentAsset()
             }
             if activeDevelopTool != .heal {
                 selectedSpotHealID = nil
@@ -1957,6 +1967,42 @@ public final class AppState: ObservableObject {
         cropOverlayStyle = (cropOverlayStyle == .grid) ? .thirds : .grid
     }
     
+    /// Infers the matching crop aspect ratio preset from an asset's current crop geometry.
+    public func resolvedCropPreset(for asset: PhotoAsset, xmp: XMPMetadata) -> CropAspectRatioPreset {
+        guard xmp.hasCrop else { return .original }
+        let g = xmp.cropGeometry
+        let (rawW, rawH) = assetDimensions(for: asset)
+        let cropPixelAspect = (g.widthFraction * rawW) / max(1.0, g.heightFraction * rawH)
+        let matchesRatio: (CGFloat) -> Bool = { target in
+            guard target > 0 else { return false }
+            return abs(cropPixelAspect - target) / target < 0.01
+                || abs(cropPixelAspect - (1.0 / target)) / (1.0 / target) < 0.01
+        }
+        if matchesRatio(rawW / max(1.0, rawH)) {
+            return .original
+        }
+        for preset in [CropAspectRatioPreset.square1x1, .ratio4x5, .ratio5x7, .ratio16x9] {
+            if let target = preset.ratio(originalWidth: rawW, originalHeight: rawH), matchesRatio(target) {
+                return preset
+            }
+        }
+        return .custom
+    }
+
+    /// Syncs the crop aspect ratio menu and lock state to the primary selected asset's existing crop.
+    public func syncCropAspectRatioPresetFromCurrentAsset() {
+        guard let id = primarySelectedAssetID,
+              let asset = allAssets.first(where: { $0.id == id }) else {
+            cropAspectRatioPreset = .original
+            isCropAspectLocked = true
+            return
+        }
+        let currentXMP = (liveDevelopAssetID == id && liveDevelopXMP != nil) ? liveDevelopXMP! : asset.xmp
+        let resolved = resolvedCropPreset(for: asset, xmp: currentXMP)
+        cropAspectRatioPreset = resolved
+        isCropAspectLocked = (resolved != .custom)
+    }
+
     /// Sets crop aspect ratio preset and adjusts crop geometry
     public func setCropPreset(_ preset: CropAspectRatioPreset, for assetID: String? = nil) {
         if activeDevelopTool == .crop && !isCropOverlayActive {
