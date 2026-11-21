@@ -271,6 +271,11 @@ public final class AdobeColorPipeline: Sendable {
             current = LocalClarityKernel.apply(image: current, clarityFactor: Float(Double(clarity) / 100.0))
         }
         
+        // 8b2. Non-destructive 90° Rotation & Flip (before Spot Heal & Crop so overlay coordinates match)
+        if xmp.hasOrientationTransform {
+            current = applyOrientationTransform(image: current, orientation: xmp.orientationTransform)
+        }
+        
         // 8c. Spot Removal / Healing (in uncropped image space before Crop & Straighten)
         if !xmp.spotHeals.isEmpty {
             current = SpotHealKernel.apply(image: current, spots: xmp.spotHeals)
@@ -410,6 +415,11 @@ public final class AdobeColorPipeline: Sendable {
             current = ToneCurveKernel.apply(image: current, toneCurve: xmp.toneCurve)
         }
         
+        // 7a. Non-destructive 90° Rotation & Flip (before Spot Heal & Crop so overlay coordinates match)
+        if xmp.hasOrientationTransform {
+            current = applyOrientationTransform(image: current, orientation: xmp.orientationTransform)
+        }
+
         // 7b. Spot Removal / Healing (in uncropped image space before Crop & Straighten)
         if !xmp.spotHeals.isEmpty {
             current = SpotHealKernel.apply(image: current, spots: xmp.spotHeals)
@@ -421,6 +431,22 @@ public final class AdobeColorPipeline: Sendable {
         }
         
         return current
+    }
+
+    /// Applies non-destructive 90° rotation / mirror flip using EXIF orientation semantics (1...8).
+    public func applyOrientationTransform(image: CIImage, orientation: PhotoOrientationTransform) -> CIImage {
+        guard !orientation.isIdentity else { return image }
+        let extent = image.extent
+        guard !extent.isEmpty && extent.width > 0 && extent.height > 0 else { return image }
+        var normalized = image
+        if extent.origin != .zero {
+            normalized = normalized.transformed(by: CGAffineTransform(translationX: -extent.origin.x, y: -extent.origin.y))
+        }
+        var oriented = normalized.oriented(forExifOrientation: Int32(orientation.rawValue))
+        if oriented.extent.origin != .zero {
+            oriented = oriented.transformed(by: CGAffineTransform(translationX: -oriented.extent.origin.x, y: -oriented.extent.origin.y))
+        }
+        return oriented
     }
 
     /// Crops and straightens an image using normalized XMP crop bounds and rotation

@@ -327,13 +327,18 @@ public final class RAWImageLoader: @unchecked Sendable {
             }
         
             let srgb = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+            let orientedTargetExtent: CGRect = (xmp?.orientationTransform.swapsWidthAndHeight == true)
+                ? CGRect(origin: .zero, size: CGSize(width: targetExtent.height, height: targetExtent.width))
+                : targetExtent
             let outputExtent: CGRect
             if let sourceRect {
-                outputExtent = sourceRect.intersection(targetExtent)
-                guard !outputExtent.isEmpty else { return nil }
-            } else if xmp?.hasCrop == true {
                 let pExtent = processed.extent
-                outputExtent = (pExtent.isInfinite || pExtent.isEmpty) ? targetExtent : pExtent
+                let bounds = (pExtent.isInfinite || pExtent.isEmpty) ? orientedTargetExtent : pExtent
+                outputExtent = sourceRect.intersection(bounds)
+                guard !outputExtent.isEmpty else { return nil }
+            } else if xmp?.hasCrop == true || xmp?.hasOrientationTransform == true {
+                let pExtent = processed.extent
+                outputExtent = (pExtent.isInfinite || pExtent.isEmpty) ? orientedTargetExtent : pExtent
             } else {
                 outputExtent = targetExtent
             }

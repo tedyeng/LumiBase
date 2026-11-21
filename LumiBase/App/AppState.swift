@@ -1897,6 +1897,61 @@ public final class AppState: ObservableObject {
         }
     }
     
+    /// Rotates selected photo(s) 90° clockwise (⌘]) non-destructively in XMP
+    public func rotateSelectedPhotosRight(for assetID: String? = nil) {
+        applyPhotoOrientationTransform(for: assetID) { $0.rotatedClockwise90() }
+    }
+
+    /// Rotates selected photo(s) 90° counter-clockwise (⌘[) non-destructively in XMP
+    public func rotateSelectedPhotosLeft(for assetID: String? = nil) {
+        applyPhotoOrientationTransform(for: assetID) { $0.rotatedCounterClockwise90() }
+    }
+
+    /// Flips selected photo(s) horizontally non-destructively in XMP
+    public func flipSelectedPhotosHorizontal(for assetID: String? = nil) {
+        applyPhotoOrientationTransform(for: assetID) { $0.flippedHorizontal() }
+    }
+
+    /// Flips selected photo(s) vertically non-destructively in XMP
+    public func flipSelectedPhotosVertical(for assetID: String? = nil) {
+        applyPhotoOrientationTransform(for: assetID) { $0.flippedVertical() }
+    }
+
+    /// Applies a D4 orientation transform to the specified asset or all selected assets without leaving Library mode.
+    public func applyPhotoOrientationTransform(
+        for assetID: String? = nil,
+        transform: (PhotoOrientationTransform) -> PhotoOrientationTransform
+    ) {
+        let targetIDs: [String]
+        if let assetID {
+            targetIDs = [assetID]
+        } else if !selectedAssetIDs.isEmpty {
+            targetIDs = Array(selectedAssetIDs)
+        } else if let primaryID = primarySelectedAssetID {
+            targetIDs = [primaryID]
+        } else {
+            return
+        }
+
+        var didMutate = false
+        for id in targetIDs {
+            guard fileMutationFence.permits(id),
+                  let index = allAssets.firstIndex(where: { $0.id == id }) else { continue }
+            var currentXMP = (liveDevelopAssetID == id && liveDevelopXMP != nil) ? liveDevelopXMP! : allAssets[index].xmp
+            currentXMP.orientationTransform = transform(currentXMP.orientationTransform)
+            allAssets[index].xmp = currentXMP
+            if liveDevelopAssetID == id {
+                liveCommitTask?.cancel()
+                liveDevelopXMP = currentXMP
+            }
+            debouncedSyncXMP(for: allAssets[index])
+            didMutate = true
+        }
+        if didMutate {
+            displaySourceRevision &+= 1
+        }
+    }
+
     /// Resets crop box to full uncropped photo, angle to 0°, and aspect preset to Original
     public func resetCrop(for assetID: String? = nil) {
         cropAspectRatioPreset = .original
@@ -1907,7 +1962,9 @@ public final class AppState: ObservableObject {
     
     public func assetDimensions(for asset: PhotoAsset) -> (width: CGFloat, height: CGFloat) {
         if let pw = asset.cameraMetadata.pixelWidth, let ph = asset.cameraMetadata.pixelHeight, pw > 0, ph > 0 {
-            let isRotated = [5, 6, 7, 8].contains(asset.sourceOrientation ?? 1)
+            let sourceRotated = [5, 6, 7, 8].contains(asset.sourceOrientation ?? 1)
+            let currentXMP = (liveDevelopAssetID == asset.id && liveDevelopXMP != nil) ? liveDevelopXMP! : asset.xmp
+            let isRotated = sourceRotated != currentXMP.orientationTransform.swapsWidthAndHeight
             let w = CGFloat(isRotated ? ph : pw)
             let h = CGFloat(isRotated ? pw : ph)
             return (w, h)

@@ -86,3 +86,83 @@ public struct CropGeometry: Equatable, Sendable {
     
     public static let full = CropGeometry(top: 0.0, left: 0.0, bottom: 1.0, right: 1.0, angle: 0.0)
 }
+
+/// Non-destructive photo rotation (90° increments) & flip transform (EXIF / CGImagePropertyOrientation 1...8).
+/// Applied relative to the upright EXIF-decoded image, forming the D4 dihedral group.
+public enum PhotoOrientationTransform: Int, Codable, Equatable, CaseIterable, Sendable {
+    case up = 1            // Identity
+    case upMirrored = 2    // Flip horizontal
+    case down = 3          // Rotate 180°
+    case downMirrored = 4  // Flip vertical
+    case leftMirrored = 5  // Transpose (rotate 90° CW + flip H)
+    case right = 6         // Rotate 90° CW
+    case rightMirrored = 7 // Transverse (rotate 90° CCW + flip H)
+    case left = 8          // Rotate 90° CCW
+
+    public var isIdentity: Bool { self == .up }
+
+    public var swapsWidthAndHeight: Bool {
+        switch self {
+        case .leftMirrored, .right, .rightMirrored, .left:
+            return true
+        case .up, .upMirrored, .down, .downMirrored:
+            return false
+        }
+    }
+
+    /// Composes a 90° clockwise rotation after the current transform.
+    public func rotatedClockwise90() -> PhotoOrientationTransform {
+        switch self {
+        case .up: return .right
+        case .right: return .down
+        case .down: return .left
+        case .left: return .up
+        case .upMirrored: return .rightMirrored
+        case .rightMirrored: return .downMirrored
+        case .downMirrored: return .leftMirrored
+        case .leftMirrored: return .upMirrored
+        }
+    }
+
+    /// Composes a 90° counter-clockwise rotation after the current transform.
+    public func rotatedCounterClockwise90() -> PhotoOrientationTransform {
+        switch self {
+        case .up: return .left
+        case .left: return .down
+        case .down: return .right
+        case .right: return .up
+        case .upMirrored: return .leftMirrored
+        case .leftMirrored: return .downMirrored
+        case .downMirrored: return .rightMirrored
+        case .rightMirrored: return .upMirrored
+        }
+    }
+
+    /// Composes a horizontal mirror flip after the current transform.
+    public func flippedHorizontal() -> PhotoOrientationTransform {
+        switch self {
+        case .up: return .upMirrored
+        case .upMirrored: return .up
+        case .down: return .downMirrored
+        case .downMirrored: return .down
+        case .right: return .leftMirrored
+        case .leftMirrored: return .right
+        case .left: return .rightMirrored
+        case .rightMirrored: return .left
+        }
+    }
+
+    /// Composes a vertical mirror flip after the current transform.
+    public func flippedVertical() -> PhotoOrientationTransform {
+        switch self {
+        case .up: return .downMirrored
+        case .downMirrored: return .up
+        case .upMirrored: return .down
+        case .down: return .upMirrored
+        case .right: return .rightMirrored
+        case .rightMirrored: return .right
+        case .left: return .leftMirrored
+        case .leftMirrored: return .left
+        }
+    }
+}

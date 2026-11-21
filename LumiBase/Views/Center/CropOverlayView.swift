@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 public enum CropHandle: CaseIterable {
     case topLeft, topMid, topRight
@@ -6,7 +7,7 @@ public enum CropHandle: CaseIterable {
     case bottomLeft, bottomMid, bottomRight
 }
 
-/// Interactive 8-point crop overlay with Rule of Thirds grid and aspect ratio enforcement
+/// Interactive 8-point crop overlay with Rule of Thirds grid, aspect ratio enforcement, and edge/corner rotation
 public struct CropOverlayView: View {
     public let imageSize: CGSize
     public let containerSize: CGSize
@@ -18,7 +19,20 @@ public struct CropOverlayView: View {
     @State private var dragLiveGeometry: CropGeometry?
     @State private var dragGridCounts: (cols: Int, rows: Int)?
     
+    // Direct canvas rotation (drag outside crop box or along border between handles)
+    @State private var isRotating: Bool = false
+    @State private var rotateInitialAngle: Double?
+    @State private var rotateLastVectorAngle: Double?
+    @State private var rotateAccumulatedRadians: Double = 0.0
+    @State private var rotateLiveAngle: Double?
+    @State private var rotateDidChange: Bool = false
+    @State private var isHoveringRotateZone: Bool = false
+    @State private var rotateCursorSector: Int = 0
+    @State private var pushedRotateCursorSector: Int? = nil
+    
     private static let coordinateSpaceName = "CropOverlayCoordinateSpace"
+    private static let handleHitSize: CGFloat = 28.0
+    private static let maxBorderRotateInset: CGFloat = 8.0
     
     public init(imageSize: CGSize, containerSize: CGSize, appState: AppState) {
         self.imageSize = imageSize
@@ -61,8 +75,25 @@ public struct CropOverlayView: View {
     public var body: some View {
         let imgRect = imageDisplayRect
         let cRect = cropRect(in: imgRect)
+        let borderRotateInset = Self.borderRotateInset(for: cRect)
         
         ZStack {
+            // 0. Outer & Border Rotation Drag Area (behind interior pan area and 8 resize handles)
+            Color.black.opacity(0.001)
+                .gesture(
+                    DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.coordinateSpaceName))
+                        .onChanged { value in
+                            handleRotateDrag(
+                                location: value.location,
+                                startLocation: value.startLocation,
+                                imgRect: imgRect
+                            )
+                        }
+                        .onEnded { _ in
+                            handleRotateEnd()
+                        }
+                )
+            
             // 1. Darkened outer mask (4 surrounding boxes)
             outerDimmedMask(containerSize: containerSize, cropRect: cRect)
             
@@ -72,6 +103,7 @@ public struct CropOverlayView: View {
                 Rectangle()
                     .stroke(Color.white.opacity(0.85), lineWidth: 1.5)
                     .shadow(color: .black.opacity(0.6), radius: 1, x: 0, y: 0)
+                    .allowsHitTesting(false)
                 
                 // Crop Overlay Guide: Multi-line adaptive Alignment Grid or Rule of Thirds (3x3)
                 if appState.cropOverlayStyle == .grid {
@@ -80,9 +112,10 @@ public struct CropOverlayView: View {
                     ruleOfThirdsGrid
                 }
                 
-                // 3. Center Pan Drag Area
+                // 3. Center Pan Drag Area (inset slightly so border edges between handles also rotate)
                 Rectangle()
                     .fill(Color.black.opacity(0.001)) // Transparent hit target
+                    .padding(borderRotateInset)
                     .gesture(
                         DragGesture(minimumDistance: 0, coordinateSpace: .named(Self.coordinateSpaceName))
                             .onChanged { value in
@@ -100,10 +133,40 @@ public struct CropOverlayView: View {
             ForEach(CropHandle.allCases, id: \.self) { handle in
                 cropHandleView(for: handle, cropRect: cRect, imgRect: imgRect)
             }
+            
+            // 5. Live Angle HUD Badge while rotating on canvas
+            if isRotating {
+                rotateAngleBadge(angle: rotateLiveAngle ?? currentGeometry.angle)
+                    .position(x: cRect.midX, y: max(28, cRect.minY + 28))
+                    .allowsHitTesting(false)
+            }
         }
         .frame(width: containerSize.width, height: containerSize.height)
         .coordinateSpace(name: Self.coordinateSpaceName)
         .contentShape(Rectangle())
+        .onContinuousHover(coordinateSpace: .named(Self.coordinateSpaceName)) { phase in
+            switch phase {
+            case .active(let location):
+                let inRotateZone = Self.isPointInRotateZone(location, cropRect: cRect)
+                isHoveringRotateZone = inRotateZone
+                if inRotateZone {
+                    rotateCursorSector = Self.rotateCursorSector(
+                        for: location,
+                        center: CGPoint(x: cRect.midX, y: cRect.midY)
+                    )
+                }
+                syncRotateCursor()
+            case .ended:
+                isHoveringRotateZone = false
+                syncRotateCursor()
+            }
+        }
+        .onChange(of: isRotating) { _, _ in
+            syncRotateCursor()
+        }
+        .onDisappear {
+            popRotateCursorIfNeeded()
+        }
         .onChange(of: committedGeometry) { _, _ in
             if !isDragging {
                 dragLiveGeometry = nil
@@ -206,7 +269,7 @@ public struct CropOverlayView: View {
                     .shadow(color: .black.opacity(0.5), radius: 2)
             }
         }
-        .frame(width: 28, height: 28)
+        .frame(width: Self.handleHitSize, height: Self.handleHitSize)
         .contentShape(Rectangle())
         .position(pos)
         .gesture(
@@ -221,6 +284,10 @@ public struct CropOverlayView: View {
     }
     
     private func handlePosition(for handle: CropHandle, cropRect: CGRect) -> CGPoint {
+        Self.handlePosition(for: handle, cropRect: cropRect)
+    }
+    
+    public static func handlePosition(for handle: CropHandle, cropRect: CGRect) -> CGPoint {
         switch handle {
         case .topLeft: return CGPoint(x: cropRect.minX, y: cropRect.minY)
         case .topMid: return CGPoint(x: cropRect.midX, y: cropRect.minY)
@@ -405,6 +472,215 @@ public struct CropOverlayView: View {
         dragGridCounts = nil
         activeHandle = nil
         isDragging = false
+    }
+    
+    // MARK: - Direct Canvas Rotation
+    
+    private func handleRotateDrag(location: CGPoint, startLocation: CGPoint, imgRect: CGRect) {
+        let pivot = CGPoint(x: imgRect.midX, y: imgRect.midY)
+        
+        if rotateInitialAngle == nil {
+            let startDx = Double(startLocation.x - pivot.x)
+            let startDy = Double(startLocation.y - pivot.y)
+            guard hypot(startDx, startDy) >= 10.0 else { return }
+            
+            let initial = currentGeometry
+            rotateInitialAngle = initial.angle
+            rotateLastVectorAngle = atan2(startDy, startDx)
+            rotateAccumulatedRadians = 0.0
+            rotateLiveAngle = initial.angle
+            rotateDidChange = false
+            
+            let initW = initial.widthFraction * imgRect.width
+            let initH = initial.heightFraction * imgRect.height
+            dragGridCounts = (
+                cols: max(4, Int(round(initW / 32.0))),
+                rows: max(4, Int(round(initH / 32.0)))
+            )
+            isRotating = true
+            isDragging = true
+        }
+        
+        guard let initialAngle = rotateInitialAngle, let lastAngle = rotateLastVectorAngle else { return }
+        let dx = Double(location.x - pivot.x)
+        let dy = Double(location.y - pivot.y)
+        guard hypot(dx, dy) >= 10.0 else { return }
+        
+        let currentVectorAngle = atan2(dy, dx)
+        let stepDelta = Self.wrappedAngleDeltaRadians(from: lastAngle, to: currentVectorAngle)
+        rotateLastVectorAngle = currentVectorAngle
+        rotateAccumulatedRadians += stepDelta
+        
+        rotateCursorSector = Self.rotateCursorSector(for: location, center: pivot)
+        syncRotateCursor()
+        
+        let newAngle = Self.updatedCropAngle(
+            initialAngle: initialAngle,
+            accumulatedDeltaRadians: rotateAccumulatedRadians
+        )
+        if newAngle != rotateLiveAngle {
+            rotateLiveAngle = newAngle
+            rotateDidChange = true
+            appState.updateCropAngle(newAngle, isDragging: true)
+        }
+    }
+    
+    private func handleRotateEnd() {
+        if rotateDidChange, let finalAngle = rotateLiveAngle {
+            appState.updateCropAngle(finalAngle, isDragging: false)
+        }
+        rotateInitialAngle = nil
+        rotateLastVectorAngle = nil
+        rotateAccumulatedRadians = 0.0
+        rotateLiveAngle = nil
+        rotateDidChange = false
+        dragGridCounts = nil
+        isRotating = false
+        isDragging = false
+    }
+    
+    private func rotateAngleBadge(angle: Double) -> some View {
+        Text(String(format: "%+.1f°", angle == 0 ? 0.0 : angle))
+            .font(.system(size: 12, weight: .semibold, design: .monospaced))
+            .foregroundColor(.white)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(Color.black.opacity(0.75))
+            .clipShape(Capsule())
+            .overlay(Capsule().stroke(Color.white.opacity(0.25), lineWidth: 1))
+            .shadow(color: .black.opacity(0.45), radius: 4, x: 0, y: 1)
+    }
+    
+    // MARK: - Rotate Zone Hit-Testing & Math
+    
+    public static func borderRotateInset(for cropRect: CGRect) -> CGFloat {
+        min(maxBorderRotateInset, min(cropRect.width, cropRect.height) * 0.15)
+    }
+    
+    /// Returns true when `point` is outside the crop box or on its border strip between resize handles.
+    public static func isPointInRotateZone(_ point: CGPoint, cropRect: CGRect) -> Bool {
+        let halfHandle = handleHitSize / 2.0
+        for handle in CropHandle.allCases {
+            let pos = handlePosition(for: handle, cropRect: cropRect)
+            let handleRect = CGRect(
+                x: pos.x - halfHandle,
+                y: pos.y - halfHandle,
+                width: handleHitSize,
+                height: handleHitSize
+            )
+            if handleRect.contains(point) {
+                return false
+            }
+        }
+        let inset = borderRotateInset(for: cropRect)
+        let panRect = cropRect.insetBy(dx: inset, dy: inset)
+        return !panRect.contains(point)
+    }
+    
+    /// Shortest signed angular delta in radians (-pi...pi) to avoid discontinuities across the -pi/+pi seam.
+    public static func wrappedAngleDeltaRadians(from previous: Double, to current: Double) -> Double {
+        atan2(sin(current - previous), cos(current - previous))
+    }
+    
+    /// Converts accumulated screen-space clockwise delta radians (SwiftUI Y-down) into clamped XMP cropAngle (-45...45 deg).
+    public static func updatedCropAngle(initialAngle: Double, accumulatedDeltaRadians: Double) -> Double {
+        let deltaDegrees = accumulatedDeltaRadians * 180.0 / .pi
+        let raw = max(-45.0, min(45.0, initialAngle - deltaDegrees))
+        let rounded = (raw * 10.0).rounded() / 10.0
+        return abs(rounded) < 0.05 ? 0.0 : rounded
+    }
+    
+    /// Quantizes the pointer's radial direction around `center` (SwiftUI Y-down) into 8 sectors:
+    /// 0 = right, 1 = top-right, 2 = top, 3 = top-left, 4 = left, 5 = bottom-left, 6 = bottom, 7 = bottom-right.
+    public static func rotateCursorSector(for point: CGPoint, center: CGPoint) -> Int {
+        let dx = Double(point.x - center.x)
+        let dy = Double(-(point.y - center.y)) // Convert SwiftUI Y-down to standard Y-up
+        var deg = atan2(dy, dx) * 180.0 / .pi
+        if deg < 0 { deg += 360.0 }
+        return Int(((deg + 22.5).truncatingRemainder(dividingBy: 360.0)) / 45.0) % 8
+    }
+    
+    // MARK: - Rotate Cursor
+    
+    private func syncRotateCursor() {
+        let shouldShowRotate = isHoveringRotateZone || isRotating
+        if shouldShowRotate {
+            if pushedRotateCursorSector == rotateCursorSector { return }
+            if pushedRotateCursorSector != nil {
+                NSCursor.pop()
+            }
+            Self.rotateCursors[rotateCursorSector].push()
+            pushedRotateCursorSector = rotateCursorSector
+        } else if pushedRotateCursorSector != nil {
+            NSCursor.pop()
+            pushedRotateCursorSector = nil
+        }
+    }
+    
+    private func popRotateCursorIfNeeded() {
+        if pushedRotateCursorSector != nil {
+            NSCursor.pop()
+            pushedRotateCursorSector = nil
+        }
+        isHoveringRotateZone = false
+    }
+    
+    private static let rotateCursors: [NSCursor] = (0..<8).map { sector in
+        makeRotateCursor(centerDegrees: CGFloat(sector) * 45.0)
+    }
+    
+    private static func makeRotateCursor(centerDegrees: CGFloat) -> NSCursor {
+        let size = NSSize(width: 24, height: 24)
+        let image = NSImage(size: size, flipped: false) { _ in
+            let centerRad = centerDegrees * .pi / 180.0
+            let arcCenter = NSPoint(
+                x: 12.0 - 2.5 * cos(centerRad),
+                y: 12.0 - 2.5 * sin(centerRad)
+            )
+            let radius: CGFloat = 7.2
+            let startDeg: CGFloat = centerDegrees - 55.0
+            let endDeg: CGFloat = centerDegrees + 55.0
+            
+            func buildArrowPath() -> NSBezierPath {
+                let path = NSBezierPath()
+                path.lineCapStyle = .round
+                path.lineJoinStyle = .round
+                path.appendArc(withCenter: arcCenter, radius: radius, startAngle: startDeg, endAngle: endDeg, clockwise: false)
+                
+                // Arrowhead at endDeg (CCW tip)
+                let endRad = endDeg * .pi / 180.0
+                let endTip = NSPoint(x: arcCenter.x + radius * cos(endRad), y: arcCenter.y + radius * sin(endRad))
+                let endTangent = endRad + .pi / 2.0
+                let headLen: CGFloat = 3.8
+                let spread: CGFloat = 0.62
+                path.move(to: NSPoint(x: endTip.x - headLen * cos(endTangent - spread), y: endTip.y - headLen * sin(endTangent - spread)))
+                path.line(to: endTip)
+                path.line(to: NSPoint(x: endTip.x - headLen * cos(endTangent + spread), y: endTip.y - headLen * sin(endTangent + spread)))
+                
+                // Arrowhead at startDeg (CW tip)
+                let startRad = startDeg * .pi / 180.0
+                let startTip = NSPoint(x: arcCenter.x + radius * cos(startRad), y: arcCenter.y + radius * sin(startRad))
+                let startTangent = startRad - .pi / 2.0
+                path.move(to: NSPoint(x: startTip.x - headLen * cos(startTangent - spread), y: startTip.y - headLen * sin(startTangent - spread)))
+                path.line(to: startTip)
+                path.line(to: NSPoint(x: startTip.x - headLen * cos(startTangent + spread), y: startTip.y - headLen * sin(startTangent + spread)))
+                
+                return path
+            }
+            
+            let halo = buildArrowPath()
+            halo.lineWidth = 3.6
+            NSColor.white.setStroke()
+            halo.stroke()
+            
+            let core = buildArrowPath()
+            core.lineWidth = 1.6
+            NSColor.black.setStroke()
+            core.stroke()
+            
+            return true
+        }
+        return NSCursor(image: image, hotSpot: NSPoint(x: 12, y: 12))
     }
 }
 

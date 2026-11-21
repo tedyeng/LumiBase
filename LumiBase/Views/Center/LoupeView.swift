@@ -339,14 +339,18 @@ struct InspectionFrameLayout {
     // Mirror only the existing crop/straighten output bounds, not its pixel pipeline.
     // Fit proxies need this native output extent before their full-size raster arrives.
     static func processedFullExtent(source: CGRect, xmp: XMPMetadata) -> CGRect {
-        guard xmp.hasCrop, !source.isEmpty else { return source }
+        guard !source.isEmpty else { return source }
+        let orientedSource: CGRect = xmp.orientationTransform.swapsWidthAndHeight
+            ? CGRect(origin: .zero, size: CGSize(width: source.height, height: source.width))
+            : source
+        guard xmp.hasCrop else { return orientedSource }
         let angle = xmp.cropAngle ?? 0
-        var output = source
+        var output = orientedSource
         if abs(angle) > 0.01 {
-            var transform = CGAffineTransform(translationX: source.midX, y: source.midY)
+            var transform = CGAffineTransform(translationX: orientedSource.midX, y: orientedSource.midY)
             transform = transform.rotated(by: CGFloat(-angle * .pi / 180))
-            transform = transform.translatedBy(x: -source.midX, y: -source.midY)
-            output = source.applying(transform)
+            transform = transform.translatedBy(x: -orientedSource.midX, y: -orientedSource.midY)
+            output = orientedSource.applying(transform)
         }
         var top = CGFloat(xmp.cropTop ?? 0), left = CGFloat(xmp.cropLeft ?? 0)
         var bottom = CGFloat(xmp.cropBottom ?? 1), right = CGFloat(xmp.cropRight ?? 1)
@@ -354,7 +358,7 @@ struct InspectionFrameLayout {
             let rad = CGFloat(abs(angle) * .pi / 180.0)
             let sinA = sin(rad)
             let cosA = cos(rad)
-            let aspect = source.width / max(1.0, source.height)
+            let aspect = orientedSource.width / max(1.0, orientedSource.height)
             let cropWNorm = 1.0 / (cosA + (1.0 / aspect) * sinA)
             let cropHNorm = 1.0 / (cosA + aspect * sinA)
             left = max(0.0, (1.0 - cropWNorm) / 2.0)
@@ -363,10 +367,10 @@ struct InspectionFrameLayout {
             bottom = min(1.0, 1.0 - top)
         }
         if top > 0.001 || left > 0.001 || bottom < 0.999 || right < 0.999 {
-            let x = source.minX + left * source.width
-            let y = source.minY + (1 - bottom) * source.height
-            let w = max(1, (right - left) * source.width)
-            let h = max(1, (bottom - top) * source.height)
+            let x = orientedSource.minX + left * orientedSource.width
+            let y = orientedSource.minY + (1 - bottom) * orientedSource.height
+            let w = max(1, (right - left) * orientedSource.width)
+            let h = max(1, (bottom - top) * orientedSource.height)
             output = CGRect(x: (abs(x - round(x)) < 0.001) ? round(x) : x,
                             y: (abs(y - round(y)) < 0.001) ? round(y) : y,
                             width: (abs(w - round(w)) < 0.001) ? round(w) : w,
@@ -629,10 +633,13 @@ public struct LoupeView: View {
         .init(center: inspection.center, viewport: viewportPixels, backing: backingScale)
     }
     private var roiPrototypeEnabled: Bool {
-        if let asset = appState.primarySelectedAsset, activeXMP(for: asset).hasCrop {
-            // Cropped native pixels use the existing full processed render: ROI coordinates
-            // are in the uncropped source domain and must not punch holes in the crop.
-            return false
+        if let asset = appState.primarySelectedAsset {
+            let xmp = activeXMP(for: asset)
+            if xmp.hasCrop || xmp.hasOrientationTransform {
+                // Cropped or rotated/flipped native pixels use the full processed render:
+                // ROI coordinates are in the uncropped/unrotated source domain.
+                return false
+            }
         }
         return roiPrototypeToggle.enabled
     }
@@ -1894,7 +1901,7 @@ public struct LoupeView: View {
                     return
                 }
                 if let result {
-                    let fitExtent = renderXMP.hasCrop
+                    let fitExtent = (renderXMP.hasCrop || renderXMP.hasOrientationTransform)
                         ? InspectionFrameLayout.processedFullExtent(source: holder.fullExtent, xmp: renderXMP) : holder.fullExtent
                     InspectionReadyFrameStore.shared.publishFullPreview(asset: asset, xmp: renderXMP,
                         image: result, fullExtent: fitExtent)
@@ -1959,8 +1966,11 @@ public struct LoupeView: View {
                     LiveDevelopPreviewEngine.shared.requestRender(baseHolder: fresh, cameraModel: model, xmp: renderXMP, interactive: false, fullResolution: true) { fallback in
                         guard renderRevision.accepts(ticket), appState.displaySourceRevision == sourceRevision, appState.primarySelectedAssetID == targetID,
                       ProcessedROIRequest.settingsIdentity(activeXMP(for: asset)) == renderSettingsIdentity else { return }
-                        display.accept(fallback, assetID: targetID, filename: asset.filename, pixels: fresh.fullExtent.size,
-                            native: true, ticket: displayTicket, fullExtent: fresh.fullExtent,
+                        let fallbackExtent = (renderXMP.hasCrop || renderXMP.hasOrientationTransform)
+                            ? CGRect(origin: .zero, size: fallback?.size ?? InspectionFrameLayout.processedFullExtent(source: fresh.fullExtent, xmp: renderXMP).size)
+                            : fresh.fullExtent
+                        display.accept(fallback, assetID: targetID, filename: asset.filename, pixels: fallbackExtent.size,
+                            native: true, ticket: displayTicket, fullExtent: fallbackExtent,
                             developSettingsIdentity: renderSettingsIdentity)
                         isLoading = false
                         imageError = fallback == nil ? "Unable to render \(asset.filename)." : nil
@@ -1969,12 +1979,12 @@ public struct LoupeView: View {
                     }
                     return
                 }
-                let isCropped = renderXMP.hasCrop && roiRect == nil
-                let frameExtent = isCropped
+                let hasGeometryTransform = (renderXMP.hasCrop || renderXMP.hasOrientationTransform) && roiRect == nil
+                let frameExtent = hasGeometryTransform
                     ? (native ? CGRect(origin: .zero, size: result?.size ?? .zero) : InspectionFrameLayout.processedFullExtent(source: fresh.fullExtent, xmp: renderXMP))
                     : fresh.fullExtent
                 display.accept(result, assetID: targetID, filename: asset.filename,
-                    pixels: isCropped ? frameExtent.size : (roiRect.map(\.size) ?? fresh.fullExtent.size), native: native, ticket: displayTicket,
+                    pixels: hasGeometryTransform ? frameExtent.size : (roiRect.map(\.size) ?? fresh.fullExtent.size), native: native, ticket: displayTicket,
                     sourceRect: result == nil ? nil : roiRect, fullExtent: frameExtent,
                     developSettingsIdentity: renderSettingsIdentity)
                 if let result, !native {

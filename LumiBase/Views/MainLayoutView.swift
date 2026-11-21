@@ -185,6 +185,18 @@ public struct MainLayoutView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseFlipCrop"))) { _ in
             appState.flipCropOrientation()
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseRotateLeft"))) { _ in
+            appState.rotateSelectedPhotosLeft()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseRotateRight"))) { _ in
+            appState.rotateSelectedPhotosRight()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseFlipHorizontal"))) { _ in
+            appState.flipSelectedPhotosHorizontal()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseFlipVertical"))) { _ in
+            appState.flipSelectedPhotosVertical()
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("LumiBaseCycleOverlay"))) { _ in
             appState.cycleCropOverlayStyle()
         }

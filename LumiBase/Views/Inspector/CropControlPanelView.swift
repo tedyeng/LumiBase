@@ -130,6 +130,31 @@ public struct CropControlPanelView: View {
             
             Divider().background(LightroomTheme.dividerColor)
             
+            // 2b. Rotate 90° & Flip Row
+            HStack(spacing: 6) {
+                Text("Rotate & Flip:")
+                    .uiFont(10, weight: .medium)
+                    .foregroundColor(LightroomTheme.textSecondary)
+                
+                Spacer()
+                
+                transformButton(icon: "rotate.left", help: "Rotate Left 90° CCW (⌘[)") {
+                    appState.rotateSelectedPhotosLeft(for: asset.id)
+                }
+                transformButton(icon: "rotate.right", help: "Rotate Right 90° CW (⌘])") {
+                    appState.rotateSelectedPhotosRight(for: asset.id)
+                }
+                transformButton(icon: "arrow.left.and.right.righttriangle.left.righttriangle.right", help: "Flip Horizontal") {
+                    appState.flipSelectedPhotosHorizontal(for: asset.id)
+                }
+                transformButton(icon: "arrow.up.and.down.righttriangle.up.righttriangle.down", help: "Flip Vertical") {
+                    appState.flipSelectedPhotosVertical(for: asset.id)
+                }
+            }
+            .padding(.horizontal, 10)
+            
+            Divider().background(LightroomTheme.dividerColor)
+            
             // 3. Tool Overlay Guide Style Row (Grid vs Thirds, Shortcut: O)
             HStack {
                 Text("Tool Overlay:")
@@ -221,5 +246,22 @@ public struct CropControlPanelView: View {
         .padding(.vertical, 6)
         .background(LightroomTheme.cardBackground.opacity(0.3))
         .cornerRadius(4)
+    }
+
+    private func transformButton(icon: String, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .uiFont(11, weight: .medium)
+                .foregroundColor(LightroomTheme.textPrimary)
+                .frame(width: 24, height: 22)
+                .background(LightroomTheme.cardBackground)
+                .cornerRadius(3)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 3)
+                        .stroke(LightroomTheme.cardBorder, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .help(help)
     }
 }

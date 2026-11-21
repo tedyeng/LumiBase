@@ -167,6 +167,9 @@ public final class XMPWriter: Sendable {
                 }.joined(separator: ";")
                 developAttrs += " lumibase:SpotHeals=\"\(encoded)\""
             }
+            if metadata.hasOrientationTransform {
+                developAttrs += " lumibase:OrientationTransform=\"\(metadata.orientationTransform.rawValue)\""
+            }
         }
         
         let xml = """

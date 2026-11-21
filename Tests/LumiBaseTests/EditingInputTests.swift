@@ -153,6 +153,69 @@ final class EditingInputTests: XCTestCase {
             if field != .exposure { XCTAssertEqual(xmp.exposure2012, 1) }
         }
     }
+
+    @MainActor func testColorMixerTabMovesFocusToNextAndPreviousSlider() async throws {
+        _ = NSApplication.shared
+        // Verify ordering in both single-channel and All mode
+        XCTAssertEqual(ColorMixerPanelView.orderedFields(for: .saturation).count, 8)
+        XCTAssertEqual(ColorMixerPanelView.orderedFields(for: .all).count, 24)
+        XCTAssertEqual(ColorMixerPanelView.orderedFields(for: .all).first, HSLSliderField(mode: .hue, band: .red))
+        XCTAssertEqual(ColorMixerPanelView.orderedFields(for: .all).last, HSLSliderField(mode: .luminance, band: .magenta))
+
+        let state = AppState(preloader: PreviewPreloader(observeMemoryPressure: false))
+        var xmp = XMPMetadata.empty
+        xmp.hsl[.red].hue = 11
+        xmp.hsl[.orange].hue = 10
+        let asset = PhotoAsset(fileURL: URL(fileURLWithPath: "/tmp/hsl_tab.ARW"), xmp: xmp)
+        state.allAssets = [asset]
+        state.primarySelectedAssetID = asset.id
+
+        let host = NSHostingView(rootView: ColorMixerPanelView(asset: asset, appState: state))
+        let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 320, height: 420),
+                              styleMask: [.titled], backing: .buffered, defer: false)
+        window.contentView = host
+        defer { window.contentView = nil }
+        host.layoutSubtreeIfNeeded()
+
+        func descendants(_ v: NSView) -> [NSView] { [v] + v.subviews.flatMap(descendants) }
+        let fields = descendants(host).compactMap { $0 as? NSTextField }
+        XCTAssertEqual(fields.count, 8)
+
+        // Focus first slider (Red)
+        XCTAssertTrue(window.makeFirstResponder(fields[0]))
+        try await Task.sleep(nanoseconds: 150_000_000)
+
+        func activeTextField() -> NSTextField? {
+            if let tf = window.firstResponder as? NSTextField { return tf }
+            if let tv = window.firstResponder as? NSTextView, let tf = tv.delegate as? NSTextField { return tf }
+            return nil
+        }
+        XCTAssertEqual(activeTextField(), fields[0])
+
+        // Press Tab -> should move focus to second slider (Orange) AND select all its text ("10")
+        let tabEvent = try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero,
+            modifierFlags: [], timestamp: 1, windowNumber: window.windowNumber,
+            context: nil, characters: "\t", charactersIgnoringModifiers: "\t",
+            isARepeat: false, keyCode: 48))
+        window.sendEvent(tabEvent)
+        try await Task.sleep(nanoseconds: 200_000_000)
+        XCTAssertEqual(activeTextField(), fields[1], "Tab should move focus from Red to Orange")
+        let editorAfterTab = try XCTUnwrap(window.firstResponder as? NSTextView)
+        XCTAssertEqual(editorAfterTab.string, "10")
+        XCTAssertEqual(editorAfterTab.selectedRange(), NSRange(location: 0, length: 2), "Tabbing into a slider must select all text in the input box")
+
+        // Press Shift+Tab -> should move focus back to Red AND select all its text ("11")
+        let backTabEvent = try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero,
+            modifierFlags: [.shift], timestamp: 2, windowNumber: window.windowNumber,
+            context: nil, characters: "\u{19}", charactersIgnoringModifiers: "\t",
+            isARepeat: false, keyCode: 48))
+        window.sendEvent(backTabEvent)
+        try await Task.sleep(nanoseconds: 200_000_000)
+        XCTAssertEqual(activeTextField(), fields[0], "Shift+Tab should move focus back from Orange to Red")
+        let editorAfterBackTab = try XCTUnwrap(window.firstResponder as? NSTextView)
+        XCTAssertEqual(editorAfterBackTab.string, "11")
+        XCTAssertEqual(editorAfterBackTab.selectedRange(), NSRange(location: 0, length: 2), "Shift+Tabbing into a slider must select all text in the input box")
+    }
 }
 
 private final class TestWheel: NSEvent {

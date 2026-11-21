@@ -125,7 +125,12 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
     public var toneCurve: ToneCurveData = .linear
     public var hsl: HSLAdjustments = .zero
     public var spotHeals: [SpotHealEntry] = []
+    public var orientationTransform: PhotoOrientationTransform = .up
     private var _hasCrop: Bool = false
+    
+    public var hasOrientationTransform: Bool {
+        !orientationTransform.isIdentity
+    }
     
     public var hasCrop: Bool {
         get {
@@ -184,7 +189,8 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
         convertToGrayscale: Bool? = nil,
         toneCurve: ToneCurveData = .linear,
         hsl: HSLAdjustments = .zero,
-        spotHeals: [SpotHealEntry] = []
+        spotHeals: [SpotHealEntry] = [],
+        orientationTransform: PhotoOrientationTransform = .up
     ) {
         self.isLoadedFromSidecar = isLoadedFromSidecar
         self.sidecarFilename = sidecarFilename
@@ -222,6 +228,7 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
         self.toneCurve = toneCurve
         self.hsl = hsl
         self.spotHeals = spotHeals
+        self.orientationTransform = orientationTransform
     }
     
     public var cropGeometry: CropGeometry {
@@ -281,6 +288,7 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
         !toneCurve.isLinear ||
         !hsl.isZero ||
         !spotHeals.isEmpty ||
+        hasOrientationTransform ||
         hasCrop
     }
 
@@ -309,6 +317,7 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
         before.spotHeals = []
         if !preserveCrop {
             before.resetCrop()
+            before.orientationTransform = .up
         }
         return before
     }
@@ -335,6 +344,7 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
             "dehaze=\(integer(dehaze))", "vibrance=\(integer(vibrance))",
             "saturation=\(integer(saturation))", "clarity=\(integer(clarity2012))",
             "texture=\(integer(texture))",
+            "orientation=\(orientationTransform.rawValue)",
             "crop=\(hasCrop ? 1 : 0):\(decimal(cropTop)):\(decimal(cropLeft)):\(decimal(cropBottom)):\(decimal(cropRight)):\(decimal(cropAngle))",
             "profile=\(string(cameraProfile))", "grayscale=\(convertToGrayscale.map { $0 ? 1 : 0 } ?? -1)",
             "toneCurve=\(toneCurve.cacheIdentity)", "hsl=\(hsl.cacheIdentity)",
@@ -363,6 +373,7 @@ public struct XMPMetadata: Codable, Equatable, Sendable {
         toneCurve = .linear
         hsl = .zero
         spotHeals = []
+        orientationTransform = .up
         resetCrop()
     }
     

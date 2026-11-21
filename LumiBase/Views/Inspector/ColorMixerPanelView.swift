@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Mode for HSL Color Mixer
-public enum HSLMixerMode: String, CaseIterable, Identifiable {
+public enum HSLMixerMode: String, CaseIterable, Identifiable, Sendable {
     case hue = "Hue"
     case saturation = "Saturation"
     case luminance = "Luminance"
@@ -10,16 +10,47 @@ public enum HSLMixerMode: String, CaseIterable, Identifiable {
     public var id: String { rawValue }
 }
 
+/// Focus identifier for HSL Color Mixer sliders (supports Tab / Shift+Tab navigation)
+public struct HSLSliderField: Hashable, Sendable {
+    public let mode: HSLMixerMode
+    public let band: HSLColorBand
+
+    public init(mode: HSLMixerMode, band: HSLColorBand) {
+        self.mode = mode
+        self.band = band
+    }
+}
+
 /// Complete Lightroom Classic HSL / Color Mixer Panel View
 public struct ColorMixerPanelView: View {
     public let asset: PhotoAsset
     @ObservedObject var appState: AppState
     
     @State private var mixerMode: HSLMixerMode = .hue
+    @FocusState private var focusedSlider: AnyHashable?
     
     public init(asset: PhotoAsset, appState: AppState) {
         self.asset = asset
         self.appState = appState
+    }
+
+    public static func orderedFields(for mixerMode: HSLMixerMode) -> [HSLSliderField] {
+        let modes: [HSLMixerMode] = (mixerMode == .all) ? [.hue, .saturation, .luminance] : [mixerMode]
+        return modes.flatMap { mode in
+            HSLColorBand.allCases.map { HSLSliderField(mode: mode, band: $0) }
+        }
+    }
+
+    private func nextSlider(after current: HSLSliderField) -> HSLSliderField? {
+        let all = Self.orderedFields(for: mixerMode)
+        guard let idx = all.firstIndex(of: current) else { return all.first }
+        return all[(idx + 1) % all.count]
+    }
+
+    private func previousSlider(before current: HSLSliderField) -> HSLSliderField? {
+        let all = Self.orderedFields(for: mixerMode)
+        guard let idx = all.firstIndex(of: current) else { return all.last }
+        return all[(idx - 1 + all.count) % all.count]
     }
     
     private var currentXMP: XMPMetadata {
@@ -145,6 +176,7 @@ public struct ColorMixerPanelView: View {
     @ViewBuilder
     private func renderBandRow(_ band: HSLColorBand, mode: HSLMixerMode) -> some View {
         let bandColor = colorForBand(band)
+        let sliderField = HSLSliderField(mode: mode, band: band)
         
         LightroomSlider(
             title: band.rawValue,
@@ -174,6 +206,14 @@ public struct ColorMixerPanelView: View {
             trackStyle: .standard,
             valueFormatter: { String(format: "%+d", Int($0)) },
             leadingColor: bandColor,
+            customField: sliderField,
+            focusedCustomField: $focusedSlider,
+            onNextField: {
+                focusedSlider = nextSlider(after: sliderField)
+            },
+            onPreviousField: {
+                focusedSlider = previousSlider(before: sliderField)
+            },
             onEditingChanged: { isEditing in
                 if !isEditing {
                     appState.updateDevelopSettings(for: asset.id, isDragging: false) { _ in }

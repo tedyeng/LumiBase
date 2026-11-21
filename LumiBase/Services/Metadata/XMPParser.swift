@@ -78,6 +78,7 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
     private var parsedToneCurve: ToneCurveData = .linear
     private var parsedHSL: HSLAdjustments = .zero
     private var parsedSpotHeals: [SpotHealEntry] = []
+    private var parsedOrientationTransform: PhotoOrientationTransform = .up
     
     private var inSubjectBag: Bool = false
     private var inTitleAlt: Bool = false
@@ -128,7 +129,8 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
                 convertToGrayscale: parsedConvertToGrayscale,
                 toneCurve: parsedToneCurve,
                 hsl: parsedHSL,
-                spotHeals: parsedSpotHeals
+                spotHeals: parsedSpotHeals,
+                orientationTransform: parsedOrientationTransform
             )
         }
         
@@ -177,6 +179,10 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
                 parsedAdvancedRAWHighlightRecovery = Self.parseBoolean(val)
             } else if key == "lumibase:spotheals" {
                 parsedSpotHeals = Self.parseSpotHeals(val)
+            } else if key == "lumibase:orientationtransform" {
+                if let raw = Int(val), let orient = PhotoOrientationTransform(rawValue: raw) {
+                    parsedOrientationTransform = orient
+                }
             } else if key.hasSuffix("shadows2012") {
                 parsedShadows = Int(val)
             } else if key.hasSuffix("whites2012") {
@@ -556,6 +562,13 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
             spotHeals = Self.parseSpotHeals(spotMatch)
         }
         
+        var orientationTransform: PhotoOrientationTransform = .up
+        if let orientMatch = matchFirst(pattern: #"OrientationTransform="([1-8])""#, in: content),
+           let raw = Int(orientMatch),
+           let orient = PhotoOrientationTransform(rawValue: raw) {
+            orientationTransform = orient
+        }
+        
         return XMPMetadata(
             isLoadedFromSidecar: true,
             rating: rating,
@@ -588,7 +601,8 @@ public final class XMPParser: NSObject, XMLParserDelegate, @unchecked Sendable {
             convertToGrayscale: convertToGrayscale,
             toneCurve: toneCurve,
             hsl: hsl,
-            spotHeals: spotHeals
+            spotHeals: spotHeals,
+            orientationTransform: orientationTransform
         )
     }
 

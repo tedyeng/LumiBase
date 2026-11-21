@@ -140,6 +140,26 @@ struct LumiBaseApp: App {
                 
                 Divider()
                 
+                Button("Rotate Left (CCW)") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseRotateLeft"), object: nil)
+                }
+                .keyboardShortcut("[", modifiers: .command)
+                
+                Button("Rotate Right (CW)") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseRotateRight"), object: nil)
+                }
+                .keyboardShortcut("]", modifiers: .command)
+                
+                Button("Flip Horizontal") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseFlipHorizontal"), object: nil)
+                }
+                
+                Button("Flip Vertical") {
+                    NotificationCenter.default.post(name: NSNotification.Name("LumiBaseFlipVertical"), object: nil)
+                }
+                
+                Divider()
+                
                 Button("Reload XMP from Disk") {
                     NotificationCenter.default.post(name: NSNotification.Name("LumiBaseReloadXMP"), object: nil)
                 }

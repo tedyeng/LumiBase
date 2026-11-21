@@ -220,6 +220,7 @@ public struct DevelopSyncOptions: Codable, Equatable, Sendable {
             target.cropBottom = source.cropBottom
             target.cropRight = source.cropRight
             target.cropAngle = source.cropAngle
+            target.orientationTransform = source.orientationTransform
         }
     }
     

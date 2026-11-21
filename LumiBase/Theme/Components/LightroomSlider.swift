@@ -96,6 +96,8 @@ public struct LightroomSlider: View {
     
     public var field: BasicSliderField? = nil
     public var focusedField: FocusState<BasicSliderField?>.Binding? = nil
+    public var customField: AnyHashable? = nil
+    public var focusedCustomField: FocusState<AnyHashable?>.Binding? = nil
     public var onNextField: (() -> Void)? = nil
     public var onPreviousField: (() -> Void)? = nil
     
@@ -113,6 +115,9 @@ public struct LightroomSlider: View {
     private var isEditing: Bool {
         if let focusedField = focusedField, let field = field {
             return focusedField.wrappedValue == field
+        }
+        if let focusedCustomField = focusedCustomField, let customField = customField {
+            return focusedCustomField.wrappedValue == customField
         }
         return isLocalFocused
     }
@@ -132,6 +137,8 @@ public struct LightroomSlider: View {
         leadingColor: Color? = nil,
         field: BasicSliderField? = nil,
         focusedField: FocusState<BasicSliderField?>.Binding? = nil,
+        customField: AnyHashable? = nil,
+        focusedCustomField: FocusState<AnyHashable?>.Binding? = nil,
         onNextField: (() -> Void)? = nil,
         onPreviousField: (() -> Void)? = nil,
         onEditingChanged: ((Bool) -> Void)? = nil,
@@ -147,6 +154,8 @@ public struct LightroomSlider: View {
         self.leadingColor = leadingColor
         self.field = field
         self.focusedField = focusedField
+        self.customField = customField
+        self.focusedCustomField = focusedCustomField
         self.onNextField = onNextField
         self.onPreviousField = onPreviousField
         self.onEditingChanged = onEditingChanged
@@ -273,10 +282,21 @@ public struct LightroomSlider: View {
         .onChange(of: focusedField?.wrappedValue) { oldField, newField in
             if let field = field {
                 if newField == field {
-                    DispatchQueue.main.async {
-                        syncTextInput()
-                    }
+                    syncTextInput()
+                    scheduleSelectAllText()
                 } else if oldField == field {
+                    DispatchQueue.main.async {
+                        commitTextInput()
+                    }
+                }
+            }
+        }
+        .onChange(of: focusedCustomField?.wrappedValue) { oldField, newField in
+            if let customField = customField {
+                if newField == customField {
+                    syncTextInput()
+                    scheduleSelectAllText()
+                } else if oldField == customField {
                     DispatchQueue.main.async {
                         commitTextInput()
                     }
@@ -285,9 +305,8 @@ public struct LightroomSlider: View {
         }
         .onChange(of: isLocalFocused) { oldFocus, newFocus in
             if newFocus {
-                DispatchQueue.main.async {
-                    syncTextInput()
-                }
+                syncTextInput()
+                scheduleSelectAllText()
             } else if oldFocus {
                 DispatchQueue.main.async {
                     commitTextInput()
@@ -332,9 +351,9 @@ public struct LightroomSlider: View {
                     if value != next { value = next; onEditingChanged?(false) }
                     return .handled
                 }
-                if press.key == .tab {
+                if press.key == .tab || press.characters == "\u{19}" {
                     commitTextInput()
-                    if press.modifiers.contains(.shift) {
+                    if press.modifiers.contains(.shift) || press.characters == "\u{19}" {
                         onPreviousField?()
                     } else {
                         onNextField?()
@@ -346,6 +365,8 @@ public struct LightroomSlider: View {
         
         if let focusedField = focusedField, let field = field {
             fieldView.focused(focusedField, equals: field)
+        } else if let focusedCustomField = focusedCustomField, let customField = customField {
+            fieldView.focused(focusedCustomField, equals: customField)
         } else {
             fieldView.focused($isLocalFocused)
         }
@@ -372,14 +393,34 @@ public struct LightroomSlider: View {
             textInput = String(format: "%.0f", effectiveValue)
         }
     }
+
+    private func scheduleSelectAllText() {
+        let selectEditor: () -> Void = {
+            if let editor = (NSApp.keyWindow?.firstResponder as? NSTextView)
+                ?? NSApp.windows.compactMap({ $0.firstResponder as? NSTextView }).first {
+                editor.selectAll(nil)
+            } else {
+                NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: nil)
+            }
+        }
+        // Run after SwiftUI flushes both the focus transition and the synced textInput into NSTextField.
+        DispatchQueue.main.async {
+            DispatchQueue.main.async {
+                selectEditor()
+            }
+        }
+    }
     
     private func startEditing() {
         syncTextInput()
         if let focusedField = focusedField, let field = field {
             focusedField.wrappedValue = field
+        } else if let focusedCustomField = focusedCustomField, let customField = customField {
+            focusedCustomField.wrappedValue = customField
         } else {
             isLocalFocused = true
         }
+        scheduleSelectAllText()
     }
     
     private func cancelTextInput() {
@@ -417,6 +458,9 @@ public struct LightroomSlider: View {
         }
         if let focusedField = focusedField, focusedField.wrappedValue == field {
             focusedField.wrappedValue = nil
+        }
+        if let focusedCustomField = focusedCustomField, focusedCustomField.wrappedValue == customField {
+            focusedCustomField.wrappedValue = nil
         }
     }
     
